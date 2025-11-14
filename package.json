@@ -1,0 +1,16 @@
+{
+  "name": "@n/adira.ts",
+  "version": "0.0.1",
+  "description": "API type builder for seamless, strongly-typed backend integrations.",
+  "keywords": [
+    "typescript",
+    "api",
+    "type-generator"
+  ],
+  "author": "Rata Sorin <ratasorin0@gmail.com>",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  }
+}
