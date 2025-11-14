@@ -11,6 +11,11 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "types:generate": "npx ts-node ./packages/@invoicify/generator/index.ts --c ./packages/@invoicify/generator/tsconfig.json",
+    "types:publish": "./packages/package.manager.sh PUBLISH @invoicify/types",
+    "types:build": "./packages/package.manager.sh BUILD @invoicify/types",
+    "types:remove": "./packages/package.manager.sh REMOVE @invoicify/types",
+    "types:serve": "npx verdaccio --listen 8888"
   }
 }
