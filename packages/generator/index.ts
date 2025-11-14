@@ -123,7 +123,7 @@ const watch = (config: AdiraConfig) => {
   const resolvedWatchPath = path.resolve(process.cwd(), watchPath);
 
   const watcher = chokidar.watch(resolvedWatchPath, {
-    ignored: /src\/generated\//,
+    ignored: path.resolve(process.cwd(), config.generatedDir),
     ignoreInitial: false,
     awaitWriteFinish: {
       stabilityThreshold: 100,
