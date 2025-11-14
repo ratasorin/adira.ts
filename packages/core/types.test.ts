@@ -12,7 +12,7 @@ import {
   PopulatedSchema,
   SelectableFieldsAfterJoin,
   SortSpec,
-} from "./types";
+} from ".";
 
 declare module "mongoose" {
   namespace Types {

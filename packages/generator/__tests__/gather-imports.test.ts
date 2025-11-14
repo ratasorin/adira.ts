@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { gatherImports, ImportMap } from "../typegen";
+import { gatherImports, ImportMap } from "../../../src/typegen";
 
 describe("gatherImports Integration Test", () => {
   const FILENAME = "/app/src/api-types.ts";

@@ -21,16 +21,18 @@ const getRelativeImportPath = (from: string, to: string): string => {
   return relativePath.replace(/\.ts$/, "");
 };
 
-export function writeTypes(types: TypesMeta) {
+export function writeTypes(types: TypesMeta, generatedDir?: string) {
   const { api, imports } = types;
   let output = "";
+
+  const outputDir = generatedDir || path.join(process.cwd(), "src", "generated");
 
   // 🔹 Step 1: Write imports
   for (const [pathName, typeReferences] of Object.entries(imports)) {
     const importsJoined = typeReferences.join(", ");
     if (pathName.startsWith("/")) {
       const relativePath = getRelativeImportPath(
-        path.join("src", "generated"),
+        outputDir,
         pathName
       );
       output += `import { ${importsJoined} } from '${relativePath}';\n`;
@@ -101,6 +103,12 @@ export function writeTypes(types: TypesMeta) {
 
   output += `};\n`;
 
+  // Ensure output directory exists
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
   // 🔹 Step 5: Write file
-  fs.writeFileSync(path.join("src", "generated", "index.api.ts"), output);
+  const outputPath = path.join(outputDir, "index.api.ts");
+  fs.writeFileSync(outputPath, output);
 }

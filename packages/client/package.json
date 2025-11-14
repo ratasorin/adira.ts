@@ -1,0 +1,31 @@
+{
+  "name": "@n/adira.client.ts",
+  "version": "0.1.0",
+  "description": "API client for making type-safe requests to adira.ts generated endpoints",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "typescript",
+    "api",
+    "client",
+    "axios"
+  ],
+  "author": "Sorin Rata <ratasorin0@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@n/adira.core.ts": "^0.1.0",
+    "axios": "^1.13.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

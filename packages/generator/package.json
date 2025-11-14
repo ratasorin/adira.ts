@@ -1,0 +1,38 @@
+{
+  "name": "@n/adira.generator.ts",
+  "version": "0.1.0",
+  "description": "Generator for parsing Express.js routes and generating TypeScript API definitions",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "bin": {
+    "adira-generator": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "typescript",
+    "api",
+    "generator",
+    "express",
+    "routes"
+  ],
+  "author": "Sorin Rata <ratasorin0@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@n/adira.core.ts": "^0.1.0",
+    "typescript": "^5.9.3",
+    "chokidar": "^3.5.3",
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/chokidar": "^2.1.3",
+    "typescript": "^5.9.3"
+  }
+}

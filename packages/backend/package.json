@@ -1,0 +1,32 @@
+{
+  "name": "@n/adira.backend.ts",
+  "version": "0.1.0",
+  "description": "Backend utilities for API route handlers with MongoDB aggregation functions",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "typescript",
+    "mongoose",
+    "api",
+    "handlers",
+    "aggregation"
+  ],
+  "author": "Sorin Rata <ratasorin0@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@n/adira.core.ts": "^0.1.0",
+    "mongoose": "^8.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

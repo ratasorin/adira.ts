@@ -11,9 +11,9 @@ import {
   RequestParamInclude,
   RequestParamSelect,
   InferRequestPath,
-} from "./types";
-import axios, { AxiosRequestConfig } from "axios";
-export * from "./types";
+} from "@n/adira.core.ts";
+import axios, { type AxiosRequestConfig } from "axios";
+export * from "@n/adira.core.ts";
 
 const replacePathParams = (path: string, pathParams?: any): string => {
   if (!pathParams) return path;

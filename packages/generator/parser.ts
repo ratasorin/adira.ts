@@ -2,6 +2,7 @@ import ts from "typescript";
 import path from "path";
 import fs from "fs";
 import glob from "fast-glob";
+import { loadConfig } from "./config";
 
 export interface RouteMeta {
   method: string;
@@ -12,9 +13,18 @@ export interface RouteMeta {
   prefix?: string;
 }
 
-// Utility to get all .ts files under src/
+// Utility to get all .ts files from the configured source directory
 function getAllFiles(): string[] {
-  return glob.sync("src/**/*.ts", { absolute: true });
+  const config = loadConfig();
+
+  // Use the configured input source or default to 'src'
+  // Look in the user's project directory (process.cwd()) not the generator package
+  const inputSrc = config.inputSrc || "src";
+  const pattern = path.join(inputSrc, "**/*.ts");
+  return glob.sync(pattern, {
+    absolute: true,
+    cwd: process.cwd(), // Set current working directory as the root
+  });
 }
 
 function resolveImport(
