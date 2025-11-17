@@ -26,7 +26,7 @@ Additionally, the tool provides a `generateHandler` utility that enables rapid b
 
 ## Prerequisites
 
-- Node.js 16+ 
+- Node.js 16+
 - TypeScript
 - Express.js routes with typed handler functions
 
@@ -71,6 +71,10 @@ This will:
 4. Start a local Verdaccio registry
 5. Publish the generated types as a package
 6. Watch for file changes and repeat the process
+
+## Examples
+
+See the `/examples/backend` directory for a demo with Mongoose User model and typed routes showcasing schema integration. Also check `/examples/demo-backend` for a basic setup.
 
 ## Project Structure
 

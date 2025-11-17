@@ -32,7 +32,7 @@ describe("gatherImports Integration Test", () => {
     API_SOURCE_CODE,
     ts.ScriptTarget.ES2020,
     true,
-    ts.ScriptKind.TS
+    ts.ScriptKind.TS,
   );
 
   /**
@@ -40,7 +40,7 @@ describe("gatherImports Integration Test", () => {
    */
   function findTypeNode(
     aliasName: string,
-    fieldName: string
+    fieldName: string,
   ): ts.TypeNode | undefined {
     let targetNode: ts.TypeNode | undefined;
 
@@ -64,7 +64,7 @@ describe("gatherImports Integration Test", () => {
 
     if (!targetNode) {
       throw new Error(
-        `Could not find type node for \${aliasName}.\${fieldName}`
+        `Could not find type node for \${aliasName}.\${fieldName}`,
       );
     }
 
@@ -75,7 +75,6 @@ describe("gatherImports Integration Test", () => {
     const importMap: ImportMap = {};
     const node = findTypeNode("_api_auth_login", "ResponseBody");
 
-    console.log({ node });
     gatherImports(node, importMap, sourceFile);
 
     expect(importMap).toEqual({

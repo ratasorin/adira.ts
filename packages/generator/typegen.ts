@@ -54,7 +54,7 @@ export interface APITypes {
  * Type guard for GenericTypeDefinition
  */
 export function isGenericTypeDefinition(
-  def: MethodTypeDefinition
+  def: MethodTypeDefinition,
 ): def is GenericTypeDefinition {
   return (
     typeof def === "object" &&
@@ -86,7 +86,7 @@ function getConstraintText(node: ts.TypeNode): string {
  * Type guard for SimpleTypeDefinition
  */
 export function isSimpleTypeDefinition(
-  def: MethodTypeDefinition
+  def: MethodTypeDefinition,
 ): def is SimpleTypeDefinition {
   return !isGenericTypeDefinition(def);
 }
@@ -103,7 +103,7 @@ export interface ImportMap {
  */
 function resolveImportToAbsolutePath(
   importModule: string,
-  sourceFilePath: string
+  sourceFilePath: string,
 ): string | null {
   const tsConfigPath = path.resolve(process.cwd(), "tsconfig.json");
 
@@ -116,7 +116,7 @@ function resolveImportToAbsolutePath(
   const parsedConfig = ts.parseJsonConfigFileContent(
     configFile.config,
     ts.sys,
-    path.dirname(tsConfigPath)
+    path.dirname(tsConfigPath),
   );
 
   const host = ts.createCompilerHost(parsedConfig.options, true);
@@ -124,7 +124,7 @@ function resolveImportToAbsolutePath(
     importModule,
     sourceFilePath,
     parsedConfig.options,
-    host
+    host,
   );
 
   if (resolved.resolvedModule) {
@@ -133,7 +133,7 @@ function resolveImportToAbsolutePath(
 
   const maybePath = path.resolve(
     path.dirname(sourceFilePath),
-    importModule + ".ts"
+    importModule + ".ts",
   );
   return existsSync(maybePath) ? maybePath : null;
 }
@@ -143,7 +143,7 @@ function resolveImportToAbsolutePath(
  * This is useful because generics may contain unions, intersections, or arrays.
  */
 const getTypeReferencesFromNode = (
-  node: ts.TypeNode
+  node: ts.TypeNode,
 ): ts.TypeReferenceNode[] => {
   const typeReferences: ts.TypeReferenceNode[] = [];
 
@@ -171,10 +171,9 @@ const getTypeReferencesFromNode = (
           extractTypeReferences(member.type);
         }
       });
-    }
-    else if (ts.isTypeLiteralNode(node)) {
+    } else if (ts.isTypeLiteralNode(node)) {
       // Traverse all members (properties) of the inline object
-      node.members.forEach(member => {
+      node.members.forEach((member) => {
         if (ts.isPropertySignature(member) && member.type) {
           // Recursively check the type of the property
           extractTypeReferences(member.type);
@@ -192,7 +191,7 @@ const getTypeReferencesFromNode = (
  * Automatically uses the module specifier for external packages (non-relative/non-absolute imports).
  */
 function buildImportSourceMap(
-  sourceFile: ts.SourceFile
+  sourceFile: ts.SourceFile,
 ): Record<string, string> {
   const importMap: Record<string, string> = {};
   const filePath = sourceFile.fileName;
@@ -243,7 +242,7 @@ function buildImportSourceMap(
  */
 function getExportSourceFileOrModule(
   sourceFile: ts.SourceFile,
-  typeName: string
+  typeName: string,
 ): string | null {
   for (const statement of sourceFile.statements) {
     // ✅ export interface Foo {}
@@ -256,7 +255,7 @@ function getExportSourceFileOrModule(
       if (
         statement.modifiers &&
         statement.modifiers.some(
-          (mod) => mod.kind === ts.SyntaxKind.ExportKeyword
+          (mod) => mod.kind === ts.SyntaxKind.ExportKeyword,
         )
       ) {
         return sourceFile.fileName;
@@ -285,7 +284,7 @@ const processTypeParameters = (
   typeParameters: ts.NodeArray<ts.TypeParameterDeclaration>,
   imports: ImportMap,
   file: ts.SourceFile,
-  generics: GenericParam[]
+  generics: GenericParam[],
 ) => {
   typeParameters.forEach((tp) => {
     const gp: GenericParam = { name: tp.name.getText() };
@@ -306,21 +305,19 @@ const processTypeParameters = (
 export const gatherImports = (
   node: ts.TypeNode | undefined,
   importMap: ImportMap,
-  sourceFile: ts.SourceFile
+  sourceFile: ts.SourceFile,
 ): ImportMap => {
   if (!node) return {};
 
   const importSourceMap = buildImportSourceMap(sourceFile);
   const typeReferences = getTypeReferencesFromNode(node);
 
-  console.log({ node: node.getText() });
-
   for (const typeReference of typeReferences) {
     // Recursively handle nested type arguments
     let index = 0;
     let currentNode: ts.TypeNode | undefined = extractTypeGeneric(
       typeReference,
-      index
+      index,
     );
 
     while (currentNode) {
@@ -334,7 +331,7 @@ export const gatherImports = (
 
     const typeReferenceExportSource = getExportSourceFileOrModule(
       sourceFile,
-      typeName
+      typeName,
     );
 
     // Handle external imports
@@ -420,7 +417,7 @@ export async function generateTypes(routes: RouteMeta[]): Promise<TypesMeta> {
               decl.initializer.typeParameters,
               imports,
               file,
-              generics
+              generics,
             );
           }
           name = decl.name;
@@ -468,23 +465,23 @@ export async function generateTypes(routes: RouteMeta[]): Promise<TypesMeta> {
           [route.method.toUpperCase()]:
             generics.length > 0
               ? {
-                aliasName: key.concat(route.method || "").replace(/\//g, "_"),
-                generics,
-                types: {
+                  aliasName: key.concat(route.method || "").replace(/\//g, "_"),
+                  generics,
+                  types: {
+                    RequestParams: paramsDict?.getText(),
+                    RequestBody: body?.getText(),
+                    ResponseBody: res?.getText(),
+                    RequestQuery: query?.getText(),
+                    RequestForm: "",
+                  },
+                }
+              : {
                   RequestParams: paramsDict?.getText(),
                   RequestBody: body?.getText(),
                   ResponseBody: res?.getText(),
                   RequestQuery: query?.getText(),
                   RequestForm: "",
                 },
-              }
-              : {
-                RequestParams: paramsDict?.getText(),
-                RequestBody: body?.getText(),
-                ResponseBody: res?.getText(),
-                RequestQuery: query?.getText(),
-                RequestForm: "",
-              },
         };
       }
     });
@@ -498,7 +495,7 @@ export async function generateTypes(routes: RouteMeta[]): Promise<TypesMeta> {
  */
 function extractTypeGeneric(
   node: ts.TypeNode | undefined,
-  index: number
+  index: number,
 ): ts.TypeNode | undefined {
   if (
     node &&

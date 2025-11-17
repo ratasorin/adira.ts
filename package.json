@@ -16,10 +16,14 @@
     "test": "npm run test --workspaces"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "private": true,
   "dependencies": {
     "chokidar": "^4.0.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "inputSrc": {
+      "type": "string",
+      "description": "Source directory for input files"
+    },
+    "generatedDir": {
+      "type": "string",
+      "description": "Directory for generated outputs"
+    },
+    "verdaccioPort": {
+      "type": "number",
+      "description": "Port for Verdaccio registry"
+    }
+  },
+  "required": ["inputSrc", "generatedDir", "verdaccioPort"]
+}

@@ -1,0 +1,5 @@
+{
+  "inputSrc": "./src",
+  "generatedDir": "./shared",
+  "verdaccioPort": 8888
+}

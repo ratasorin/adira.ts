@@ -1,0 +1,8 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["**/*.adira.json"],
+      "url": "https://api.npoint.io/fcaa5cc8c9576343708c"
+    }
+  ]
+}
