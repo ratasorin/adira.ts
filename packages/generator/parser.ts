@@ -29,7 +29,7 @@ function getAllFiles(): string[] {
 
 function resolveImport(
   fromFile: string,
-  modulePath: string
+  modulePath: string,
 ): string | undefined {
   const basePath = path.resolve(path.dirname(fromFile), modulePath);
   const tsFile = basePath + ".ts";
@@ -51,7 +51,7 @@ export async function parseRoutes(): Promise<RouteMeta[]> {
       file,
       fs.readFileSync(file, "utf8"),
       ts.ScriptTarget.Latest,
-      true
+      true,
     );
 
     ts.forEachChild(source, (node) => {
@@ -124,7 +124,7 @@ export async function parseRoutes(): Promise<RouteMeta[]> {
         if (
           ts.isPropertyAccessExpression(call.expression) &&
           ["get", "post", "put", "patch", "delete"].includes(
-            call.expression.name.getText()
+            call.expression.name.getText(),
           )
         ) {
           const method = call.expression.name.getText();
@@ -187,7 +187,7 @@ export async function parseRoutes(): Promise<RouteMeta[]> {
               handlerPath,
               fs.readFileSync(handlerPath, "utf8"),
               ts.ScriptTarget.Latest,
-              true
+              true,
             );
 
             ts.forEachChild(indexSource, (node) => {
@@ -207,7 +207,7 @@ export async function parseRoutes(): Promise<RouteMeta[]> {
                       handlerPath,
                       node.moduleSpecifier
                         ?.getText()
-                        ?.replace(/^['"]|['"]$/g, "") || ""
+                        ?.replace(/^['"]|['"]$/g, "") || "",
                     ) as string;
                     // Once we find the handler, we *SHOULD* stop checking further
                   }

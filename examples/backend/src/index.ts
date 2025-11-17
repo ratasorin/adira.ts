@@ -1,3 +1,4 @@
+import userRouter from "./routes";
 import express from "express";
 import mongoose from "mongoose";
 
@@ -8,8 +9,6 @@ mongoose
 
 const app = express();
 app.use(express.json());
-
-import userRouter from "./routes/users.js";
 
 app.use("/api", userRouter);
 

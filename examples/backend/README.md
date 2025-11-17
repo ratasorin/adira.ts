@@ -20,7 +20,8 @@ Run `npm run generate-types` to parse `./src` and generate API types in `./types
 `npm run dev` starts the server on port 3000 (connects to local MongoDB at mongodb://localhost:27017/demo; start MongoDB if needed).
 
 Test routes:
-- GET `/api/users` - Returns mock User[] with _id as ObjectId.
+
+- GET `/api/users` - Returns mock User[] with \_id as ObjectId.
 - POST `/api/users` - Creates mock User from {name, email} body.
 
 The generator will detect the IUser types in handlers and generate corresponding API definitions.
