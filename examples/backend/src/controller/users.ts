@@ -1,42 +1,26 @@
 import {
-  generateRouteHandler,
-  GetAggregation,
-  GetInclude,
-  GetObjectAfterJoin,
-  GetParams,
-  GetResponseBody,
-  GetSelect,
+  InferHandlerParams,
+  generateExecutor,
+  InferHandlerResponse,
 } from "@n/adira.backend.ts";
 import User, { IUser } from "../models/User";
 import { ApplyReplacements } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
+import mongoose from "mongoose";
 
 type FullUser = ApplyReplacements<IUser, {}>;
-const getUsers = generateRouteHandler<"GET", IUser, FullUser>("GET", User);
+const getUsers = generateExecutor<"GET", IUser, FullUser>("GET", User);
 
 export type GetUsersFn = typeof getUsers;
 
-export const getUsersHandler = async <
-  Include extends GetInclude<GetUsersFn>,
-  Select extends GetSelect<GetUsersFn, Include>,
-  Aggregations extends GetAggregation<GetUsersFn>,
-  ObjectAfterJoin extends GetObjectAfterJoin<GetUsersFn, Include>,
->(
-  req: Request<
-    any,
-    any,
-    any,
-    GetParams<Include, Select, Aggregations, ObjectAfterJoin>
-  >,
-  res: Response<
-    | ErrorResponse
-    | GetResponseBody<GetUsersFn, Include, Select, Aggregations, {}>
-  >,
+export const getUsersHandler = async (
+  req: Request<any, any, any, InferHandlerParams<GetUsersFn>>,
+  res: Response<InferHandlerResponse<GetUsersFn, {}> | ErrorResponse>,
 ) => {
   try {
     const users = await getUsers(req.query);
-    res.send({ base: users });
+    res.send({ executor: users });
   } catch (err) {
     res.send({
       error: true,

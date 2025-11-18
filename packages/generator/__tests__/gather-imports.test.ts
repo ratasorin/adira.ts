@@ -7,13 +7,13 @@ describe("gatherImports Integration Test", () => {
     import { ErrorResponse, IInvoiceChangeLog, ObjectIdLike, AvailableKeys, Schema } from '@types/index';
     import { LoginResponseBody } from '@controller/auth/login';
     import { IInvoice } from '@models/invoice/Invoice';
-    import { PatchResponseBody, GetParams, GetInclude, GetSelect } from '@utils/api/generate-handler';
+    import { PatchResponseBody, InferParams, InferInclude, InferSelect } from '@utils/api/generate-handler';
 
     // Mock functions/types used in the generic
     type PatchInvoiceFn = any;
 
-    export type _api_invoice_patch<Include extends GetInclude<PatchInvoiceFn>, Select extends GetSelect<PatchInvoiceFn, Include>> = {
-      RequestParams?: { id?: ObjectIdLike, key: AvailableKeys<Schema> } & GetParams<Include, Select>;
+    export type _api_invoice_patch<Include extends InferInclude<PatchInvoiceFn>, Select extends InferSelect<PatchInvoiceFn, Include>> = {
+      RequestParams?: { id?: ObjectIdLike, key: AvailableKeys<Schema> } & InferParams<Include, Select>;
       RequestBody?: Omit<Partial<IInvoice>, "_id">;
       ResponseBody?: PatchResponseBody<PatchInvoiceFn, Include, Select, IInvoiceChangeLog | null> | ErrorResponse;
       RequestQuery?: unknown;
@@ -113,7 +113,7 @@ describe("gatherImports Integration Test", () => {
     gatherImports(node, importMap, sourceFile);
 
     expect(importMap).toEqual({
-      "@utils/api/generate-handler": ["GetParams"],
+      "@utils/api/generate-handler": ["InferParams"],
       "@types/index": ["ObjectIdLike", "Schema", "AvailableKeys"],
     });
   });

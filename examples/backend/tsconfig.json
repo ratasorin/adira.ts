@@ -11,6 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true
   },
-  "include": ["src/**/*", "shared/**/*"],
+  "include": ["src/**/*", "shared/**/*", "index.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

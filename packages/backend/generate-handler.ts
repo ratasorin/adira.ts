@@ -10,6 +10,10 @@ import {
   SelectableFieldsAfterJoin,
   BuildResponseBody,
   ExtractResponse,
+  GroupOperations,
+  SortDirection,
+  Leafs,
+  FlattenForFilter,
 } from "@n/adira.core.ts";
 
 import { Document, Model, PipelineStage } from "mongoose";
@@ -21,19 +25,45 @@ import {
 } from "./db/$assert-pipeline-params";
 import mongoose from "mongoose";
 
-export type GetInclude<Handler> = Handler extends { __base?: infer T }
-  ? PopulatableKeys<T>[] & { __base?: T }
+export type InferInclude<Handler> = Handler extends { __base?: infer T }
+  ? string[] & { __base?: T }
   : never;
 
-export type GetSelect<Handler, Include extends any[]> = Handler extends {
+export type InferSelect<Handler> = Handler extends {
   __populated?: infer P;
   __base?: infer T;
 }
-  ? ExtractSelect<P, T, Include> & { __full?: P; __base?: T }
+  ? Leafs<P>[] & { __full?: P; __base?: T }
   : never;
 
-export type GetAggregation<Handler> = Handler extends { __populated?: infer P }
-  ? AggLike<P>
+export type InferFilter<Handler> = Handler extends {
+  __populated?: infer P;
+  __base?: infer T;
+}
+  ? Filter<P> & { __full?: P; __base?: T }
+  : never;
+
+export type InferGroupBy<Handler> = Handler extends {
+  __populated?: infer P;
+  __base?: infer T;
+}
+  ? {
+      fields: string[];
+      aggregations: {
+        alias: string;
+        op: GroupOperations;
+        applyOnField: string;
+      };
+    } & {
+      __full?: P;
+      __base?: T;
+    }
+  : never;
+
+export type InferSort<Handler> = Handler extends {
+  __populated?: infer P;
+}
+  ? Record<string, SortDirection> & { __full?: P }
   : never;
 
 export type GetResponseBody<
@@ -41,7 +71,7 @@ export type GetResponseBody<
   Include extends any[],
   Select extends any[],
   Aggregation extends AggLike<any> = [],
-  Extra = {}
+  Extra = {},
 > = Handler extends {
   __populated?: infer P;
   __base?: infer T;
@@ -53,7 +83,7 @@ export type PatchResponseBody<
   Handler,
   Include extends any[],
   Select extends any[],
-  Extra = {}
+  Extra = {},
 > = Handler extends {
   __populated?: infer P;
   __base?: infer T;
@@ -61,11 +91,21 @@ export type PatchResponseBody<
   ? BuildResponseBody<P, T, Include, Select, undefined, false, Extra>
   : never;
 
+export type InferPartition<Handler> = Handler extends {
+  __base?: infer T;
+}
+  ? {
+      groupBy: string[];
+      orderBy: string[];
+      take: "first" | "last";
+    } & { __base?: T }
+  : never;
+
 export type PostResponseBody<
   Handler,
   Include extends any[],
   Select extends any[],
-  Extra = {}
+  Extra = {},
 > = Handler extends {
   __populated?: infer P;
   __base?: infer T;
@@ -75,16 +115,41 @@ export type PostResponseBody<
 
 export type GetObjectAfterJoin<
   Handler,
-  Include extends readonly any[]
+  Include extends readonly any[],
 > = Handler extends { __populated?: infer P; __base?: infer T }
   ? SelectableFieldsAfterJoin<P, T, Include>
   : never;
 
-export type GetParams<
+export type InferHandlerParams<Handler> = {
+  include: InferInclude<Handler>;
+  select: InferSelect<Handler>;
+  limit?: number;
+  offset?: number;
+  filters?: InferFilter<Handler>;
+  groupBy?: InferGroupBy<Handler>;
+  sort?: InferSort<Handler>;
+  partition?: InferPartition<Handler>;
+};
+
+export type InferHandlerResponse<Handler, HandlerExtraWorkReturn> =
+  Handler extends {
+    __populated?: infer P;
+    __base?: infer T;
+  }
+    ? {
+        executor: any;
+        handler?: HandlerExtraWorkReturn;
+      } & {
+        __populated?: P;
+        __base?: T;
+      }
+    : never;
+
+export type InferExecutorParams<
   Include extends any[],
   Select extends any[],
-  Aggregations extends any[] = [],
-  ObjectAfterJoin = any
+  Aggregations extends any[],
+  ObjectAfterJoin,
 > = {
   include: Include;
   select: Select;
@@ -96,32 +161,34 @@ export type GetParams<
   partition?: PartitionSpec<ObjectAfterJoin>;
 };
 
+export type NormalizeArray<A, T> = A extends never[] ? T : A;
+
 export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-export type GetHandler<
-  T = {},
-  R extends Partial<Record<string, any>> = {},
-  PSchema = PopulatedSchema<T, R>
+export type ExecuteGET<
+  T,
+  R extends Partial<Record<string, any>>,
+  PSchema = PopulatedSchema<T, R>,
 > = (<
-  Include extends PopulatableKeys<T>[],
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<PSchema, T, Include>,
   Agg extends AggLike<PSchema>,
-  ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>
+  ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
 >(
-  params: GetParams<Include, Select, Agg, ObjectAfterJoin>
+  params: InferExecutorParams<Include, Select, Agg, ObjectAfterJoin>,
 ) => Promise<ExtractResponse<PSchema, T, Include, Select, Agg, true>>) & {
   __base?: T;
   __populated?: PSchema;
 };
 
-export type PostHandler<
+export type ExecutePOST<
   T,
   R extends Partial<Record<string, any>>,
-  PSchema = PopulatedSchema<T, R>
+  PSchema = PopulatedSchema<T, R>,
 > = (<
   UserIdField extends keyof T,
   NewItem extends Omit<T, "_id" | UserIdField>,
   Include extends PopulatableKeys<T>[],
-  Select extends ExtractSelect<PSchema, T, Include>
+  Select extends ExtractSelect<PSchema, T, Include>,
 >(params: {
   fields: NewItem;
   userId: string;
@@ -133,15 +200,15 @@ export type PostHandler<
   __populated?: PSchema;
 };
 
-export type PatchHandler<
+export type ExecutePATCH<
   T,
   R extends Partial<Record<string, any>>,
-  PSchema = PopulatedSchema<T, R>
+  PSchema = PopulatedSchema<T, R>,
 > = (<
   UserIdField extends keyof T,
   NewItem extends Partial<Omit<T, "_id" | UserIdField>>,
   Include extends PopulatableKeys<T>[],
-  Select extends ExtractSelect<PSchema, T, Include>
+  Select extends ExtractSelect<PSchema, T, Include>,
 >(params: {
   fields: NewItem;
   id: string;
@@ -154,17 +221,17 @@ export type PatchHandler<
   __populated?: PSchema;
 };
 
-export type RouteHandlerReturn<
+export type ExecutorReturnType<
   Method extends METHOD,
   T = {},
-  R extends Partial<Record<string, any>> = {}
+  R extends Partial<Record<string, any>> = {},
 > = Method extends "GET"
-  ? GetHandler<T, R>
+  ? ExecuteGET<T, R>
   : Method extends "POST"
-  ? PostHandler<T, R>
-  : Method extends "PATCH"
-  ? PatchHandler<T, R>
-  : never;
+    ? ExecutePOST<T, R>
+    : Method extends "PATCH"
+      ? ExecutePATCH<T, R>
+      : never;
 
 const generateProjectionQuery = (select: string[]): PipelineStage.Project => {
   return select.length
@@ -179,11 +246,11 @@ const generateProjectionQuery = (select: string[]): PipelineStage.Project => {
 
 const generateLookupQuery = <T>(
   model: Model<T>,
-  include: string[]
+  include: string[],
 ): PipelineStage[] => {
   return include.reduce(
     (prev, curr) => [...prev, ...buildPopulatePipeline(model, curr)],
-    [] as any[]
+    [] as any[],
   ) as PipelineStage[];
 };
 
@@ -194,7 +261,7 @@ const generatePartitionQuery = (
         orderBy: string;
         take: "first" | "last";
       }
-    | undefined
+    | undefined,
 ): PipelineStage[] => {
   if (partition) {
     const { groupBy, orderBy, take } = partition;
@@ -213,7 +280,7 @@ const generatePartitionQuery = (
 };
 
 const generateFilterQuery = (
-  filters: Record<string, any> | undefined
+  filters: Record<string, any> | undefined,
 ): PipelineStage[] => {
   if (filters && Object.keys(filters).length > 0) {
     return [{ $match: filters }];
@@ -221,16 +288,19 @@ const generateFilterQuery = (
 };
 
 const generateGroupQuery = (
-  groupBy: SimpleGroupBySpec | undefined
+  groupBy: SimpleGroupBySpec | undefined,
 ): PipelineStage[] => {
   if (groupBy) {
     let groupStage: Record<string, any> = {
       _id:
         groupBy.fields.length > 1
-          ? groupBy.fields.reduce((acc, field) => {
-              acc[field] = `$${field}`;
-              return acc;
-            }, {} as Record<string, string>)
+          ? groupBy.fields.reduce(
+              (acc, field) => {
+                acc[field] = `$${field}`;
+                return acc;
+              },
+              {} as Record<string, string>,
+            )
           : `$${groupBy.fields[0]}`,
     };
 
@@ -245,23 +315,23 @@ const generateGroupQuery = (
 };
 
 const generateSortQuery = (
-  sort: Record<string, 1 | -1> | undefined
+  sort: Record<string, 1 | -1> | undefined,
 ): PipelineStage[] => {
   if (sort) {
     const $sort = filterDefined(sort);
     return [{ $sort }];
   } else return [];
 };
-export const generateRouteHandler = <
+export const generateExecutor = <
   Method extends METHOD,
-  T = {},
-  R extends Partial<Record<string, any>> = {}
+  T,
+  Replacements extends Partial<Record<string, any>>,
 >(
   method: Method,
-  model: Model<T & Document>
-): RouteHandlerReturn<Method, T, R> => {
+  model: Model<T & Document>,
+): ExecutorReturnType<Method, T, Replacements> => {
   if (method === "GET") {
-    const fn: GetHandler<T, R> = async (params) => {
+    const fn: ExecuteGET<T, Replacements> = async (params) => {
       const {
         filters,
         groupBy,
@@ -309,7 +379,7 @@ export const generateRouteHandler = <
   }
 
   if (method === "POST") {
-    const fn: PostHandler<T, R> = async (params) => {
+    const fn: ExecutePOST<T, Replacements> = async (params) => {
       const { include, select } = normalizeParams(params);
       let fields: any = params.fields;
       const { userField, userId } = params;
@@ -327,11 +397,11 @@ export const generateRouteHandler = <
 
       return record;
     };
-    return fn as RouteHandlerReturn<Method, T, R>;
+    return fn as ExecutorReturnType<Method, T, Replacements>;
   }
 
   if (method === "PATCH") {
-    const fn: PatchHandler<T, R> = async (params) => {
+    const fn: ExecutePATCH<T, Replacements> = async (params) => {
       const { include, select } = normalizeParams(params);
       let fields: any = params.fields;
       const { userField, userId, id } = params;
@@ -348,7 +418,7 @@ export const generateRouteHandler = <
       const newRecord = await model.findByIdAndUpdate(
         new mongoose.Types.ObjectId(id),
         { ...fields, [userField]: userId },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
 
       if (!newRecord) throw new Error(`New: Record with id ${id} not found!`);
@@ -358,7 +428,7 @@ export const generateRouteHandler = <
 
       return record;
     };
-    return fn as RouteHandlerReturn<Method, T, R>;
+    return fn as ExecutorReturnType<Method, T, Replacements>;
   }
 
   throw new Error(`Unsupported method: ${method}`);

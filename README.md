@@ -44,7 +44,10 @@ npm install @n/adira.ts
 
 ```typescript
 // Example route handler with type annotations
-export const getInvoices = (req: Request<{ id: string }, any, any>, res: Response<Invoice[]>) => {
+export const getInvoices = (
+  req: Request<{ id: string }, any, any>,
+  res: Response<Invoice[]>,
+) => {
   // Handler implementation
 };
 ```
@@ -65,6 +68,7 @@ npx ts-node ./index.ts
 ```
 
 This will:
+
 1. Parse all routes in `src/**/*.ts` files
 2. Extract type information from handler functions
 3. Generate type definitions in `src/generated/index.api.ts`
@@ -113,27 +117,50 @@ The `generate-handler.ts` utility provides powerful types and functions for rapi
 ### Basic Usage
 
 ```typescript
-import { generateRouteHandler, GetInclude, GetSelect, GetAggregation, GetResponseBody } from "@n/adira.ts";
+import {
+  generateRouteHandler,
+  InferInclude,
+  InferSelect,
+  GetAggregation,
+  GetResponseBody,
+} from "@n/adira.ts";
 
 // Generate handlers for your models
-export const getInvoices = generateRouteHandler<"GET", IInvoice, InvoiceReplacements>("GET", Invoice);
-export const postInvoice = generateRouteHandler<"POST", IInvoice, InvoiceReplacements>("POST", Invoice);
-export const patchInvoice = generateRouteHandler<"PATCH", IInvoice, InvoiceReplacements>("PATCH", Invoice);
+export const getInvoices = generateRouteHandler<
+  "GET",
+  IInvoice,
+  InvoiceReplacements
+>("GET", Invoice);
+export const postInvoice = generateRouteHandler<
+  "POST",
+  IInvoice,
+  InvoiceReplacements
+>("POST", Invoice);
+export const patchInvoice = generateRouteHandler<
+  "PATCH",
+  IInvoice,
+  InvoiceReplacements
+>("PATCH", Invoice);
 
 // Create typed handler functions
 export type GetInvoicesFn = typeof getInvoices;
 
 export const getInvoicesHandler = async <
-  Include extends GetInclude<GetInvoicesFn>,
-  Select extends GetSelect<GetInvoicesFn, Include>,
+  Include extends InferInclude<GetInvoicesFn>,
+  Select extends InferSelect<GetInvoicesFn, Include>,
   Aggregations extends GetAggregation<GetInvoicesFn>,
-  ObjectAfterJoin extends GetObjectAfterJoin<GetInvoicesFn, Include>
+  ObjectAfterJoin extends GetObjectAfterJoin<GetInvoicesFn, Include>,
 >(
-  req: Request<any, any, any, GetParams<Include, Select, Aggregations, ObjectAfterJoin>>,
+  req: Request<
+    any,
+    any,
+    any,
+    InferParams<Include, Select, Aggregations, ObjectAfterJoin>
+  >,
   res: Response<
     | ErrorResponse
     | GetResponseBody<GetInvoicesFn, Include, Select, Aggregations, {}>
-  >
+  >,
 ) => {
   try {
     const invoices = await getInvoices(req.query);
@@ -201,11 +228,11 @@ The tool generates a comprehensive API type map that looks like:
 ```typescript
 export type InvoicifyAPI = {
   "/api/invoices": {
-    "GET": {
+    GET: {
       RequestQuery?: InvoiceQuery;
       ResponseBody?: Invoice[];
     };
-    "POST": {
+    POST: {
       RequestBody?: CreateInvoiceRequest;
       ResponseBody?: Invoice;
     };

@@ -35,7 +35,7 @@ export type IsScalar<T> = T extends Scalar ? true : false;
 
 export type Join<
   Prefix extends string = "",
-  Key extends string = ""
+  Key extends string = "",
 > = Prefix extends "" ? Key : `${Prefix}.${Key}`;
 
 export type Element<T> = T extends readonly (infer U)[] ? U : never;
@@ -57,34 +57,35 @@ export type IsObjectId<T> = T extends ObjectIdLike ? true : false;
 export type PopulatableKeys<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = [Depth] extends [0]
   ? never
   : IsObjectId<T> extends true
-  ? Prefix
-  : T extends Scalar
-  ? never
-  : T extends readonly any[]
-  ? PopulatableKeys<Element<T>, Prefix, Prev[Depth]>
-  : T extends object
-  ? KeyIteration<T, Prefix, Depth>
-  : never;
+    ? Prefix
+    : T extends Scalar
+      ? never
+      : T extends readonly any[]
+        ? PopulatableKeys<Element<T>, Prefix, Prev[Depth]>
+        : T extends object
+          ? KeyIteration<T, Prefix, Depth>
+          : never;
 
 export type KeyIteration<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
-> = Keys<T> extends infer K
-  ? K extends keyof T
-    ? K extends "_id" // skip root _id
-      ? never
-      : PopulatableKeys<T[K], Join<Prefix, K & string>, Prev[Depth]>
-    : never
-  : never;
+  Depth extends number = 10,
+> =
+  Keys<T> extends infer K
+    ? K extends keyof T
+      ? K extends "_id" // skip root _id
+        ? never
+        : PopulatableKeys<T[K], Join<Prefix, K & string>, Prev[Depth]>
+      : never
+    : never;
 
 export type KeysWithPrefix<
   R = {},
-  Prefix extends string = ""
+  Prefix extends string = "",
 > = keyof R extends infer K
   ? K extends string
     ? K extends `${Prefix}.${string}`
@@ -93,42 +94,40 @@ export type KeysWithPrefix<
     : never
   : never;
 
-export type Shift<R = {}, Prefix extends string = ""> = Pick<
-  R,
-  KeysWithPrefix<R, Prefix>
-> extends infer Picked
-  ? {
-      [K in keyof Picked as K extends `${Prefix}.${infer Rest}`
-        ? Rest
-        : never]: Picked[K];
-    }
-  : never;
+export type Shift<R = {}, Prefix extends string = ""> =
+  Pick<R, KeysWithPrefix<R, Prefix>> extends infer Picked
+    ? {
+        [K in keyof Picked as K extends `${Prefix}.${infer Rest}`
+          ? Rest
+          : never]: Picked[K];
+      }
+    : never;
 
 export type ApplyReplacements<
   Schema = {},
   Replacements extends Record<string, any> = {},
-  Depth extends number = 10
+  Depth extends number = 10,
 > = [Depth] extends [0]
   ? Schema
   : Schema extends ObjectIdLike
-  ? Replacements[keyof Replacements] | null
-  : {
-      [K in keyof Schema]: K & string extends keyof Replacements
-        ? Replacements[K & string] | null
-        : KeysWithPrefix<Replacements, K & string> extends never
-        ? Schema[K]
-        : Schema[K] extends Array<infer Element>
-        ? ApplyReplacements<
-            Element,
-            Shift<Replacements, K & string>,
-            Prev[Depth]
-          >[]
-        : ApplyReplacements<
-            Schema[K],
-            Shift<Replacements, K & string>,
-            Prev[Depth]
-          >;
-    };
+    ? Replacements[keyof Replacements] | null
+    : {
+        [K in keyof Schema]: K & string extends keyof Replacements
+          ? Replacements[K & string] | null
+          : KeysWithPrefix<Replacements, K & string> extends never
+            ? Schema[K]
+            : Schema[K] extends Array<infer Element>
+              ? ApplyReplacements<
+                  Element,
+                  Shift<Replacements, K & string>,
+                  Prev[Depth]
+                >[]
+              : ApplyReplacements<
+                  Schema[K],
+                  Shift<Replacements, K & string>,
+                  Prev[Depth]
+                >;
+      };
 
 export type Replacements<T> = Partial<Record<PopulatableKeys<T>, any>>;
 
@@ -149,7 +148,7 @@ export type Replacements<T> = Partial<Record<PopulatableKeys<T>, any>>;
  */
 export type PopulatedSchema<
   Schema,
-  R extends Partial<Record<string, any>>
+  R extends Partial<Record<string, any>>,
 > = ApplyReplacements<Schema, R>;
 
 export type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -159,7 +158,7 @@ export type IsLeaf<T> = T extends Scalar ? true : false;
 export type RecurseLeafPaths<
   T extends object = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = keyof T extends infer K
   ? K extends keyof T
     ? Leafs<NonNullable<T[K]>, Join<Prefix, Extract<K, string>>, Prev[Depth]>
@@ -190,20 +189,20 @@ export type RecurseLeafPaths<
 export type Leafs<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = [Depth] extends [0]
   ? never
   : IsLeaf<T> extends true
-  ? Prefix
-  : T extends Array<infer E>
-  ? IsLeaf<E> extends true
-    ? Prefix // array of leaves → include prefix only
-    : // array of objects → include prefix (intermediate) and recurse on elements
-      Prefix | Leafs<NonNullable<E>, Prefix, Prev[Depth]>
-  : T extends object
-  ? // Include prefix (intermediate object path) AND recurse on keys
-    Prefix | RecurseLeafPaths<T, Prefix, Depth>
-  : Prefix;
+    ? Prefix
+    : T extends Array<infer E>
+      ? IsLeaf<E> extends true
+        ? Prefix // array of leaves → include prefix only
+        : // array of objects → include prefix (intermediate) and recurse on elements
+          Prefix | Leafs<NonNullable<E>, Prefix, Prev[Depth]>
+      : T extends object
+        ? // Include prefix (intermediate object path) AND recurse on keys
+          Prefix | RecurseLeafPaths<T, Prefix, Depth>
+        : Prefix;
 
 /**
  * Splits a dot-separated string path into a tuple of path segments
@@ -233,7 +232,7 @@ export type PickTrue<A = {}> = {
 
 export type SelectedPaths<
   T = {},
-  Q extends Partial<Record<Leafs<T>, true>> = {}
+  Q extends Partial<Record<Leafs<T>, true>> = {},
 > = Extract<keyof Q, string>;
 
 // Check if a path starts with a given key
@@ -249,12 +248,10 @@ export type DirectMatch<Q extends any[] = [], K extends string = ""> = Extract<
 >;
 
 // Extract nested matches (e.g., "user.name" → "name")
-export type NestedMatches<
-  Q extends any[] = [],
-  K extends string = ""
-> = Extract<Q[number], `${K}.${string}`> extends `${K}.${infer Rest}`
-  ? [Rest]
-  : [];
+export type NestedMatches<Q extends any[] = [], K extends string = ""> =
+  Extract<Q[number], `${K}.${string}`> extends `${K}.${infer Rest}`
+    ? [Rest]
+    : [];
 
 /**
  * Builds a nested selection object from a query object
@@ -287,16 +284,12 @@ export type IncludeUnionOf<T extends readonly any[]> = T[number];
 // extract subpaths for a key K: for includes like "friends.friend" and K="friends" -> "friend"
 export type SubPathsForKey<
   Inc = "",
-  K extends string = ""
+  K extends string = "",
 > = Inc extends `${K}.${infer Rest}` ? Rest : never;
 
 // check if K is directly included (i.e. "company" is present in IncludeUnion)
-export type HasDirectInclude<Inc = "", K extends string = ""> = Extract<
-  Inc,
-  K
-> extends never
-  ? false
-  : true;
+export type HasDirectInclude<Inc = "", K extends string = ""> =
+  Extract<Inc, K> extends never ? false : true;
 
 /**
  * Public entrypoint: Include is a readonly tuple (e.g. ["friends.friend","company"] as const)
@@ -305,7 +298,7 @@ export type HasDirectInclude<Inc = "", K extends string = ""> = Extract<
 export type SelectableFieldsAfterJoin<
   Full = {},
   Base = {},
-  Include extends readonly any[] = []
+  Include extends readonly any[] = [],
 > = _SelectableFieldsAfterJoin<Base, Full, IncludeUnionOf<Include>>;
 
 /**
@@ -320,36 +313,36 @@ export type SelectableFieldsAfterJoin<
 export type _SelectableFieldsAfterJoin<
   Base = {},
   Full = {},
-  IncludeUnion extends string = ""
+  IncludeUnion extends string = "",
 > =
   // If this field was an ObjectId in the original, after populate it becomes Full
   Base extends ObjectIdLike
     ? Full | null
     : // Arrays: preserve array, recurse element type
-    Base extends readonly (infer U)[]
-    ? Full extends readonly (infer UU)[]
-      ? _SelectableFieldsAfterJoin<U, UU, IncludeUnion>[]
-      : Base // mismatch, keep original (you might want to signal an error type here)
-    : // Plain object: map keys
-    Base extends object
-    ? {
-        [K in keyof Base]: K extends keyof Full
-          ? // if the key is directly included (e.g. "company"), return the full populated type
-            HasDirectInclude<IncludeUnion, Extract<K, string>> extends true
-            ? Full[K] | null
-            : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
-            SubPathsForKey<IncludeUnion, Extract<K, string>> extends never
-            ? Base[K] // not included at all — keep base
-            : _SelectableFieldsAfterJoin<
-                Base[K],
-                Full[K],
-                SubPathsForKey<IncludeUnion, Extract<K, string>>
-              >
-          : // key not present in Full (no population target) — keep base
-            Base[K];
-      }
-    : // primitives: just keep Base
-      Base;
+      Base extends readonly (infer U)[]
+      ? Full extends readonly (infer UU)[]
+        ? _SelectableFieldsAfterJoin<U, UU, IncludeUnion>[]
+        : Base // mismatch, keep original (you might want to signal an error type here)
+      : // Plain object: map keys
+        Base extends object
+        ? {
+            [K in keyof Base]: K extends keyof Full
+              ? // if the key is directly included (e.g. "company"), return the full populated type
+                HasDirectInclude<IncludeUnion, Extract<K, string>> extends true
+                ? Full[K] | null
+                : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
+                  SubPathsForKey<IncludeUnion, Extract<K, string>> extends never
+                  ? Base[K] // not included at all — keep base
+                  : _SelectableFieldsAfterJoin<
+                      Base[K],
+                      Full[K],
+                      SubPathsForKey<IncludeUnion, Extract<K, string>>
+                    >
+              : // key not present in Full (no population target) — keep base
+                Base[K];
+          }
+        : // primitives: just keep Base
+          Base;
 
 /**
  * Picks properties from an object type based on a query
@@ -372,7 +365,7 @@ export type PickFromQuery<
   T = {},
   Select extends any[] = [],
   AllowMetadata extends boolean = true,
-  BaseT = {}
+  BaseT = {},
 > = Select extends []
   ? T
   : (AllowMetadata extends true
@@ -396,7 +389,7 @@ export type BuildResponseBody<
   Select extends any[] = [],
   Agg extends AggLike<any> | undefined = undefined,
   IsArray extends boolean = false,
-  Extra = {}
+  Extra = {},
 > = (IsArray extends true
   ? ExtractResponseBodyArray<
       FullSchema,
@@ -427,13 +420,13 @@ export type TopLevelKeys<Q extends any[] = []> = TopLevelKeysUnion<Q[number]>[];
 export type ExtractSelect<
   Full = {},
   Base = {},
-  Include extends any[] = []
+  Include extends any[] = [],
 > = Leafs<SelectableFieldsAfterJoin<Full, Base, Include>>[];
 
 export type EnhacedExtractSelect<
   Full = {},
   Base = {},
-  Include extends any[] = []
+  Include extends any[] = [],
 > = ExtractSelect<Full, Base, Include> & {
   __full?: Full;
   __base?: Base;
@@ -479,7 +472,7 @@ export type ExtractBase<
   FullObject = {},
   Base = {},
   Include extends any[] = [],
-  Select extends any[] = []
+  Select extends any[] = [],
 > = PickFromQuery<FullObject, Include, false> &
   Omit<Base, TopLevelKeys<Include>[number]> extends infer R
   ? Select extends []
@@ -498,7 +491,7 @@ export type ExtractResponse<
   Include extends any[] = [],
   Select extends any[] = [],
   Agg extends { alias: string }[] | undefined = undefined,
-  IsArray extends boolean = false
+  IsArray extends boolean = false,
 > = Agg extends undefined
   ? IsArray extends true
     ? ExtractBase<FullObject, Base, Include, Select>[]
@@ -520,7 +513,7 @@ export type ExtractResponseBodySingle<
   Include extends any[] = [],
   Select extends any[] = [],
   Agg extends AggLike<any> | undefined = undefined,
-  Extra = {}
+  Extra = {},
 > = {
   base?: ExtractResponse<FullObject, Base, Include, Select, Agg, false>;
   extra?: Extra;
@@ -533,7 +526,7 @@ export type ExtractResponseBodyArray<
   Include extends any[] = [],
   Select extends any[] = [],
   Agg extends AggLike<any> | undefined = undefined,
-  Extra = {}
+  Extra = {},
 > = {
   base?: ExtractResponse<FullObject, Base, Include, Select, Agg, true>;
   extra?: Extra;
@@ -577,7 +570,7 @@ export type StringOperators = {
 export type FlattenArray<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = {
   [P in Prefix]?: ArrayOperators<
     DefaultOperators<FlattenForFilter<T, "", Prev[Depth]>>
@@ -587,7 +580,7 @@ export type FlattenArray<
 export type FlattenObject<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = {
   [K in keyof T]-?: FlattenForFilter<
     T[K],
@@ -600,33 +593,33 @@ export type FlattenObject<
 export type FlattenForFilter<
   T = {},
   Prefix extends string = "",
-  Depth extends number = 10
+  Depth extends number = 10,
 > = [Depth] extends [never]
   ? {}
   : IsScalar<T> extends true
-  ? Prefix extends ""
-    ? FilterOperators<T>
-    : { [P in Prefix]?: FilterOperators<T> }
-  : IsScalar<T> extends true
-  ? { [P in Prefix]?: FilterOperators<T> } // treat it like scalar
-  : T extends (infer U)[]
-  ? FlattenArray<U, Prefix, Depth>
-  : FlattenObject<T, Prefix, Depth>;
+    ? Prefix extends ""
+      ? FilterOperators<T>
+      : { [P in Prefix]?: FilterOperators<T> }
+    : IsScalar<T> extends true
+      ? { [P in Prefix]?: FilterOperators<T> } // treat it like scalar
+      : T extends (infer U)[]
+        ? FlattenArray<U, Prefix, Depth>
+        : FlattenObject<T, Prefix, Depth>;
 
 // --- Add FilterOperators for scalars ---
 export type FilterOperators<T> = T extends number
   ? (ScalarOperators<T> & NumberOperators) | T
   : T extends string
-  ? (ScalarOperators<T> & StringOperators) | T
-  : T extends Date
-  ? ScalarOperators<T> & DateOperators
-  : T extends ObjectIdLike
-  ? ScalarOperators<T>
-  : T;
+    ? (ScalarOperators<T> & StringOperators) | T
+    : T extends Date
+      ? ScalarOperators<T> & DateOperators
+      : T extends ObjectIdLike
+        ? ScalarOperators<T>
+        : T;
 
 // --- Wrap flattened object with default Mongo operators ---
 export type FilterWithOperators<T = {}, Depth extends number = 9> = [
-  Depth
+  Depth,
 ] extends [never]
   ? T
   : DefaultOperators<T, Depth>;
@@ -667,7 +660,7 @@ export type PartitionSpec<T = {}> = {
 
 export type AssertValidReplacements<
   T,
-  R extends Record<PopulatableKeys<T>, any>
+  R extends Record<PopulatableKeys<T>, any>,
 > = R;
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -686,7 +679,7 @@ export type PublicAPIPaths<API> = {
 
 export type InferBaseAndPopulated<
   Def,
-  M extends HTTPMethod
+  M extends HTTPMethod,
 > = M extends keyof Def
   ? Def[M] extends () => {
       RequestQuery?: infer Q;
@@ -705,8 +698,8 @@ export type RequestBody<Def, M extends HTTPMethod> = M extends keyof Def
     }
     ? B
     : Def[M] extends { RequestBody?: infer R }
-    ? R
-    : undefined
+      ? R
+      : undefined
   : never;
 
 export type InferQueryParams<Def, M extends HTTPMethod> = M extends keyof Def
@@ -715,8 +708,8 @@ export type InferQueryParams<Def, M extends HTTPMethod> = M extends keyof Def
     }
     ? Omit<Q, "include" | "select" | "groupBy">
     : Def[M] extends { RequestQuery?: infer QQ }
-    ? QQ
-    : undefined
+      ? QQ
+      : undefined
   : never;
 
 export type InferResponseBody<
@@ -724,7 +717,7 @@ export type InferResponseBody<
   M extends HTTPMethod,
   Include extends any[],
   Select extends any[],
-  Agg extends AggLike<any> | undefined = undefined
+  Agg extends AggLike<any> | undefined = undefined,
 > = M extends keyof Def
   ? Def[M] extends () => infer FRB
     ? FRB extends { ResponseBody?: infer RB }
@@ -784,8 +777,8 @@ export type InferResponseBody<
         : { ResponseIsNot_BuildResponseBody_: true }
       : { ResponseBodyMalformedError: true }
     : Def[M] extends { ResponseBody?: infer R }
-    ? R
-    : { ResponseIsNotAFunctionError: true }
+      ? R
+      : { ResponseIsNotAFunctionError: true }
   : { MethodNotFoundError: true };
 
 export type RequestParamInclude<Def, M extends HTTPMethod> = M extends keyof Def
@@ -803,7 +796,7 @@ export type RequestParamInclude<Def, M extends HTTPMethod> = M extends keyof Def
 export type RequestParamSelect<
   Def,
   M extends HTTPMethod,
-  Include extends any[]
+  Include extends any[],
 > = M extends keyof Def
   ? Def[M] extends () => { RequestQuery?: infer Q }
     ? Q extends { select?: infer S }
@@ -820,8 +813,8 @@ export type InferRequestPath<Def, M extends HTTPMethod> = M extends keyof Def
     }
     ? PP
     : Def[M] extends {
-        RequestParams?: infer P extends Record<string, string | number>;
-      }
-    ? P
-    : undefined
+          RequestParams?: infer P extends Record<string, string | number>;
+        }
+      ? P
+      : undefined
   : undefined;
