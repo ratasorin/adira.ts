@@ -2,17 +2,16 @@ import mongoose from "mongoose";
 import {
   BuildResponseBody,
   ExtractResponseBodyArray,
-  ExtractResponseBodySingle,
   ExtractSelect,
-  Filter,
-  InferResponseBody,
+  FilterDefinition,
   Leafs,
   NestedSelection,
   ObjectIdLike,
   PopulatedSchema,
   SelectableFieldsAfterJoin,
-  SortSpec,
+  SortByDefinition,
 } from ".";
+import { InferResponseBody } from "./helpers/frontend";
 
 declare module "mongoose" {
   namespace Types {
@@ -94,7 +93,7 @@ type SelectableLeafs = Leafs<SelectableFields>;
 
 type Select = ExtractSelect<PopulatedUser, User, ["friends.friend"]>;
 
-type FilterUser = Filter<PopulatedUser>;
+type FilterUser = FilterDefinition<PopulatedUser>;
 const filter: FilterUser = {
   $or: [
     {
@@ -114,7 +113,7 @@ const filter: FilterUser = {
   ],
 };
 
-type SortBy = SortSpec<PopulatedUser>;
+type SortBy = SortByDefinition<PopulatedUser>;
 const sort: SortBy = {
   "friends.friend.baseUser": 1,
 };
@@ -124,7 +123,7 @@ type TestExtractResponse = ExtractResponseBodyArray<
   User,
   ["friends.friend"],
   ["name", "email", "age", "friends.friend"],
-  [{ applyOnField: "age"; op: "$sum"; alias: "ABC" }],
+  [{ target: "friends.friend"; operation: "$count"; as: "allFriends" }],
   { hello: "world" }
 >;
 

@@ -1,17 +1,12 @@
 import {
-  GroupBy,
-  SortSpec,
   ExtractSelect,
-  Filter,
   PopulatableKeys,
   PopulatedSchema,
   SelectableFieldsAfterJoin,
-  BuildResponseBody,
   ExtractResponse,
   GroupOperationsDefinition,
-  SortDirection,
   Leafs,
-  RowSelection,
+  Backend,
 } from "@n/adira.core.ts";
 
 import { Document, Model, PipelineStage } from "mongoose";
@@ -23,138 +18,6 @@ import {
 } from "./db/$assert-pipeline-params";
 import mongoose from "mongoose";
 
-export type InferInclude<Handler> = Handler extends { __base?: infer T }
-  ? string[] & { __base?: T }
-  : never;
-
-export type InferSelect<Handler> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? Leafs<P>[] & { __full?: P; __base?: T }
-  : never;
-
-export type InferFilter<Handler> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? Filter<P> & { __full?: P; __base?: T }
-  : never;
-
-export type InferGroupBy<Handler> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? {
-      fields: Leafs<P>[];
-      operations: GroupOperationsDefinition<P>[];
-    } & {
-      __full?: P;
-      __base?: T;
-    }
-  : never;
-
-export type InferSort<Handler> = Handler extends {
-  __populated?: infer P;
-}
-  ? Record<string, SortDirection> & { __full?: P }
-  : never;
-
-export type GetResponseBody<
-  Handler,
-  Include extends any[],
-  Select extends any[],
-  Aggregation extends GroupOperationsDefinition<any> = [],
-  Extra = {},
-> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? BuildResponseBody<P, T, Include, Select, Aggregation, true, Extra>
-  : never;
-
-export type PatchResponseBody<
-  Handler,
-  Include extends any[],
-  Select extends any[],
-  Extra = {},
-> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? BuildResponseBody<P, T, Include, Select, undefined, false, Extra>
-  : never;
-
-export type InferPartition<Handler> = Handler extends {
-  __base?: infer T;
-}
-  ? {
-      groupBy: string[];
-      orderBy: string[];
-      take: "first" | "last";
-    } & { __base?: T }
-  : never;
-
-export type PostResponseBody<
-  Handler,
-  Include extends any[],
-  Select extends any[],
-  Extra = {},
-> = Handler extends {
-  __populated?: infer P;
-  __base?: infer T;
-}
-  ? BuildResponseBody<P, T, Include, Select, undefined, false, Extra>
-  : never;
-
-export type GetObjectAfterJoin<
-  Handler,
-  Include extends readonly any[],
-> = Handler extends { __populated?: infer P; __base?: infer T }
-  ? SelectableFieldsAfterJoin<P, T, Include>
-  : never;
-
-export type InferHandlerParams<Handler> = {
-  include: InferInclude<Handler>;
-  select: InferSelect<Handler>;
-  limit?: number;
-  offset?: number;
-  filters?: InferFilter<Handler>;
-  groupBy?: InferGroupBy<Handler>;
-  sort?: InferSort<Handler>;
-  partition?: InferPartition<Handler>;
-};
-
-export type InferHandlerResponse<Handler, HandlerExtraWorkReturn> =
-  Handler extends {
-    __populated?: infer P;
-    __base?: infer T;
-  }
-    ? {
-        executor: any;
-        handler?: HandlerExtraWorkReturn;
-      } & {
-        __populated?: P;
-        __base?: T;
-      }
-    : never;
-
-export type InferExecutorParams<
-  Include extends any[],
-  Select extends any[],
-  Aggregations extends any[],
-  ObjectAfterJoin,
-> = {
-  include: Include;
-  select: Select;
-  limit?: number;
-  offset?: number;
-  filters?: Filter<ObjectAfterJoin>;
-  groupBy?: GroupBy<ObjectAfterJoin, Aggregations>;
-  sort?: SortSpec<ObjectAfterJoin>;
-  partition?: RowSelection<ObjectAfterJoin>;
-};
-
 export type NormalizeArray<A, T> = A extends never[] ? T : A;
 
 export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -165,11 +28,18 @@ export type ExecuteGET<
 > = (<
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<PSchema, T, Include>,
-  Agg extends GroupOperationsDefinition<PSchema>,
+  GroupOperations extends GroupOperationsDefinition<Leafs<PSchema>>,
   ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
 >(
-  params: InferExecutorParams<Include, Select, Agg, ObjectAfterJoin>,
-) => Promise<ExtractResponse<PSchema, T, Include, Select, Agg, true>>) & {
+  params: Backend.InferExecutorParams<
+    Include,
+    Select,
+    GroupOperations,
+    ObjectAfterJoin
+  >,
+) => Promise<
+  ExtractResponse<PSchema, T, Include, Select, GroupOperations, true>
+>) & {
   __base?: T;
   __populated?: PSchema;
 };
@@ -179,17 +49,16 @@ export type ExecutePOST<
   R extends Partial<Record<string, any>>,
   PSchema = PopulatedSchema<T, R>,
 > = (<
-  UserIdField extends keyof T,
-  NewItem extends Omit<T, "_id" | UserIdField>,
-  Include extends PopulatableKeys<T>[],
+  NewItem extends Omit<T, "_id">,
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<PSchema, T, Include>,
->(params: {
-  fields: NewItem;
-  userId: string;
-  userField: UserIdField;
-  include?: Include;
-  select?: Select;
-}) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
+>(
+  params: {
+    include?: Include;
+    select?: Select;
+  },
+  newItem: NewItem,
+) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
   __base?: T;
   __populated?: PSchema;
 };
@@ -199,18 +68,20 @@ export type ExecutePATCH<
   R extends Partial<Record<string, any>>,
   PSchema = PopulatedSchema<T, R>,
 > = (<
-  UserIdField extends keyof T,
-  NewItem extends Partial<Omit<T, "_id" | UserIdField>>,
-  Include extends PopulatableKeys<T>[],
+  NewItem extends Partial<Omit<T, "_id">>,
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<PSchema, T, Include>,
->(params: {
-  fields: NewItem;
-  id: string;
-  userId: string;
-  userField: UserIdField;
-  include?: Include;
-  select?: Select;
-}) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
+>(
+  id: string,
+  params: {
+    include?: Include;
+    select?: Select;
+  },
+  newItem: NewItem,
+  config: {
+    createNewRecord?: boolean;
+  },
+) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
   __base?: T;
   __populated?: PSchema;
 };
@@ -373,10 +244,8 @@ export const generateExecutor = <
   }
 
   if (method === "POST") {
-    const fn: ExecutePOST<T, Replacements> = async (params) => {
+    const fn: ExecutePOST<T, Replacements> = async (params, newItem) => {
       const { include, select } = normalizeParams(params);
-      let fields: any = params.fields;
-      const { userField, userId } = params;
 
       const pipeline: PipelineStage[] = [];
 
@@ -384,7 +253,7 @@ export const generateExecutor = <
       const lookupStages = generateLookupQuery(model, include);
       pipeline.push(...lookupStages, projectStage);
 
-      const newRecord = await model.create({ ...fields, [userField]: userId });
+      const newRecord = await model.create(newItem);
       pipeline.unshift({ $match: { _id: newRecord._id } });
 
       const [record] = await model.aggregate(pipeline);
@@ -395,10 +264,13 @@ export const generateExecutor = <
   }
 
   if (method === "PATCH") {
-    const fn: ExecutePATCH<T, Replacements> = async (params) => {
+    const fn: ExecutePATCH<T, Replacements> = async (
+      id,
+      params,
+      fields,
+      config,
+    ) => {
       const { include, select } = normalizeParams(params);
-      let fields: any = params.fields;
-      const { userField, userId, id } = params;
 
       const pipeline: PipelineStage[] = [];
 
@@ -411,8 +283,8 @@ export const generateExecutor = <
 
       const newRecord = await model.findByIdAndUpdate(
         new mongoose.Types.ObjectId(id),
-        { ...fields, [userField]: userId },
-        { new: true, runValidators: true },
+        fields,
+        { new: config.createNewRecord, runValidators: true },
       );
 
       if (!newRecord) throw new Error(`New: Record with id ${id} not found!`);

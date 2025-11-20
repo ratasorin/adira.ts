@@ -1,8 +1,4 @@
-import {
-  InferHandlerParams,
-  generateExecutor,
-  InferHandlerResponse,
-} from "@n/adira.backend.ts";
+import { Backend, generateExecutor } from "@n/adira.backend.ts";
 import User, { IUser } from "../models/User";
 import { ApplyReplacements } from "@n/adira.core.ts";
 import { Request, Response } from "express";
@@ -15,8 +11,8 @@ const getUsers = generateExecutor<"GET", IUser, FullUser>("GET", User);
 export type GetUsersFn = typeof getUsers;
 
 export const getUsersHandler = async (
-  req: Request<any, any, any, InferHandlerParams<GetUsersFn>>,
-  res: Response<InferHandlerResponse<GetUsersFn, {}> | ErrorResponse>,
+  req: Request<any, any, any, Backend.InferHandlerParams<GetUsersFn>>,
+  res: Response<Backend.InferHandlerResponse<GetUsersFn, {}> | ErrorResponse>,
 ) => {
   try {
     const users = await getUsers(req.query);

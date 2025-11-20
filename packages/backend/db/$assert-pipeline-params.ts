@@ -1,18 +1,24 @@
 export function assertRecord(
   v?: unknown,
-  field?: string
+  field?: string,
 ): asserts v is Record<string, any> | undefined {
   if (v === undefined) return;
   if (typeof v !== "object" || v === null || Array.isArray(v))
     throw new Error(`Invalid '${field}': expected an object`);
 }
 
-export function assertArray<T>(v: unknown, checker: (item?: T) => boolean, field?: string): asserts v is T[] {
+export function assertArray<T>(
+  v: unknown,
+  checker: (item?: T) => boolean,
+  field?: string,
+): asserts v is T[] {
   if (!Array.isArray(v) || !v.every(checker))
     throw new Error(`Invalid '${field}': expected string[]`);
 }
 
-export function assertSortSpec(v?: unknown): asserts v is Record<string, -1 | 1> | undefined {
+export function assertSortBy(
+  v?: unknown,
+): asserts v is Record<string, -1 | 1> | undefined {
   if (v === undefined) return;
   assertRecord(v, "sort");
   for (const [k, val] of Object.entries(v)) {
@@ -21,11 +27,13 @@ export function assertSortSpec(v?: unknown): asserts v is Record<string, -1 | 1>
   }
 }
 
-export function assertPartitionSpec(v?: unknown): asserts v is {
-  groupBy: string;
-  orderBy: string;
-  take: "first" | "last";
-} | undefined {
+export function assertPartitionSpec(v?: unknown): asserts v is
+  | {
+      groupBy: string;
+      orderBy: string;
+      take: "first" | "last";
+    }
+  | undefined {
   if (v === undefined) return;
 
   assertRecord(v, "partition");
@@ -36,26 +44,37 @@ export function assertPartitionSpec(v?: unknown): asserts v is {
     (take !== "first" && take !== "last")
   )
     throw new Error(
-      "Invalid 'partition': must have { groupBy: string, orderBy: string, take: 'first' | 'last' }"
+      "Invalid 'partition': must have { groupBy: string, orderBy: string, take: 'first' | 'last' }",
     );
 }
 
-
-export interface AggregateField { alias: string, op: string; applyOnField: string }
+export interface AggregateField {
+  alias: string;
+  op: string;
+  applyOnField: string;
+}
 export interface SimpleGroupBySpec {
   fields: string[];
-  aggregations?: Array<AggregateField>
+  aggregations?: Array<AggregateField>;
 }
 
-export function assertGroupBySpec(v?: SimpleGroupBySpec): asserts v is SimpleGroupBySpec {
+export function assertGroupBySpec(
+  v?: SimpleGroupBySpec,
+): asserts v is SimpleGroupBySpec {
   if (v === undefined) return;
 
   assertRecord(v, "groupBy");
   if (!Array.isArray(v.fields) || !v.fields.every((f) => typeof f === "string"))
     throw new Error("Invalid 'groupBy.fields': expected string[]");
   if (v.aggregations !== undefined)
-    assertArray<AggregateField>(v.aggregations, (item) => typeof item?.alias === "string" && typeof item?.applyOnField === "string" && typeof item?.op === "string", 'groupBy.aggregations')
-
+    assertArray<AggregateField>(
+      v.aggregations,
+      (item) =>
+        typeof item?.alias === "string" &&
+        typeof item?.applyOnField === "string" &&
+        typeof item?.op === "string",
+      "groupBy.aggregations",
+    );
 }
 
 export function normalizeParams(params: {
@@ -95,7 +114,7 @@ export function normalizeParams(params: {
   // Optional objects
   assertRecord(filters, "filters");
   assertGroupBySpec(groupBy);
-  assertSortSpec(sort);
+  assertSortBy(sort);
   assertPartitionSpec(partition);
 
   return {

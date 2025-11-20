@@ -651,13 +651,13 @@ export type DefaultOperators<T = {}, Depth extends number = 9> = T & {
   $not?: FilterWithOperators<T, Prev[Depth]>;
 };
 
-export type Filter<FullObject = {}> = FilterWithOperators<
+export type FilterDefinition<FullObject = {}> = FilterWithOperators<
   FlattenForFilter<FullObject>
 >;
 
 export type SortDirection = 1 | -1;
 
-export type SortSpec<FullObject = {}> = Partial<
+export type SortByDefinition<FullObject = {}> = Partial<
   Record<Leafs<FullObject> & string, SortDirection>
 >;
 
@@ -674,12 +674,15 @@ export type GroupOperationsDefinition<TargetLeaf> = Array<{
   as: string;
 }>;
 
-export type GroupBy<Fields = [], GroupOperations = []> = {
+export type GroupByDefinition<
+  Fields extends any[] = [],
+  GroupOperations extends any[] = [],
+> = {
   fields: Fields;
   operations: GroupOperations;
 };
 
-export type RowSelection<T = {}> = {
+export type RowsPrunerDefiniton<T = {}> = {
   partitionBy: Leafs<T>;
   orderBy: Leafs<T>;
   pick: "first" | "last";
@@ -690,160 +693,5 @@ export type AssertValidReplacements<
   R extends Record<PopulatableKeys<T>, any>,
 > = R;
 
-export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-
-export type AllKeys<T> = T extends unknown ? keyof T : never;
-
-export type APIMethods<API, R extends string> = AllKeys<API[R & keyof API]>;
-
-type StripAPI<Path extends string> = Path extends `/api${infer Rest}`
-  ? Rest
-  : never;
-
-export type PublicAPIPaths<API> = {
-  [K in keyof API as StripAPI<K & string>]: K;
-};
-
-export type InferBaseAndPopulated<
-  Def,
-  M extends HTTPMethod,
-> = M extends keyof Def
-  ? Def[M] extends () => {
-      RequestQuery?: infer Q;
-    }
-    ? Q extends { select?: infer S }
-      ? S extends { __base?: infer B; __full?: infer P }
-        ? { base: B; full: P }
-        : { base: null; full: null }
-      : { base: undefined; full: undefined }
-    : { base: "error"; full: "error" }
-  : { base: "never"; full: "never" };
-
-export type RequestBody<Def, M extends HTTPMethod> = M extends keyof Def
-  ? Def[M] extends () => {
-      RequestBody?: infer B;
-    }
-    ? B
-    : Def[M] extends { RequestBody?: infer R }
-      ? R
-      : undefined
-  : never;
-
-export type InferQueryParams<Def, M extends HTTPMethod> = M extends keyof Def
-  ? Def[M] extends () => {
-      RequestQuery?: infer Q;
-    }
-    ? Omit<Q, "include" | "select" | "groupBy">
-    : Def[M] extends { RequestQuery?: infer QQ }
-      ? QQ
-      : undefined
-  : never;
-
-export type InferResponseBody<
-  Def,
-  M extends HTTPMethod,
-  Include extends any[],
-  Select extends any[],
-  GroupOperations extends
-    | GroupOperationsDefinition<any>
-    | undefined = undefined,
-> = M extends keyof Def
-  ? Def[M] extends () => infer FRB
-    ? FRB extends { ResponseBody?: infer RB }
-      ? Extract<
-          RB,
-          {
-            __full?: any;
-            __base?: any;
-            __extra?: any;
-            __array?: any;
-          }
-        > extends {
-          __full?: infer FullObject;
-          __base?: infer Base;
-          __extra?: infer Rest;
-          __array?: infer IsArray;
-        }
-        ? IsArray extends true
-          ?
-              | ExtractResponseBodyArray<
-                  FullObject,
-                  Base,
-                  Include,
-                  Select,
-                  GroupOperations,
-                  Rest
-                >
-              | Exclude<
-                  RB,
-                  | {
-                      __full?: FullObject;
-                      __base?: Base;
-                      __extra?: Rest;
-                      __array?: IsArray;
-                    }
-                  | { base: any; extra: any }
-                >
-          :
-              | ExtractResponseBodySingle<
-                  FullObject,
-                  Base,
-                  Include,
-                  Select,
-                  GroupOperations,
-                  Rest
-                >
-              | Exclude<
-                  RB,
-                  | {
-                      __full?: FullObject;
-                      __base?: Base;
-                      __extra?: Rest;
-                      __array?: IsArray;
-                    }
-                  | { base: any; extra: any }
-                >
-        : { ResponseIsNot_BuildResponseBody_: true }
-      : { ResponseBodyMalformedError: true }
-    : Def[M] extends { ResponseBody?: infer R }
-      ? R
-      : { ResponseIsNotAFunctionError: true }
-  : { MethodNotFoundError: true };
-
-export type RequestParamInclude<Def, M extends HTTPMethod> = M extends keyof Def
-  ? Def[M] extends () => {
-      RequestQuery?: infer Q;
-    }
-    ? Q extends { include: infer I }
-      ? I extends { __base?: infer Base }
-        ? PopulatableKeys<Base>[]
-        : never
-      : never
-    : never
-  : never;
-
-export type RequestParamSelect<
-  Def,
-  M extends HTTPMethod,
-  Include extends any[],
-> = M extends keyof Def
-  ? Def[M] extends () => { RequestQuery?: infer Q }
-    ? Q extends { select?: infer S }
-      ? S extends { __full?: infer Full; __base?: infer Base }
-        ? ExtractSelect<Full, Base, Include>
-        : never
-      : never
-    : never
-  : never;
-
-export type InferRequestPath<Def, M extends HTTPMethod> = M extends keyof Def
-  ? Def[M] extends () => {
-      RequestPath?: infer PP;
-    }
-    ? PP
-    : Def[M] extends {
-          RequestParams?: infer P extends Record<string, string | number>;
-        }
-      ? P
-      : undefined
-  : undefined;
+export * as Backend from "./helpers/backend";
+export * as Frontend from "./helpers/frontend";
