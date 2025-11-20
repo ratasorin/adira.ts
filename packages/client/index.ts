@@ -1,7 +1,7 @@
 import {
-  AggLike,
+  GroupOperationsDefinition,
   APIMethods,
-  GroupSpec,
+  GroupBy,
   HTTPMethod,
   InferBaseAndPopulated,
   InferQueryParams,
@@ -27,9 +27,9 @@ const replacePathParams = (path: string, pathParams?: any): string => {
 };
 
 export const createApiClient = <
-  API extends Record<string, Partial<Record<HTTPMethod, any>>>
+  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
 >(
-  baseUrl: string
+  baseUrl: string,
 ) => {
   return async function apiCall<
     PublicPaths extends PublicAPIPaths<API>,
@@ -37,12 +37,12 @@ export const createApiClient = <
     Method extends APIMethods<API, PublicPaths[Path & string] & string>,
     Include extends RequestParamInclude<Endpoint, Method>,
     Select extends RequestParamSelect<Endpoint, Method, Include>,
-    Agg extends AggLike<Full>,
+    Agg extends GroupOperationsDefinition<Full>,
     Full extends InferBaseAndPopulated<Endpoint, Method>["full"],
     Data extends RequestBody<Endpoint, Method>,
     QueryParams extends InferQueryParams<Endpoint, Method>,
     PathParam extends InferRequestPath<Endpoint, Method>,
-    Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API]
+    Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
   >(
     url: Path,
     method: Method,
@@ -52,12 +52,12 @@ export const createApiClient = <
       query,
     }: {
       query?: { include: Include; select: Select } & (Method extends "GET"
-        ? { groupBy?: GroupSpec<Full, Agg> }
+        ? { groupBy?: GroupBy<Full, Agg> }
         : {}) &
         QueryParams;
       data?: Data;
       path?: PathParam;
-    }
+    },
   ): Promise<InferResponseBody<Endpoint, Method, Include, Select, Agg>> {
     const fullPath = replacePathParams(url as string, path);
     const fullUrl = `${baseUrl}${

@@ -387,7 +387,9 @@ export type BuildResponseBody<
   BaseSchema = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  Agg extends AggLike<any> | undefined = undefined,
+  GroupOperations extends
+    | GroupOperationsDefinition<any>
+    | undefined = undefined,
   IsArray extends boolean = false,
   Extra = {},
 > = (IsArray extends true
@@ -396,7 +398,7 @@ export type BuildResponseBody<
       BaseSchema,
       Include,
       Select,
-      Agg,
+      GroupOperations,
       Extra
     >
   : ExtractResponseBodySingle<
@@ -404,7 +406,7 @@ export type BuildResponseBody<
       BaseSchema,
       Include,
       Select,
-      Agg,
+      GroupOperations,
       Extra
     >) & {
   __full?: FullSchema;
@@ -438,8 +440,8 @@ export type EnhacedExtractSelect<
 //   Base = {},
 //   Include extends any[] = [],
 //   Select extends any[] = [],
-//   Agg = []
-// > = Agg extends []
+//   GroupOperations = []
+// > = GroupOperations extends []
 //   ? PickFromQuery<FullObject, Include, false> &
 //       Omit<Base, TopLevelKeys<Include>[number]> extends infer R
 //     ? Select extends []
@@ -463,8 +465,8 @@ export type EnhacedExtractSelect<
 //                 false
 //               >
 //         : {};
-//       grouped: Agg extends Array<{ alias: string }>
-//         ? { [K in Agg[number]["alias"]]: number }
+//       grouped: GroupOperations extends Array<{ alias: string }>
+//         ? { [K in GroupOperations[number]["alias"]]: number }
 //         : {};
 //     };
 
@@ -490,9 +492,9 @@ export type ExtractResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  Agg extends { alias: string }[] | undefined = undefined,
+  GroupOperations extends { as: string }[] | undefined = undefined,
   IsArray extends boolean = false,
-> = Agg extends undefined
+> = GroupOperations extends undefined
   ? IsArray extends true
     ? ExtractBase<FullObject, Base, Include, Select>[]
     : ExtractBase<FullObject, Base, Include, Select>
@@ -501,8 +503,8 @@ export type ExtractResponse<
         ? ExtractBase<FullObject, Base, Include, Select>[]
         : ExtractBase<FullObject, Base, Include, Select>;
       grouped: ({
-        // @ts-expect-error Alias will exist on each element!
-        [K in Agg[number]["alias"]]: number;
+        // @ts-expect-error "as" will exist on each element!
+        [K in GroupOperations[number]["as"]]: number;
       } & { _id: string })[];
     };
 
@@ -512,10 +514,19 @@ export type ExtractResponseBodySingle<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  Agg extends AggLike<any> | undefined = undefined,
+  GroupOperations extends
+    | GroupOperationsDefinition<any>
+    | undefined = undefined,
   Extra = {},
 > = {
-  base?: ExtractResponse<FullObject, Base, Include, Select, Agg, false>;
+  base?: ExtractResponse<
+    FullObject,
+    Base,
+    Include,
+    Select,
+    GroupOperations,
+    false
+  >;
   extra?: Extra;
 };
 
@@ -525,10 +536,19 @@ export type ExtractResponseBodyArray<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  Agg extends AggLike<any> | undefined = undefined,
+  GroupOperations extends
+    | GroupOperationsDefinition<any>
+    | undefined = undefined,
   Extra = {},
 > = {
-  base?: ExtractResponse<FullObject, Base, Include, Select, Agg, true>;
+  base?: ExtractResponse<
+    FullObject,
+    Base,
+    Include,
+    Select,
+    GroupOperations,
+    true
+  >;
   extra?: Extra;
 };
 
@@ -641,21 +661,28 @@ export type SortSpec<FullObject = {}> = Partial<
   Record<Leafs<FullObject> & string, SortDirection>
 >;
 
-export type GroupOperations = "$sum" | "$avg" | "$min" | "$max" | "$count";
-export type AggLike<Populated = {}> = Array<{
-  alias: string;
-  op: GroupOperations;
-  applyOnField: Leafs<Populated>;
+export type AvailableGroupOperation =
+  | "$sum"
+  | "$avg"
+  | "$min"
+  | "$max"
+  | "$count";
+
+export type GroupOperationsDefinition<TargetLeaf> = Array<{
+  target: TargetLeaf;
+  operation: AvailableGroupOperation;
+  as: string;
 }>;
-export type GroupSpec<Populated = {}, Aggregations = []> = {
-  fields: Leafs<Populated>[];
-  aggregations: Aggregations;
+
+export type GroupBy<Fields = [], GroupOperations = []> = {
+  fields: Fields;
+  operations: GroupOperations;
 };
 
-export type PartitionSpec<T = {}> = {
-  groupBy: Leafs<T>;
+export type RowSelection<T = {}> = {
+  partitionBy: Leafs<T>;
   orderBy: Leafs<T>;
-  take: "first" | "last";
+  pick: "first" | "last";
 };
 
 export type AssertValidReplacements<
@@ -717,7 +744,9 @@ export type InferResponseBody<
   M extends HTTPMethod,
   Include extends any[],
   Select extends any[],
-  Agg extends AggLike<any> | undefined = undefined,
+  GroupOperations extends
+    | GroupOperationsDefinition<any>
+    | undefined = undefined,
 > = M extends keyof Def
   ? Def[M] extends () => infer FRB
     ? FRB extends { ResponseBody?: infer RB }
@@ -742,7 +771,7 @@ export type InferResponseBody<
                   Base,
                   Include,
                   Select,
-                  Agg,
+                  GroupOperations,
                   Rest
                 >
               | Exclude<
@@ -761,7 +790,7 @@ export type InferResponseBody<
                   Base,
                   Include,
                   Select,
-                  Agg,
+                  GroupOperations,
                   Rest
                 >
               | Exclude<

@@ -1,8 +1,6 @@
 import {
-  AggLike,
-  GroupSpec,
+  GroupBy,
   SortSpec,
-  PartitionSpec,
   ExtractSelect,
   Filter,
   PopulatableKeys,
@@ -10,10 +8,10 @@ import {
   SelectableFieldsAfterJoin,
   BuildResponseBody,
   ExtractResponse,
-  GroupOperations,
+  GroupOperationsDefinition,
   SortDirection,
   Leafs,
-  FlattenForFilter,
+  RowSelection,
 } from "@n/adira.core.ts";
 
 import { Document, Model, PipelineStage } from "mongoose";
@@ -48,12 +46,8 @@ export type InferGroupBy<Handler> = Handler extends {
   __base?: infer T;
 }
   ? {
-      fields: string[];
-      aggregations: {
-        alias: string;
-        op: GroupOperations;
-        applyOnField: string;
-      };
+      fields: Leafs<P>[];
+      operations: GroupOperationsDefinition<P>[];
     } & {
       __full?: P;
       __base?: T;
@@ -70,7 +64,7 @@ export type GetResponseBody<
   Handler,
   Include extends any[],
   Select extends any[],
-  Aggregation extends AggLike<any> = [],
+  Aggregation extends GroupOperationsDefinition<any> = [],
   Extra = {},
 > = Handler extends {
   __populated?: infer P;
@@ -156,9 +150,9 @@ export type InferExecutorParams<
   limit?: number;
   offset?: number;
   filters?: Filter<ObjectAfterJoin>;
-  groupBy?: GroupSpec<ObjectAfterJoin, Aggregations>;
+  groupBy?: GroupBy<ObjectAfterJoin, Aggregations>;
   sort?: SortSpec<ObjectAfterJoin>;
-  partition?: PartitionSpec<ObjectAfterJoin>;
+  partition?: RowSelection<ObjectAfterJoin>;
 };
 
 export type NormalizeArray<A, T> = A extends never[] ? T : A;
@@ -171,7 +165,7 @@ export type ExecuteGET<
 > = (<
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<PSchema, T, Include>,
-  Agg extends AggLike<PSchema>,
+  Agg extends GroupOperationsDefinition<PSchema>,
   ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
 >(
   params: InferExecutorParams<Include, Select, Agg, ObjectAfterJoin>,
