@@ -1,18 +1,22 @@
-import { ExtractResponseBodySingle } from "..";
+import {
+  EXECUTOR_KEY,
+  EXTRA_KEY,
+  ExtractResponseBodyMUTATE,
+  ExtractResponseBodyQUERY,
+} from "..";
 import { ExtractSelect } from "..";
 import { PopulatableKeys } from "..";
-import { ExtractResponseBodyArray } from "..";
 import { GroupOperationsDefinition } from "..";
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export type AllKeys<T> = T extends unknown ? keyof T : never;
 
-export type APIMethods<API, R extends string> = AllKeys<API[R & keyof API]>;
+export type APIMethods<API, R extends keyof API> = keyof API[R] & HTTPMethod;
 
 type StripAPI<Path extends string> = Path extends `/api${infer Rest}`
-  ? Rest
-  : never;
+  ? Rest & string
+  : string;
 
 export type PublicAPIPaths<API> = {
   [K in keyof API as StripAPI<K & string>]: K;
@@ -53,12 +57,10 @@ export type ExtractQueryParams<Def, M extends HTTPMethod> = M extends keyof Def
   : never;
 
 export type ResponseBodyMetadata = {
-  executor?: any;
-  extra?: any;
+  [EXECUTOR_KEY]: any;
+  [EXTRA_KEY]?: any;
   __full?: any;
   __base?: any;
-  __extra?: any;
-  __array?: any;
 };
 
 export type ExtractResBody<
@@ -71,37 +73,34 @@ export type ExtractResBody<
     | undefined = undefined,
 > = M extends keyof Def
   ? Def[M] extends { ResponseBody?: infer RB }
-    ? Extract<RB, ResponseBodyMetadata> extends {
-        __full?: infer Full;
-        __base?: infer Base;
-        __extra?: infer Extra;
-        __array?: infer IsArray;
-      }
-      ? IsArray extends true
-        ? ExtractResponseBodyArray<
-            Full,
-            Base,
-            Include,
-            Select,
-            GroupOperations,
-            Extra
-          > &
-            Exclude<RB, ResponseBodyMetadata>
-        : // SINGLE RESPONSE
-          ExtractResponseBodySingle<
-            Full,
-            Base,
-            Include,
-            Select,
-            GroupOperations,
-            Extra
-          > &
-            Exclude<RB, ResponseBodyMetadata>
-      : {
-          error: "Response body metadata missing (__full/__base/__extra/__array)";
+    ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
+      ? Extract<RB, ResponseBodyMetadata> extends {
+          [EXECUTOR_KEY]: any;
+          [EXTRA_KEY]?: any;
+          __full?: infer Full;
+          __base?: infer Base;
+          __extra?: infer Extra;
         }
-    : { error: "Malformed ResponseBody" }
-  : { error: "Endpoint method is not a function and has no ResponseBody" };
+        ? M extends "GET"
+          ?
+              | ExtractResponseBodyQUERY<
+                  Full,
+                  Base,
+                  Include,
+                  Select,
+                  GroupOperations,
+                  Extra
+                >
+              | Exclude<RB, ResponseBodyMetadata>
+          :
+              | ExtractResponseBodyMUTATE<Full, Base, Include, Select, Extra>
+              | Exclude<RB, ResponseBodyMetadata>
+        : {
+            error: "Response body metadata missing (__full/__base)";
+          }
+      : { error: "Malformed ResponseBody" }
+    : { error: "Endpoint method has no ResponseBody" }
+  : { error: "HTTP method not defined on endpoint" };
 
 export type ExtractReqInclude<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {

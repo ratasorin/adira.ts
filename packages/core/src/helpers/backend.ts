@@ -1,11 +1,19 @@
-import { GroupByDefinition } from "..";
+import {
+  ExtractResponseMUTATE,
+  ExtractResponseQUERY,
+  ExtractSelect,
+  GroupByDefinition,
+  PopulatableKeys,
+  PopulateSchema,
+  SelectableFieldsAfterJoin,
+} from "..";
 import { SortByDefinition } from "..";
 import { RowsPrunerDefiniton } from "..";
 import { GroupOperationsDefinition } from "..";
 import { FilterDefinition } from "..";
 import { Leafs } from "..";
 
-export type InferInclude<Base> = string[] & { __base?: Base };
+export type InferInclude<Base> = PopulatableKeys<Base>[] & { __base?: Base };
 
 export type InferSelect<Base, Full> = Leafs<Full>[] & {
   __full?: Full;
@@ -68,7 +76,7 @@ export type InferHandlerResponse<Handler, HandlerExtraWorkReturn> =
   }
     ? {
         executor: any;
-        handler?: HandlerExtraWorkReturn;
+        extra?: HandlerExtraWorkReturn;
       } & {
         __populated?: P;
         __base?: T;
@@ -90,3 +98,68 @@ export type InferExecutorParams<
   sort?: SortByDefinition<ObjectAfterJoin>;
   prune?: RowsPrunerDefiniton<ObjectAfterJoin>;
 };
+
+export type NormalizeArray<A, T> = A extends never[] ? T : A;
+
+export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
+  Include extends PopulatableKeys<T>[],
+  Select extends ExtractSelect<PSchema, T, Include>,
+  GroupOperations extends GroupOperationsDefinition<Leafs<PSchema>>,
+  ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
+>(
+  params: InferExecutorParams<
+    Include,
+    Select,
+    GroupOperations,
+    ObjectAfterJoin
+  >,
+) => Promise<
+  ExtractResponseQUERY<PSchema, T, Include, Select, GroupOperations>
+>) & {
+  __base?: T;
+  __populated?: PSchema;
+};
+
+export type ExecutePOST<T, PSchema = PopulateSchema<T>> = (<
+  NewItem extends Omit<T, "_id">,
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
+  Select extends ExtractSelect<PSchema, T, Include>,
+>(
+  params: {
+    include?: Include;
+    select?: Select;
+  },
+  newItem: NewItem,
+) => Promise<ExtractResponseMUTATE<PSchema, T, Include, Select>>) & {
+  __base?: T;
+  __populated?: PSchema;
+};
+
+export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
+  NewItem extends Partial<Omit<T, "_id">>,
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
+  Select extends ExtractSelect<PSchema, T, Include>,
+>(
+  id: string,
+  params: {
+    include?: Include;
+    select?: Select;
+  },
+  newItem: NewItem,
+  config: {
+    createNewRecord?: boolean;
+  },
+) => Promise<ExtractResponseMUTATE<PSchema, T, Include, Select>>) & {
+  __base?: T;
+  __populated?: PSchema;
+};
+
+export type ExecutorReturnType<T, Method extends METHOD> = Method extends "GET"
+  ? ExecuteGET<T>
+  : Method extends "POST"
+    ? ExecutePOST<T>
+    : Method extends "PATCH"
+      ? ExecutePATCH<T>
+      : never;

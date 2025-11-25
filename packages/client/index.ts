@@ -1,11 +1,11 @@
 import {
-  GroupOperationsDefinition,
+  CreateApiClient,
   Frontend,
   GroupByDefinition,
+  GroupOperationsDefinition,
   Leafs,
 } from "@n/adira.core.ts";
 import axios, { type AxiosRequestConfig } from "axios";
-export * from "@n/adira.core.ts";
 
 const replacePathParams = (path: string, pathParams?: any): string => {
   if (!pathParams) return path;
@@ -18,23 +18,20 @@ const replacePathParams = (path: string, pathParams?: any): string => {
   });
 };
 
-export const createApiClient = <
+export const createAxiosApiClient = <
   API extends Record<string, Partial<Record<Frontend.HTTPMethod, any>>>,
 >(
   baseUrl: string,
-) => {
+): ReturnType<CreateApiClient<API>> => {
   return async function apiCall<
     Metadata extends Frontend.ExtractMetadata<Endpoint, Method>,
     Full extends Frontend.ExtractFull<Metadata>,
     PublicPaths extends Frontend.PublicAPIPaths<API>,
-    Path extends keyof PublicPaths,
-    Method extends Frontend.APIMethods<
-      API,
-      PublicPaths[Path & string] & string
-    >,
+    Path extends keyof PublicPaths & string,
+    Method extends Frontend.APIMethods<API, PublicPaths[Path] & keyof API>,
     Include extends Frontend.ExtractReqInclude<Endpoint, Method>,
     Select extends Frontend.ExtractReqSelect<Endpoint, Method, Include>,
-    GroupOperations extends GroupOperationsDefinition<Full>,
+    GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
     Data extends Frontend.ExtractReqBody<Endpoint, Method>,
     QueryParams extends Frontend.ExtractQueryParams<Endpoint, Method>,
     PathParam extends Frontend.ExtractReqPath<Endpoint, Method>,
@@ -58,9 +55,7 @@ export const createApiClient = <
     Frontend.ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
   > {
     const fullPath = replacePathParams(url as string, path);
-    const fullUrl = `${baseUrl}${
-      fullPath.startsWith("/") ? fullPath : `/${fullPath}`
-    }`;
+    const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
 
     const config: AxiosRequestConfig = {
       method: method.toLowerCase() as any,
@@ -72,3 +67,6 @@ export const createApiClient = <
     return response.data as any;
   };
 };
+
+// Backward compatibility
+export const createApiClient = createAxiosApiClient;

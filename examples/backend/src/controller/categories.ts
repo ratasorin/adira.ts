@@ -1,29 +1,13 @@
-import { Backend, generateExecutor } from "@n/adira.backend.ts";
+import { generateExecutor } from "@n/adira.backend.ts";
 import Category, { ICategory } from "../models/Category";
-import {
-  AssertValidReplacements,
-  IsObjectId,
-  PopulatableKeys,
-} from "@n/adira.core.ts";
+import { Backend, PopulateSchema } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
-import mongoose from "mongoose";
 
-type FullCategory = AssertValidReplacements<ICategory, {}>;
-
-const getCategories = generateExecutor<"GET", ICategory, FullCategory>(
-  "GET",
-  Category,
-);
-const createCategory = generateExecutor<"POST", ICategory, FullCategory>(
-  "POST",
-  Category,
-);
-const updateCategory = generateExecutor<"PATCH", ICategory, FullCategory>(
-  "PATCH",
-  Category,
-);
-const deleteCategory = generateExecutor<"DELETE", ICategory, FullCategory>(
+const getCategories = generateExecutor<"GET", ICategory>("GET", Category);
+const createCategory = generateExecutor<"POST", ICategory>("POST", Category);
+const updateCategory = generateExecutor<"PATCH", ICategory>("PATCH", Category);
+const deleteCategory = generateExecutor<"DELETE", ICategory>(
   "DELETE",
   Category,
 );

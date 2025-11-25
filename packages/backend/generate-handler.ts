@@ -1,13 +1,4 @@
-import {
-  ExtractSelect,
-  PopulatableKeys,
-  PopulatedSchema,
-  SelectableFieldsAfterJoin,
-  ExtractResponse,
-  GroupOperationsDefinition,
-  Leafs,
-  Backend,
-} from "@n/adira.core.ts";
+import { Backend } from "@n/adira.core.ts";
 
 import { Document, Model, PipelineStage } from "mongoose";
 import { buildPopulatePipeline } from "./db/$lookup";
@@ -17,86 +8,6 @@ import {
   SimpleGroupBySpec,
 } from "./db/$assert-pipeline-params";
 import mongoose from "mongoose";
-
-export type NormalizeArray<A, T> = A extends never[] ? T : A;
-
-export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-export type ExecuteGET<
-  T,
-  R extends Partial<Record<string, any>>,
-  PSchema = PopulatedSchema<T, R>,
-> = (<
-  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
-  GroupOperations extends GroupOperationsDefinition<Leafs<PSchema>>,
-  ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
->(
-  params: Backend.InferExecutorParams<
-    Include,
-    Select,
-    GroupOperations,
-    ObjectAfterJoin
-  >,
-) => Promise<
-  ExtractResponse<PSchema, T, Include, Select, GroupOperations, true>
->) & {
-  __base?: T;
-  __populated?: PSchema;
-};
-
-export type ExecutePOST<
-  T,
-  R extends Partial<Record<string, any>>,
-  PSchema = PopulatedSchema<T, R>,
-> = (<
-  NewItem extends Omit<T, "_id">,
-  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
->(
-  params: {
-    include?: Include;
-    select?: Select;
-  },
-  newItem: NewItem,
-) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
-  __base?: T;
-  __populated?: PSchema;
-};
-
-export type ExecutePATCH<
-  T,
-  R extends Partial<Record<string, any>>,
-  PSchema = PopulatedSchema<T, R>,
-> = (<
-  NewItem extends Partial<Omit<T, "_id">>,
-  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
->(
-  id: string,
-  params: {
-    include?: Include;
-    select?: Select;
-  },
-  newItem: NewItem,
-  config: {
-    createNewRecord?: boolean;
-  },
-) => Promise<ExtractResponse<PSchema, T, Include, Select, undefined>>) & {
-  __base?: T;
-  __populated?: PSchema;
-};
-
-export type ExecutorReturnType<
-  Method extends METHOD,
-  T = {},
-  R extends Partial<Record<string, any>> = {},
-> = Method extends "GET"
-  ? ExecuteGET<T, R>
-  : Method extends "POST"
-    ? ExecutePOST<T, R>
-    : Method extends "PATCH"
-      ? ExecutePATCH<T, R>
-      : never;
 
 const generateProjectionQuery = (select: string[]): PipelineStage.Project => {
   return select.length
@@ -187,16 +98,12 @@ const generateSortQuery = (
     return [{ $sort }];
   } else return [];
 };
-export const generateExecutor = <
-  Method extends METHOD,
-  T,
-  Replacements extends Partial<Record<string, any>>,
->(
+export const generateExecutor = <Method extends Backend.METHOD, T>(
   method: Method,
   model: Model<T & Document>,
-): ExecutorReturnType<Method, T, Replacements> => {
+): Backend.ExecutorReturnType<T, Method> => {
   if (method === "GET") {
-    const fn: ExecuteGET<T, Replacements> = async (params) => {
+    const fn: Backend.ExecuteGET<T> = async (params) => {
       const {
         filters,
         groupBy,
@@ -244,7 +151,7 @@ export const generateExecutor = <
   }
 
   if (method === "POST") {
-    const fn: ExecutePOST<T, Replacements> = async (params, newItem) => {
+    const fn: Backend.ExecutePOST<T> = async (params, newItem) => {
       const { include, select } = normalizeParams(params);
 
       const pipeline: PipelineStage[] = [];
@@ -260,16 +167,11 @@ export const generateExecutor = <
 
       return record;
     };
-    return fn as ExecutorReturnType<Method, T, Replacements>;
+    return fn as Backend.ExecutorReturnType<T, Method>;
   }
 
   if (method === "PATCH") {
-    const fn: ExecutePATCH<T, Replacements> = async (
-      id,
-      params,
-      fields,
-      config,
-    ) => {
+    const fn: Backend.ExecutePATCH<T> = async (id, params, fields, config) => {
       const { include, select } = normalizeParams(params);
 
       const pipeline: PipelineStage[] = [];
@@ -294,7 +196,7 @@ export const generateExecutor = <
 
       return record;
     };
-    return fn as ExecutorReturnType<Method, T, Replacements>;
+    return fn as Backend.ExecutorReturnType<T, Method>;
   }
 
   throw new Error(`Unsupported method: ${method}`);

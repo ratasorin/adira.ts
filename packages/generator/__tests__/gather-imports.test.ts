@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { gatherImports, ImportMap } from "../../../src/typegen";
+import { gatherImports, ImportMap } from "../typegen";
 
 describe("gatherImports Integration Test", () => {
   const FILENAME = "/app/src/api-types.ts";
@@ -8,13 +8,14 @@ describe("gatherImports Integration Test", () => {
     import { LoginResponseBody } from '@controller/auth/login';
     import { IInvoice } from '@models/invoice/Invoice';
     import { PatchResponseBody, InferParams, InferInclude, InferSelect } from '@utils/api/generate-handler';
+    import { Backend } from '@n/adira.backend.ts';
 
     // Mock functions/types used in the generic
     type PatchInvoiceFn = any;
 
     export type _api_invoice_patch<Include extends InferInclude<PatchInvoiceFn>, Select extends InferSelect<PatchInvoiceFn, Include>> = {
       RequestParams?: { id?: ObjectIdLike, key: AvailableKeys<Schema> } & InferParams<Include, Select>;
-      RequestBody?: Omit<Partial<IInvoice>, "_id">;
+      RequestBody?: Backend.InferReqBody<PatchInvoiceFn>;
       ResponseBody?: PatchResponseBody<PatchInvoiceFn, Include, Select, IInvoiceChangeLog | null> | ErrorResponse;
       RequestQuery?: unknown;
       RequestForm?: unknown;
@@ -83,14 +84,14 @@ describe("gatherImports Integration Test", () => {
     });
   });
 
-  test("Case 2: Should gather imports from a TypeOperator (Omit) and its operand", () => {
+  test("Case 2: Should find an gather the Backend import", () => {
     const importMap: ImportMap = {};
     const node = findTypeNode("_api_invoice_patch", "RequestBody");
 
     gatherImports(node, importMap, sourceFile);
 
     expect(importMap).toEqual({
-      "@models/invoice/Invoice": ["IInvoice"],
+      "@n/adira.backend.ts": ["Backend"],
     });
   });
 

@@ -1,17 +1,20 @@
 import mongoose from "mongoose";
 import {
   BuildResponseBody,
-  ExtractResponseBodyArray,
+  ExtractResponseBodyQUERY,
   ExtractSelect,
   FilterDefinition,
   Leafs,
   NestedSelection,
   ObjectIdLike,
-  PopulatedSchema,
+  PopulatableKeys,
+  PopulateSchema,
+  RefTo,
   SelectableFieldsAfterJoin,
   SortByDefinition,
-} from ".";
-import { InferResponseBody } from "./helpers/frontend";
+} from "..";
+import { ExtractResBody } from "../helpers/frontend";
+import { ExecuteGET } from "../helpers/backend";
 
 declare module "mongoose" {
   namespace Types {
@@ -30,32 +33,35 @@ interface Company {
   };
 }
 
+interface Referal {
+  _id: ObjectIdLike;
+  code: string;
+  discount: number;
+}
+
 interface User {
   _id: ObjectIdLike;
   name: string;
   email: string;
   age: number;
-  company: ObjectIdLike;
-  friends: { friend: ObjectIdLike; since: number }[];
+  company: ObjectIdLike & RefTo<Company>;
+  friends: { friend: ObjectIdLike & RefTo<Friend>; since: number }[];
   phoneNumbers: number[];
-  referals: ObjectIdLike[];
+  referals: ObjectIdLike & RefTo<Referal>[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface Friend {
   _id: ObjectIdLike;
-  baseUser: ObjectIdLike;
+  baseUser: ObjectIdLike & RefTo<User>;
   profile: {
     avatar: string;
     size: string;
   };
 }
 
-type PopulatedUser = PopulatedSchema<
-  User,
-  { company: Company; "friends.friend": Friend }
->;
+type PopulatedUser = PopulateSchema<User>;
 
 const selection = [
   "company.address.city",
@@ -118,11 +124,11 @@ const sort: SortBy = {
   "friends.friend.baseUser": 1,
 };
 
-type TestExtractResponse = ExtractResponseBodyArray<
+type TestExtractResponse = ExtractResponseBodyQUERY<
   PopulatedUser,
   User,
   ["friends.friend"],
-  ["name", "email", "age", "friends.friend"],
+  ["name", "email", "age", "friends.friend", "company"],
   [{ target: "friends.friend"; operation: "$count"; as: "allFriends" }],
   { hello: "world" }
 >;
@@ -144,5 +150,4 @@ type Endpoints = {
   GET: EndpointDef;
 };
 
-type ExtractedResponseBody = InferResponseBody<Endpoints, "GET", [], []>;
-const extracted: ExtractedResponseBody = {};
+type ExtractedResponseBody = ExtractResBody<Endpoints, "GET", [], []>;

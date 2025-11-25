@@ -7,6 +7,8 @@ export interface ObjectIdLike {
   readonly __objectIdBrand: unique symbol;
 }
 
+export type RefTo<T> = { __refTo?: T };
+
 export type Keys<T> = keyof T;
 
 export type Scalar =
@@ -103,33 +105,25 @@ export type Shift<R = {}, Prefix extends string = ""> =
       }
     : never;
 
-export type ApplyReplacements<
-  Schema = {},
-  Replacements extends Record<string, any> = {},
-  Depth extends number = 10,
-> = [Depth] extends [0]
+export type ApplyReplacements<Schema = {}, Depth extends number = 10> = [
+  Depth,
+] extends [0]
   ? Schema
   : Schema extends ObjectIdLike
-    ? Replacements[keyof Replacements] | null
+    ? Schema extends RefTo<infer R>
+      ? R | null
+      : ObjectIdLike
     : {
-        [K in keyof Schema]: K & string extends keyof Replacements
-          ? Replacements[K & string] | null
-          : KeysWithPrefix<Replacements, K & string> extends never
-            ? Schema[K]
-            : Schema[K] extends Array<infer Element>
-              ? ApplyReplacements<
-                  Element,
-                  Shift<Replacements, K & string>,
-                  Prev[Depth]
-                >[]
-              : ApplyReplacements<
-                  Schema[K],
-                  Shift<Replacements, K & string>,
-                  Prev[Depth]
-                >;
+        [K in keyof Schema]: Schema[K] extends Scalar
+          ? Schema[K] extends ObjectIdLike
+            ? Schema[K] extends RefTo<infer R>
+              ? R | null
+              : ObjectIdLike
+            : Schema[K]
+          : Schema[K] extends Array<infer Element>
+            ? ApplyReplacements<Element, Prev[Depth]>[]
+            : ApplyReplacements<Schema[K], Prev[Depth]>;
       };
-
-export type Replacements<T> = Partial<Record<PopulatableKeys<T>, any>>;
 
 /**
  * Recursively transforms an object type by replacing fields that can be populated with their populated types
@@ -142,14 +136,11 @@ export type Replacements<T> = Partial<Record<PopulatableKeys<T>, any>>;
  * ```ts
  * type User = { _id: mongoose.Types.ObjectId; name: string; companyId: mongoose.Types.ObjectId };
  * type Company = { _id: mongoose.Types.ObjectId; name: string };
- * type PopulatedUser = PopulatedSchema<User, { companyId: Company }>;
+ * type PopulatedUser = Populatedchema<User, { companyId: Company }>;
  * // Result: { _id: mongoose.Types.ObjectId; name: string; companyId: { _id: mongoose.Types.ObjectId; name: string } }
  * ```
  */
-export type PopulatedSchema<
-  Schema,
-  R extends Partial<Record<string, any>>,
-> = ApplyReplacements<Schema, R>;
+export type PopulateSchema<Schema> = ApplyReplacements<Schema>;
 
 export type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -390,10 +381,10 @@ export type BuildResponseBody<
   GroupOperations extends
     | GroupOperationsDefinition<any>
     | undefined = undefined,
-  IsArray extends boolean = false,
   Extra = {},
-> = (IsArray extends true
-  ? ExtractResponseBodyArray<
+  IsQuery extends boolean = false,
+> = (IsQuery extends true
+  ? ExtractResponseBodyQUERY<
       FullSchema,
       BaseSchema,
       Include,
@@ -401,18 +392,15 @@ export type BuildResponseBody<
       GroupOperations,
       Extra
     >
-  : ExtractResponseBodySingle<
+  : ExtractResponseBodyMUTATE<
       FullSchema,
       BaseSchema,
       Include,
       Select,
-      GroupOperations,
       Extra
     >) & {
   __full?: FullSchema;
   __base?: BaseSchema;
-  __extra?: Extra;
-  __array?: IsArray;
 };
 
 export type TopLevelKeysUnion<Q extends string = ""> =
@@ -487,51 +475,49 @@ export type ExtractBase<
         >
   : {};
 
-export type ExtractResponse<
+export type ExtractResponseQUERY<
   FullObject = {},
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
   GroupOperations extends { as: string }[] | undefined = undefined,
-  IsArray extends boolean = false,
-> = GroupOperations extends undefined
-  ? IsArray extends true
-    ? ExtractBase<FullObject, Base, Include, Select>[]
-    : ExtractBase<FullObject, Base, Include, Select>
-  : {
-      documents: IsArray extends true
-        ? ExtractBase<FullObject, Base, Include, Select>[]
-        : ExtractBase<FullObject, Base, Include, Select>;
-      grouped: ({
-        // @ts-expect-error "as" will exist on each element!
-        [K in GroupOperations[number]["as"]]: number;
-      } & { _id: string })[];
-    };
-
-// Single object
-export type ExtractResponseBodySingle<
-  FullObject = {},
-  Base = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-  GroupOperations extends
-    | GroupOperationsDefinition<any>
-    | undefined = undefined,
-  Extra = {},
 > = {
-  base?: ExtractResponse<
-    FullObject,
-    Base,
-    Include,
-    Select,
-    GroupOperations,
-    false
-  >;
-  extra?: Extra;
+  documents: ExtractBase<FullObject, Base, Include, Select>[];
+  grouped: GroupOperations extends Array<{ as: string }>
+    ? ({
+        [K in GroupOperations[number]["as"]]: number;
+      } & { _id: string })[]
+    : [];
 };
 
+export type ExtractResponseMUTATE<
+  FullObject = {},
+  Base = {},
+  Include extends any[] = [],
+  Select extends any[] = [],
+> = ExtractBase<FullObject, Base, Include, Select>;
+
+// Single object
+export type ExtractResponseBodyMUTATE<
+  FullObject = {},
+  Base = {},
+  Include extends any[] = [],
+  Select extends any[] = [],
+  Extra = {},
+> = {
+  [K in ExecutorKey]?: ExtractResponseMUTATE<FullObject, Base, Include, Select>;
+} & {
+  [K in ExtraKey]?: Extra;
+};
+
+export const EXECUTOR_KEY = "executor" as const;
+export const EXTRA_KEY = "extra" as const;
+
+export type ExecutorKey = typeof EXECUTOR_KEY; // "executor"
+export type ExtraKey = typeof EXTRA_KEY; // "extra"
+
 // Array of objects
-export type ExtractResponseBodyArray<
+export type ExtractResponseBodyQUERY<
   FullObject = {},
   Base = {},
   Include extends any[] = [],
@@ -541,15 +527,15 @@ export type ExtractResponseBodyArray<
     | undefined = undefined,
   Extra = {},
 > = {
-  base?: ExtractResponse<
+  [K in ExecutorKey]?: ExtractResponseQUERY<
     FullObject,
     Base,
     Include,
     Select,
-    GroupOperations,
-    true
+    GroupOperations
   >;
-  extra?: Extra;
+} & {
+  [K in ExtraKey]?: Extra;
 };
 
 // Scalar operators
@@ -688,10 +674,53 @@ export type RowsPrunerDefiniton<T = {}> = {
   pick: "first" | "last";
 };
 
-export type AssertValidReplacements<
-  T,
-  R extends Record<PopulatableKeys<T>, any>,
-> = R;
-
 export * as Backend from "./helpers/backend";
 export * as Frontend from "./helpers/frontend";
+
+import {
+  HTTPMethod,
+  PublicAPIPaths,
+  APIMethods,
+  ExtractMetadata,
+  ExtractFull,
+  ExtractReqInclude,
+  ExtractReqSelect,
+  ExtractResBody,
+  ExtractReqBody,
+  ExtractQueryParams,
+  ExtractReqPath,
+} from "./helpers/frontend";
+
+export type CreateApiClient<
+  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
+> = (baseUrl: string) => <
+  Metadata extends ExtractMetadata<Endpoint, Method>,
+  Full extends ExtractFull<Metadata>,
+  PublicPaths extends PublicAPIPaths<API>,
+  Path extends keyof PublicPaths & string,
+  Method extends APIMethods<API, PublicPaths[Path] & keyof API>,
+  Include extends ExtractReqInclude<Endpoint, Method>,
+  Select extends ExtractReqSelect<Endpoint, Method, Include>,
+  GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
+  Data extends ExtractReqBody<Endpoint, Method>,
+  QueryParams extends ExtractQueryParams<Endpoint, Method>,
+  PathParam extends ExtractReqPath<Endpoint, Method>,
+  Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
+>(
+  url: Path,
+  method: Method,
+  {
+    data,
+    path,
+    query,
+  }: {
+    query?: { include: Include; select: Select } & (Method extends "GET"
+      ? { groupBy?: GroupByDefinition<Leafs<Full>[], GroupOperations> }
+      : {}) &
+      QueryParams;
+    data?: Method extends "GET" ? never : Data;
+    path?: PathParam;
+  },
+) => Promise<
+  ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
+>;

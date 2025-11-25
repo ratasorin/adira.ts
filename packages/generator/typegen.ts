@@ -228,6 +228,15 @@ function buildImportSourceMap(
         }
       }
 
+      // Handle namespace imports: import * as Alias from 'module'
+      if (
+        node.importClause.namedBindings &&
+        ts.isNamespaceImport(node.importClause.namedBindings)
+      ) {
+        const alias = node.importClause.namedBindings.name.text;
+        importMap[alias] = sourceReference;
+      }
+
       if (node.importClause.name) {
         importMap[node.importClause.name.text] = sourceReference;
       }
@@ -326,36 +335,50 @@ export const gatherImports = (
       currentNode = extractTypeGeneric(typeReference, index);
     }
 
-    const typeName = typeReference.typeName.getText();
-    const importModule = importSourceMap[typeName];
+    let typeName: string;
+    let importModule: string | undefined;
+    let typeReferenceExportSource: string | null;
+    let importNames: string[] = [];
 
-    const typeReferenceExportSource = getExportSourceFileOrModule(
-      sourceFile,
-      typeName,
-    );
+    if (ts.isQualifiedName(typeReference.typeName)) {
+      const qualifier = typeReference.typeName.left.getText();
+      typeName = typeReference.typeName.right.getText();
+      importModule = importSourceMap[qualifier];
+      importNames = [qualifier]; // Import the namespace/qualifier
+      typeReferenceExportSource = null; // Assume qualified names are from imports, not local
+    } else {
+      typeName = typeReference.typeName.getText();
+      importModule = importSourceMap[typeName];
+      importNames = [typeName];
+      typeReferenceExportSource = getExportSourceFileOrModule(
+        sourceFile,
+        typeName,
+      );
+    }
 
     // Handle external imports
-    if (!typeReferenceExportSource) {
-      if (importModule) {
-        if (!Array.isArray(importMap[importModule])) {
-          importMap[importModule] = [];
-        }
-        if (!importMap[importModule].includes(typeName)) {
-          importMap[importModule].push(typeName);
-        }
+    if (!typeReferenceExportSource && importModule) {
+      if (!Array.isArray(importMap[importModule])) {
+        importMap[importModule] = [];
       }
+      importNames.forEach(name => {
+        if (!importMap[importModule].includes(name)) {
+          importMap[importModule].push(name);
+        }
+      });
       continue;
     }
 
     // Handle types exported from this file
-    if (typeReferenceExportSource in importMap) {
-      if (!importMap[typeReferenceExportSource].includes(typeName)) {
-        importMap[typeReferenceExportSource].push(typeName);
+    if (typeReferenceExportSource) {
+      if (typeReferenceExportSource in importMap) {
+        if (!importMap[typeReferenceExportSource].includes(typeName)) {
+          importMap[typeReferenceExportSource].push(typeName);
+        }
+      } else {
+        importMap[typeReferenceExportSource] = [typeName];
       }
-      continue;
     }
-
-    importMap[typeReferenceExportSource] = [typeName];
   }
 
   return importMap;

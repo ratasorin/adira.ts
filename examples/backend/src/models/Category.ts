@@ -1,12 +1,14 @@
-import { ObjectIdLike } from "@n/adira.core.ts";
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { IUser } from "./User";
+import { RefTo } from "@n/adira.core.ts";
 
 export interface ICategory {
   _id: mongoose.Types.ObjectId;
   name: string;
   description: string;
   slug: string;
-  parentCategory: ObjectIdLike; // Reference to another Category for hierarchy
+  parentCategory: mongoose.Types.ObjectId & RefTo<ICategory>;
+  createdBy: mongoose.Types.ObjectId & RefTo<IUser>;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
