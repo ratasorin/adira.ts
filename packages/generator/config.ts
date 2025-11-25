@@ -1,4 +1,5 @@
 export interface AdiraConfig {
+  apiName: string;
   generatedDir?: string;
   verdaccioPort?: number;
   verdaccioBaseUrl?: string;
@@ -12,9 +13,10 @@ export const loadConfig = (): AdiraConfig => {
 
   // Look for config in current working directory (user's project)
   const configPaths = [
+    path.resolve(process.cwd(), "config.adira.json"),
+    path.resolve(process.cwd(), "config.nadira.json"),
     path.resolve(process.cwd(), "adira.config.json"),
     path.resolve(process.cwd(), "nadira.config.json"),
-    path.resolve(process.cwd(), "adira.config.js"),
   ];
 
   for (const configPath of configPaths) {
@@ -31,5 +33,6 @@ export const loadConfig = (): AdiraConfig => {
     verdaccioBaseUrl: "http://localhost:8888",
     inputSrc: "./src",
     outputFormat: "api.ts",
+    apiName: "APITypes",
   };
 };

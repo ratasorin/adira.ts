@@ -226,7 +226,7 @@ This enables strongly-typed API interactions without writing extra boilerplate c
 The tool generates a comprehensive API type map that looks like:
 
 ```typescript
-export type InvoicifyAPI = {
+export type DemoAPI = {
   "/api/invoices": {
     GET: {
       RequestQuery?: InvoiceQuery;

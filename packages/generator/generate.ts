@@ -8,13 +8,15 @@ export interface GeneratorResult {
   apiTypes: any;
 }
 
-export const generateApiDefinitions = async (config: AdiraConfig): Promise<GeneratorResult> => {
+export const generateApiDefinitions = async (
+  config: AdiraConfig,
+): Promise<GeneratorResult> => {
   // Use the configured input source or default to './src'
   const routeMap = await parseRoutes();
   const apiTypes = await generateTypes(routeMap);
 
   // Write types to the configured output directory
-  writeTypes(apiTypes, config.generatedDir);
+  writeTypes(apiTypes, config.apiName, config.generatedDir);
 
   return { routeMap, apiTypes };
 };

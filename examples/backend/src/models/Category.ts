@@ -10,20 +10,21 @@ export interface ICategory {
   parentCategory: mongoose.Types.ObjectId & RefTo<ICategory>;
   createdBy: mongoose.Types.ObjectId & RefTo<IUser>;
   isActive: boolean;
-  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const CategorySchema: Schema<ICategory & Document> = new Schema({
   name: { type: String, required: true, unique: true },
   description: { type: String },
   slug: { type: String, required: true, unique: true },
-  parentCategory: { type: Schema.Types.ObjectId, ref: "Category" }, // For hierarchical categories
+  parentCategory: { type: Schema.Types.ObjectId, ref: "Category" },
   isActive: { type: Boolean, default: true },
-  sortOrder: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  deletedAt: { type: Date, default: null },
+  createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
 });
 
 CategorySchema.pre("save", function (next) {

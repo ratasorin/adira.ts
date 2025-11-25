@@ -8,6 +8,9 @@ export interface ObjectIdLike {
 }
 
 export type RefTo<T> = { __refTo?: T };
+export type CleanRef<T> = {
+  [K in keyof T]: T[K] extends RefTo<any> & ObjectIdLike ? string : T[K];
+};
 
 export type Keys<T> = keyof T;
 
@@ -117,7 +120,7 @@ export type ApplyReplacements<Schema = {}, Depth extends number = 10> = [
         [K in keyof Schema]: Schema[K] extends Scalar
           ? Schema[K] extends ObjectIdLike
             ? Schema[K] extends RefTo<infer R>
-              ? R | null
+              ? CleanRef<R> | null
               : ObjectIdLike
             : Schema[K]
           : Schema[K] extends Array<infer Element>
@@ -482,7 +485,12 @@ export type ExtractResponseQUERY<
   Select extends any[] = [],
   GroupOperations extends { as: string }[] | undefined = undefined,
 > = {
-  documents: ExtractBase<FullObject, Base, Include, Select>[];
+  documents: ExtractBase<
+    CleanRef<FullObject>,
+    CleanRef<Base>,
+    Include,
+    Select
+  >[];
   grouped: GroupOperations extends Array<{ as: string }>
     ? ({
         [K in GroupOperations[number]["as"]]: number;

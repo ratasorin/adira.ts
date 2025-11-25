@@ -156,10 +156,29 @@ export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
   __populated?: PSchema;
 };
 
+export type ExecuteDELETE<T, PSchema = PopulateSchema<T>> = (<
+  Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
+  Select extends ExtractSelect<PSchema, T, Include>,
+>(
+  id: string,
+  params: {
+    include?: Include;
+    select?: Select;
+  },
+  config: {
+    softDelete?: () => any;
+  },
+) => Promise<ExtractResponseMUTATE<PSchema, T, Include, Select>[]>) & {
+  __base?: T;
+  __populated?: PSchema;
+};
+
 export type ExecutorReturnType<T, Method extends METHOD> = Method extends "GET"
   ? ExecuteGET<T>
   : Method extends "POST"
     ? ExecutePOST<T>
     : Method extends "PATCH"
       ? ExecutePATCH<T>
-      : never;
+      : Method extends "DELETE"
+        ? ExecuteDELETE<T>
+        : never;

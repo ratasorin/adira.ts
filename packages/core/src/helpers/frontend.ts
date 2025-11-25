@@ -76,10 +76,9 @@ export type ExtractResBody<
     ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
       ? Extract<RB, ResponseBodyMetadata> extends {
           [EXECUTOR_KEY]: any;
-          [EXTRA_KEY]?: any;
-          __full?: infer Full;
+          [EXTRA_KEY]?: infer Extra;
+          __populated?: infer Full;
           __base?: infer Base;
-          __extra?: infer Extra;
         }
         ? M extends "GET"
           ?

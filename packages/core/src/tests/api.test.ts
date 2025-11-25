@@ -1,6 +1,5 @@
 import {
   Backend,
-  CreateApiClient,
   Frontend,
   GroupByDefinition,
   GroupOperationsDefinition,
@@ -184,7 +183,7 @@ const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
 apiClient("/categories", "GET", {
   query: {
     include: ["parentCategory"] as const,
-    select: ["name", "createdBy", "parentCategory"] as const,
+    select: ["name", "createdBy", "parentCategory.createdBy"] as const,
     groupBy: {
       fields: ["parentCategory.slug"],
       operations: [
@@ -198,7 +197,8 @@ apiClient("/categories", "GET", {
   },
 }).then((response) => {
   if (isError(response)) {
-    return;
+    console.error("API Error:", response.message);
+  } else {
+    const r = response.executor?.documents[0];
   }
-  // response.executor?.documents[0]
 });

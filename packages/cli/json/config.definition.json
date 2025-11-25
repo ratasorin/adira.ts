@@ -13,7 +13,11 @@
     "verdaccioPort": {
       "type": "number",
       "description": "Port for Verdaccio registry"
+    },
+    "apiName": {
+      "type": "string",
+      "description": "Name of the generated API type"
     }
   },
-  "required": ["inputSrc", "generatedDir", "verdaccioPort"]
+  "required": ["inputSrc", "generatedDir", "verdaccioPort", "apiName"]
 }

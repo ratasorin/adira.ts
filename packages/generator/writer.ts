@@ -21,20 +21,22 @@ const getRelativeImportPath = (from: string, to: string): string => {
   return relativePath.replace(/\.ts$/, "");
 };
 
-export function writeTypes(types: TypesMeta, generatedDir?: string) {
+export function writeTypes(
+  types: TypesMeta,
+  apiTypeName: string,
+  generatedDir?: string,
+) {
   const { api, imports } = types;
   let output = "";
 
-  const outputDir = generatedDir || path.join(process.cwd(), "src", "generated");
+  const outputDir =
+    generatedDir || path.join(process.cwd(), "src", "generated");
 
   // 🔹 Step 1: Write imports
   for (const [pathName, typeReferences] of Object.entries(imports)) {
     const importsJoined = typeReferences.join(", ");
     if (pathName.startsWith("/")) {
-      const relativePath = getRelativeImportPath(
-        outputDir,
-        pathName
-      );
+      const relativePath = getRelativeImportPath(outputDir, pathName);
       output += `import { ${importsJoined} } from '${relativePath}';\n`;
     } else {
       output += `import { ${importsJoined} } from '${pathName}';\n`;
@@ -73,7 +75,7 @@ export function writeTypes(types: TypesMeta, generatedDir?: string) {
   }
 
   // 🔹 Step 4: Write API type definition
-  output += `\nexport type InvoicifyAPI = {`;
+  output += `\nexport type ${apiTypeName} = {`;
 
   // Iterating through each route and method
   for (const [route, methods] of Object.entries(api)) {
@@ -83,7 +85,7 @@ export function writeTypes(types: TypesMeta, generatedDir?: string) {
         // Build generic parameter list for function signature
         const genericDecl = def.generics
           .map((g) =>
-            g.constraint ? `${g.name} extends ${g.constraint}` : g.name
+            g.constraint ? `${g.name} extends ${g.constraint}` : g.name,
           )
           .join(", ");
 

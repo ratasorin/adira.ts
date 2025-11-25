@@ -1,10 +1,13 @@
+import { RefTo } from "@n/adira.core.ts";
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { IUser } from "./User";
+import { IProduct } from "./Product";
 
 export interface IOrder {
   _id: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId; // Reference to User
+  user: mongoose.Types.ObjectId & RefTo<IUser>; // Reference to User
   products: {
-    product: mongoose.Types.ObjectId; // Reference to Product
+    product: mongoose.Types.ObjectId & RefTo<IProduct>; // Reference to Product
     quantity: number;
     priceAtPurchase: number;
   }[];
@@ -21,6 +24,7 @@ export interface IOrder {
   paymentStatus: "pending" | "completed" | "failed";
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const OrderSchema: Schema<IOrder & Document> = new Schema({
@@ -51,6 +55,7 @@ const OrderSchema: Schema<IOrder & Document> = new Schema({
     enum: ["pending", "completed", "failed"],
     default: "pending",
   },
+  deletedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

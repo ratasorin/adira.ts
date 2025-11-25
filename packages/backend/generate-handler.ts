@@ -170,6 +170,34 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
     return fn as Backend.ExecutorReturnType<T, Method>;
   }
 
+  if (method === "DELETE") {
+    const fn: Backend.ExecuteDELETE<T> = async (id, params, config) => {
+      const { include, select } = normalizeParams(params);
+
+      const pipeline: PipelineStage[] = [];
+
+      const projectStage = generateProjectionQuery(select);
+      const lookupStages = generateLookupQuery(model, include);
+      pipeline.push(...lookupStages, projectStage);
+
+      // First, get the record to return it
+      pipeline.unshift({ $match: { _id: new mongoose.Types.ObjectId(id) } });
+      const [record] = await model.aggregate(pipeline);
+
+      if (!record) throw new Error(`Record with id ${id} not found!`);
+
+      // Perform the deletion
+      if (config.softDelete) {
+        await config.softDelete();
+      } else {
+        await model.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+      }
+
+      return [record];
+    };
+    return fn as Backend.ExecutorReturnType<T, Method>;
+  }
+
   if (method === "PATCH") {
     const fn: Backend.ExecutePATCH<T> = async (id, params, fields, config) => {
       const { include, select } = normalizeParams(params);

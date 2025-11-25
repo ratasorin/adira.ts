@@ -28,7 +28,7 @@ export const initAction = async () => {
 
   const schemaEntry = {
     fileMatch: ["**/*.adira.json"],
-    url: "https://api.npoint.io/fcaa5cc8c9576343708c",
+    url: "https://api.npoint.io/44541657d8844d035de3",
   };
 
   const existingEntryIndex = settings["json.schemas"].findIndex(

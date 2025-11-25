@@ -1,6 +1,6 @@
 import { generateExecutor } from "@n/adira.backend.ts";
 import Category, { ICategory } from "../models/Category";
-import { Backend, PopulateSchema } from "@n/adira.core.ts";
+import { Backend } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
 
@@ -79,19 +79,31 @@ export const updateCategoryHandler = async (
   }
 };
 
-// export const deleteCategoryHandler = async (
-//   req: Request<any, any, Backend.InferHandlerParams<DeleteCategoryFn>>,
-//   res: Response<
-//     Backend.InferHandlerResponse<DeleteCategoryFn, {}> | ErrorResponse
-//   >,
-// ) => {
-//   try {
-//     const category = await deleteCategory(req.body);
-//     res.send({ executor: category });
-//   } catch (err) {
-//     res.send({
-//       error: true,
-//       message: `Something crashed inside deleteCategoryHandler ${String(err)}`,
-//     });
-//   }
-// };
+export const deleteCategoryHandler = async (
+  req: Request<
+    { id: string },
+    any,
+    any,
+    Backend.InferHandlerParams<DeleteCategoryFn>
+  >,
+  res: Response<
+    Backend.InferHandlerResponse<DeleteCategoryFn, {}> | ErrorResponse
+  >,
+) => {
+  try {
+    const category = await deleteCategory(req.params.id, req.body, {
+      softDelete: async () => {
+        await Category.updateOne(
+          { _id: req.params.id },
+          { $set: { deletedAt: new Date() } },
+        );
+      },
+    });
+    res.send({ executor: category });
+  } catch (err) {
+    res.send({
+      error: true,
+      message: `Something crashed inside deleteCategoryHandler ${String(err)}`,
+    });
+  }
+};

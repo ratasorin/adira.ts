@@ -1,15 +1,13 @@
-import { Backend, generateExecutor } from "@n/adira.backend.ts";
+import { generateExecutor } from "@n/adira.backend.ts";
 import Order, { IOrder } from "../models/Order";
-import { ApplyReplacements } from "@n/adira.core.ts";
+import { Backend } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
-import mongoose from "mongoose";
 
-type FullOrder = ApplyReplacements<IOrder, {}>;
-const getOrders = generateExecutor<"GET", IOrder, FullOrder>("GET", Order);
-const createOrder = generateExecutor<"POST", IOrder, FullOrder>("POST", Order);
-const updateOrder = generateExecutor<"PUT", IOrder, FullOrder>("PUT", Order);
-const deleteOrder = generateExecutor<"DELETE", IOrder, FullOrder>("DELETE", Order);
+const getOrders = generateExecutor<"GET", IOrder>("GET", Order);
+const createOrder = generateExecutor<"POST", IOrder>("POST", Order);
+const updateOrder = generateExecutor<"PATCH", IOrder>("PATCH", Order);
+const deleteOrder = generateExecutor<"DELETE", IOrder>("DELETE", Order);
 
 export type GetOrdersFn = typeof getOrders;
 export type CreateOrderFn = typeof createOrder;
@@ -18,7 +16,9 @@ export type DeleteOrderFn = typeof deleteOrder;
 
 export const getOrdersHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetOrdersFn>>,
-  res: Response<Backend.InferHandlerResponse<GetOrdersFn, {}> | ErrorResponse>,
+  res: Response<
+    Backend.InferHandlerResponse<GetOrdersFn, {}> | ErrorResponse
+  >,
 ) => {
   try {
     const orders = await getOrders(req.query);
@@ -32,11 +32,13 @@ export const getOrdersHandler = async (
 };
 
 export const createOrderHandler = async (
-  req: Request<any, any, Backend.InferHandlerParams<CreateOrderFn>>,
-  res: Response<Backend.InferHandlerResponse<CreateOrderFn, {}> | ErrorResponse>,
+  req: Request<any, any, any, Backend.InferHandlerParams<CreateOrderFn>>,
+  res: Response<
+    Backend.InferHandlerResponse<CreateOrderFn, {}> | ErrorResponse
+  >,
 ) => {
   try {
-    const order = await createOrder(req.body);
+    const order = await createOrder(req.query, req.body);
     res.send({ executor: order });
   } catch (err) {
     res.send({
@@ -47,11 +49,24 @@ export const createOrderHandler = async (
 };
 
 export const updateOrderHandler = async (
-  req: Request<any, any, Backend.InferHandlerParams<UpdateOrderFn>>,
-  res: Response<Backend.InferHandlerResponse<UpdateOrderFn, {}> | ErrorResponse>,
+  req: Request<
+    { id: string },
+    any,
+    any,
+    Backend.InferHandlerParams<UpdateOrderFn>
+  >,
+  res: Response<
+    Backend.InferHandlerResponse<UpdateOrderFn, {}> | ErrorResponse
+  >,
 ) => {
   try {
-    const order = await updateOrder(req.body);
+    const { id } = req.params;
+    if (!id) {
+      throw new Error("Order id is required in params");
+    }
+    const order = await updateOrder(id, req.query, req.body, {
+      createNewRecord: true,
+    });
     res.send({ executor: order });
   } catch (err) {
     res.send({
@@ -62,11 +77,25 @@ export const updateOrderHandler = async (
 };
 
 export const deleteOrderHandler = async (
-  req: Request<any, any, Backend.InferHandlerParams<DeleteOrderFn>>,
-  res: Response<Backend.InferHandlerResponse<DeleteOrderFn, {}> | ErrorResponse>,
+  req: Request<
+    { id: string },
+    any,
+    any,
+    Backend.InferHandlerParams<DeleteOrderFn>
+  >,
+  res: Response<
+    Backend.InferHandlerResponse<DeleteOrderFn, {}> | ErrorResponse
+  >,
 ) => {
   try {
-    const order = await deleteOrder(req.body);
+    const order = await deleteOrder(req.params.id, req.query, {
+      softDelete: async () => {
+        await Order.updateOne(
+          { _id: req.params.id },
+          { $set: { deletedAt: new Date() } },
+        );
+      },
+    });
     res.send({ executor: order });
   } catch (err) {
     res.send({
