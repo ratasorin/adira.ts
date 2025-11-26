@@ -19,7 +19,7 @@ function getAllFiles(): string[] {
 
   // Use the configured input source or default to 'src'
   // Look in the user's project directory (process.cwd()) not the generator package
-  const inputSrc = config.inputSrc || "src";
+  const inputSrc = config.input.dir || "src";
   const pattern = path.join(inputSrc, "**/*.ts");
   return glob.sync(pattern, {
     absolute: true,

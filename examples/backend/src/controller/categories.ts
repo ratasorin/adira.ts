@@ -12,10 +12,10 @@ const deleteCategory = generateExecutor<"DELETE", ICategory>(
   Category,
 );
 
-export type GetCategoriesFn = typeof getCategories;
-export type CreateCategoryFn = typeof createCategory;
-export type UpdateCategoryFn = typeof updateCategory;
-export type DeleteCategoryFn = typeof deleteCategory;
+export type GetCategoriesFn = Backend.ExecuteGET<ICategory>;
+export type CreateCategoryFn = Backend.ExecutePOST<ICategory>;
+export type UpdateCategoryFn = Backend.ExecutePATCH<ICategory>;
+export type DeleteCategoryFn = Backend.ExecuteDELETE<ICategory>;
 
 export const getCategoriesHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetCategoriesFn>>,

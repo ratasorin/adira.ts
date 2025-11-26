@@ -13,7 +13,10 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "types:remove": "ts-node packages/cli/src/scripts/remove-types.ts",
+    "types:build": "ts-node packages/cli/src/scripts/build-types.ts",
+    "types:publish": "ts-node packages/cli/src/scripts/publish-types.ts"
   },
   "workspaces": [
     "packages/*",

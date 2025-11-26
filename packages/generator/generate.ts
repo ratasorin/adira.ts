@@ -1,4 +1,4 @@
-import { AdiraConfig } from "./config";
+import { AdiraConfig } from "@n/adira.core.ts";
 import { parseRoutes } from "./parser";
 import { generateTypes } from "./typegen";
 import { writeTypes } from "./writer";
@@ -16,7 +16,7 @@ export const generateApiDefinitions = async (
   const apiTypes = await generateTypes(routeMap);
 
   // Write types to the configured output directory
-  writeTypes(apiTypes, config.apiName, config.generatedDir);
+  writeTypes(apiTypes, config.output.typename || "ApiTypes", config.output.dir);
 
   return { routeMap, apiTypes };
 };

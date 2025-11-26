@@ -23,11 +23,12 @@
   "author": "Sorin Rata <ratasorin0@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@n/adira.generator.ts": "^0.1.0",
+    "@n/adira.generator.ts": "file:../generator",
     "chokidar": "^3.5.3",
     "commander": "^11.1.0"
   },
   "devDependencies": {
+    "@n/adira.core.ts": "file:../core",
     "@types/node": "^24.10.1",
     "typescript": "^5.9.3"
   }

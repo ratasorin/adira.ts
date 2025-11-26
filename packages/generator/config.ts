@@ -1,11 +1,4 @@
-export interface AdiraConfig {
-  apiName: string;
-  generatedDir?: string;
-  verdaccioPort?: number;
-  verdaccioBaseUrl?: string;
-  inputSrc?: string;
-  outputFormat?: string;
-}
+import { AdiraConfig } from "@n/adira.core.ts";
 
 export const loadConfig = (): AdiraConfig => {
   const fs = require("fs");
@@ -19,20 +12,38 @@ export const loadConfig = (): AdiraConfig => {
     path.resolve(process.cwd(), "nadira.config.json"),
   ];
 
+  let userConfig: Partial<AdiraConfig> = {};
+
   for (const configPath of configPaths) {
     if (fs.existsSync(configPath)) {
       const configContent = fs.readFileSync(configPath, "utf8");
-      return JSON.parse(configContent);
+      userConfig = JSON.parse(configContent);
+      break;
     }
   }
 
-  // Return defaults if no config found
+  // Return defaults merged with user config
   return {
-    generatedDir: "./types",
-    verdaccioPort: 8888,
-    verdaccioBaseUrl: "http://localhost:8888",
-    inputSrc: "./src",
-    outputFormat: "api.ts",
-    apiName: "APITypes",
+    input: {
+      dir: "./src",
+      ...userConfig.input,
+    },
+    output: {
+      dir: "./shared",
+      file: "index.api.ts",
+      typename: "ApiTypes",
+      ...userConfig.output,
+    },
+    registry: {
+      port: 8888,
+      url: "http://localhost",
+      version: "1.0.0",
+      name: "@app/api",
+      ...userConfig.registry,
+    },
+    allowedDependencies: [
+      ...(userConfig.allowedDependencies || []),
+      "@n/adira.core.ts",
+    ],
   };
 };

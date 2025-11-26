@@ -30,7 +30,7 @@
   "author": "Sorin Rata <ratasorin0@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@n/adira.core.ts": "^0.1.0",
+    "@n/adira.core.ts": "file:../core",
     "typescript": "^5.9.3",
     "fast-glob": "^3.3.3"
   },

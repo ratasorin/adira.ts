@@ -1,12 +1,10 @@
 import ts from "typescript";
 import path from "path";
 import { RouteMeta } from "./parser";
-import { existsSync } from "fs";
+import { loadConfig } from "./config";
+import { AdiraConfig } from "@n/adira.core.ts";
 
-/**
- * Defines the simplest API type definition, without generics.
- * This covers the standard Express Request/Response generics.
- */
+// --- Interfaces (Keep existing) ---
 export interface SimpleTypeDefinition {
   RequestParams?: string;
   RequestBody?: string;
@@ -14,508 +12,464 @@ export interface SimpleTypeDefinition {
   RequestQuery?: string;
   RequestForm?: string;
 }
-
-/**
- * Represents a single generic type parameter.
- * Example: `T extends SomeType`
- */
 export interface GenericParam {
-  name: string; // `T`
-  constraint?: string; // `SomeType`
+  name: string;
+  constraint?: string;
 }
-
-/**
- * Defines an API method type that uses one or more generic parameters.
- */
 export interface GenericTypeDefinition {
   aliasName: string;
   generics: GenericParam[];
   types: SimpleTypeDefinition;
 }
-
-/**
- * An API method definition can either be:
- *  - SimpleTypeDefinition (no generics)
- *  - GenericTypeDefinition (with generics)
- */
 export type MethodTypeDefinition = SimpleTypeDefinition | GenericTypeDefinition;
-
-/**
- * The entire API type map.
- * Maps each route (path) -> HTTP method -> MethodTypeDefinition
- */
 export interface APITypes {
-  [route: string]: {
-    [method: string]: MethodTypeDefinition;
-  };
+  [route: string]: { [method: string]: MethodTypeDefinition };
 }
-
-/**
- * Type guard for GenericTypeDefinition
- */
+export interface TypesMeta {
+  api: APITypes;
+  imports: string[];
+  definitions: string[];
+}
 export function isGenericTypeDefinition(
   def: MethodTypeDefinition,
 ): def is GenericTypeDefinition {
-  return (
-    typeof def === "object" &&
-    "aliasName" in def &&
-    "generics" in def &&
-    "types" in def
-  );
+  return typeof def === "object" && "aliasName" in def && "generics" in def;
 }
-
-function getConstraintText(node: ts.TypeNode): string {
-  if (ts.isTypeReferenceNode(node)) {
-    return node.getText();
-  } else if (ts.isArrayTypeNode(node)) {
-    return `${getConstraintText(node.elementType)}[]`;
-  } else if (ts.isUnionTypeNode(node)) {
-    return node.types.map(getConstraintText).join(" | ");
-  } else if (ts.isIntersectionTypeNode(node)) {
-    return node.types.map(getConstraintText).join(" & ");
-  } else if (ts.isParenthesizedTypeNode(node)) {
-    return `(${getConstraintText(node.type)})`;
-  } else if (ts.isLiteralTypeNode(node) || ts.isTypeLiteralNode(node)) {
-    return node.getText();
-  } else {
-    return node.getText(); // fallback
-  }
-}
-
-/**
- * Type guard for SimpleTypeDefinition
- */
 export function isSimpleTypeDefinition(
   def: MethodTypeDefinition,
 ): def is SimpleTypeDefinition {
   return !isGenericTypeDefinition(def);
 }
 
-/**
- * Mapping from filePath -> list of types imported from that file.
- */
-export interface ImportMap {
-  [filePath: string]: string[];
-}
+// --- The Semantic Type Walker ---
 
-/**
- * Resolve an import string (like "./types") into an absolute file path.
- */
-function resolveImportToAbsolutePath(
-  importModule: string,
-  sourceFilePath: string,
-): string | null {
-  const tsConfigPath = path.resolve(process.cwd(), "tsconfig.json");
+class TypeCollector {
+  private checker: ts.TypeChecker;
+  private config: AdiraConfig;
 
-  const configFile = ts.readConfigFile(tsConfigPath, ts.sys.readFile);
-  if (configFile.error) {
-    console.error("Error reading tsconfig.json", configFile.error);
-    return null;
+  private definitions = new Map<string, string>();
+  private externalImports = new Map<string, Set<string>>();
+
+  // Recursion guard stack
+  private stack = new Set<ts.Type>();
+
+  constructor(program: ts.Program) {
+    this.checker = program.getTypeChecker();
+    this.config = loadConfig();
   }
 
-  const parsedConfig = ts.parseJsonConfigFileContent(
-    configFile.config,
-    ts.sys,
-    path.dirname(tsConfigPath),
-  );
+  /**
+   * The entry point. Takes a TypeNode (from AST), gets its Semantic Type,
+   * and converts it to a string recursively.
+   */
+  public resolveTypeNode(node: ts.TypeNode | undefined): string {
+    if (!node) return "any";
 
-  const host = ts.createCompilerHost(parsedConfig.options, true);
-  const resolved = ts.resolveModuleName(
-    importModule,
-    sourceFilePath,
-    parsedConfig.options,
-    host,
-  );
+    // Unwrap Serialize<T, R> -> R logic
+    if (
+      ts.isTypeReferenceNode(node) &&
+      node.typeName.getText().endsWith("Serialize")
+    ) {
+      if (node.typeArguments && node.typeArguments.length >= 2) {
+        return this.resolveTypeNode(node.typeArguments[1]);
+      }
+    }
 
-  if (resolved.resolvedModule) {
-    return resolved.resolvedModule.resolvedFileName;
+    const type = this.checker.getTypeFromTypeNode(node);
+    return this.typeToString(type, node);
   }
 
-  const maybePath = path.resolve(
-    path.dirname(sourceFilePath),
-    importModule + ".ts",
-  );
-  return existsSync(maybePath) ? maybePath : null;
-}
+  /**
+   * Recursively converts a TS Type object to a code string.
+   * This is "Semantic Expansion" - we look at what the type IS, not what it looks like.
+   */
+  private typeToString(type: ts.Type, contextNode?: ts.Node): string {
+    // 1. Handle Primitives
+    if (type.flags & ts.TypeFlags.String) return "string";
+    if (type.flags & ts.TypeFlags.Number) return "number";
+    if (type.flags & ts.TypeFlags.Boolean) return "boolean";
+    if (type.flags & ts.TypeFlags.Void) return "void";
+    if (type.flags & ts.TypeFlags.Undefined) return "undefined";
+    if (type.flags & ts.TypeFlags.Null) return "null";
+    if (type.flags & ts.TypeFlags.Any) return "any";
+    if (type.flags & ts.TypeFlags.Unknown) return "unknown";
 
-/**
- * Extract all `TypeReferenceNode`s from a TypeNode.
- * This is useful because generics may contain unions, intersections, or arrays.
- */
-const getTypeReferencesFromNode = (
-  node: ts.TypeNode,
-): ts.TypeReferenceNode[] => {
-  const typeReferences: ts.TypeReferenceNode[] = [];
-
-  const extractTypeReferences = (node: ts.TypeNode) => {
-    if (ts.isTypeReferenceNode(node)) {
-      typeReferences.push(node);
-    } else if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
-      node.types.forEach(extractTypeReferences);
-    } else if (ts.isArrayTypeNode(node)) {
-      extractTypeReferences(node.elementType);
-    } else if (ts.isParenthesizedTypeNode(node)) {
-      extractTypeReferences(node.type);
-    } else if (ts.isTypeOperatorNode(node)) {
-      // e.g. keyof Foo
-      extractTypeReferences(node.type);
-    } else if (ts.isIndexedAccessTypeNode(node)) {
-      // e.g. Foo["bar"]
-      extractTypeReferences(node.objectType);
-      extractTypeReferences(node.indexType);
-    } else if (ts.isTypeLiteralNode(node)) {
-      // Traverse all members (properties) of the inline object
-      node.members.forEach((member) => {
-        if (ts.isPropertySignature(member) && member.type) {
-          // Recursively check the type of the property
-          extractTypeReferences(member.type);
-        }
-      });
-    } else if (ts.isTypeLiteralNode(node)) {
-      // Traverse all members (properties) of the inline object
-      node.members.forEach((member) => {
-        if (ts.isPropertySignature(member) && member.type) {
-          // Recursively check the type of the property
-          extractTypeReferences(member.type);
-        }
-      });
-    }
-  };
-
-  extractTypeReferences(node);
-  return typeReferences;
-};
-
-/**
- * Builds a map of imported types for a source file.
- * Automatically uses the module specifier for external packages (non-relative/non-absolute imports).
- */
-function buildImportSourceMap(
-  sourceFile: ts.SourceFile,
-): Record<string, string> {
-  const importMap: Record<string, string> = {};
-  const filePath = sourceFile.fileName;
-
-  ts.forEachChild(sourceFile, (node) => {
-    if (
-      ts.isImportDeclaration(node) &&
-      node.importClause &&
-      node.moduleSpecifier
-    ) {
-      const importModule = (node.moduleSpecifier as ts.StringLiteral).text;
-
-      let sourceReference: string;
-
-      // New Smart Check: If the module specifier does NOT start with a '.', treat it as a package.
-      if (!importModule.startsWith(".")) {
-        // This captures both scoped packages (@scope/pkg) and unscoped packages (pkg)
-        // The source reference is the package name itself.
-        sourceReference = importModule;
-      } else {
-        // If it starts with a '.', it's a relative import, so resolve the absolute path.
-        const absPath = resolveImportToAbsolutePath(importModule, filePath);
-        if (!absPath) return; // Skip if resolution fails
-        sourceReference = absPath;
-      }
-
-      // Map the imported names to the determined source reference
-      if (
-        node.importClause.namedBindings &&
-        ts.isNamedImports(node.importClause.namedBindings)
-      ) {
-        for (const element of node.importClause.namedBindings.elements) {
-          importMap[element.name.text] = sourceReference;
-        }
-      }
-
-      // Handle namespace imports: import * as Alias from 'module'
-      if (
-        node.importClause.namedBindings &&
-        ts.isNamespaceImport(node.importClause.namedBindings)
-      ) {
-        const alias = node.importClause.namedBindings.name.text;
-        importMap[alias] = sourceReference;
-      }
-
-      if (node.importClause.name) {
-        importMap[node.importClause.name.text] = sourceReference;
-      }
-    }
-  });
-
-  return importMap;
-}
-
-/**
- * Check if a type is exported directly or via `export { Foo }` from this file.
- */
-function getExportSourceFileOrModule(
-  sourceFile: ts.SourceFile,
-  typeName: string,
-): string | null {
-  for (const statement of sourceFile.statements) {
-    // ✅ export interface Foo {}
-    // ✅ export type Foo = { ... }
-    if (
-      (ts.isInterfaceDeclaration(statement) ||
-        ts.isTypeAliasDeclaration(statement)) &&
-      statement.name.getText() === typeName
-    ) {
-      if (
-        statement.modifiers &&
-        statement.modifiers.some(
-          (mod) => mod.kind === ts.SyntaxKind.ExportKeyword,
-        )
-      ) {
-        return sourceFile.fileName;
-      }
+    // 2. Handle Literal Types ("hello", 123, true)
+    if (type.isLiteral()) {
+      if (type.isStringLiteral()) return `"${type.value}"`;
+      if (type.isNumberLiteral()) return `${type.value}`;
+      // @ts-ignore - internal property
+      if (type.intrinsicName === "false") return "false";
+      // @ts-ignore
+      if (type.intrinsicName === "true") return "true";
     }
 
-    if (ts.isExportDeclaration(statement)) {
-      if (statement.exportClause) {
-        if (ts.isNamedExports(statement.exportClause)) {
-          for (const element of statement.exportClause.elements) {
-            if (element.name.getText() === typeName) {
-              return statement.moduleSpecifier
-                ? statement.moduleSpecifier.getText().slice(1, -1)
-                : sourceFile.fileName;
-            }
+    // 3. Handle Unions (A | B) and Intersections (A & B)
+    if (type.isUnion()) {
+      return type.types.map((t) => this.typeToString(t)).join(" | ");
+    }
+    if (type.isIntersection()) {
+      return type.types.map((t) => this.typeToString(t)).join(" & ");
+    }
+
+    // 4. Handle Arrays
+    if (this.checker.isArrayType(type)) {
+      // @ts-ignore - TypeChecker internal helper, or we can look at typeArguments
+      const typeArgs = (type as any).typeArguments || [];
+      if (typeArgs.length > 0) {
+        return `${this.typeToString(typeArgs[0])}[]`;
+      }
+      return "any[]";
+    }
+
+    // --- 5. THE ELEGANT CHECK: External Dependencies ---
+
+    // Get the Symbol associated with this type (Class, Interface, TypeAlias)
+    const symbol = type.getSymbol() || type.aliasSymbol;
+
+    if (symbol) {
+      const declarations = symbol.getDeclarations();
+      if (declarations && declarations.length > 0) {
+        const sourceFile = declarations[0].getSourceFile();
+        const fileName = sourceFile.fileName;
+
+        // Is it external?
+        if (fileName.includes("node_modules")) {
+          const pkgName = this.getPackageName(fileName);
+          const typeName = symbol.getName();
+
+          // A. Is it Whitelisted? -> IMPORT IT
+          if (this.config.allowedDependencies.includes(pkgName)) {
+            this.addImport(pkgName, typeName);
+            // Handle Generics (e.g. Backend.Response<T>)
+            // We need to map the generic arguments of the *reference*, not the expanded type
+            return this.printReferenceWithGenerics(symbol, type, typeName);
           }
+
+          // B. Unknown External -> Fail safe to 'any' (or 'object')
+          // This prevents the giant expansion of unexpected libraries
+          return "any";
         }
       }
     }
-  }
-  return null;
-}
 
-// Helper function to extract and process generic type parameters
-const processTypeParameters = (
-  typeParameters: ts.NodeArray<ts.TypeParameterDeclaration>,
-  imports: ImportMap,
-  file: ts.SourceFile,
-  generics: GenericParam[],
-) => {
-  typeParameters.forEach((tp) => {
-    const gp: GenericParam = { name: tp.name.getText() };
-    if (tp.constraint) {
-      // Use the general getConstraintText for accurate text representation
-      gp.constraint = getConstraintText(tp.constraint);
-
-      // Pass the constraint to gatherImports for dependency tracking
-      gatherImports(tp.constraint, imports, file);
+    // 6. Handle Objects / Interfaces / Function Signatures
+    // Prevent infinite recursion
+    if (this.stack.has(type)) {
+      // Return the name if it has one, otherwise any
+      return symbol ? symbol.getName() : "any";
     }
-    generics.push(gp);
-  });
-};
+    this.stack.add(type);
 
-/**
- * Gather imports for a type (recursively).
- */
-export const gatherImports = (
-  node: ts.TypeNode | undefined,
-  importMap: ImportMap,
-  sourceFile: ts.SourceFile,
-): ImportMap => {
-  if (!node) return {};
+    try {
+      // Check if it's a Promise
+      if (symbol && symbol.getName() === "Promise") {
+        const typeArgs = (type as any).typeArguments || [];
+        if (typeArgs.length > 0) {
+          return `Promise<${this.typeToString(typeArgs[0])}>`;
+        }
+        return "Promise<any>";
+      }
 
-  const importSourceMap = buildImportSourceMap(sourceFile);
-  const typeReferences = getTypeReferencesFromNode(node);
+      // If it has a symbol and name (Local Interface/Class), capture definition and return Name
+      // Only do this if it's NOT an anonymous type literal
+      if (symbol && !this.isAnonymousObject(type)) {
+        const name = symbol.getName();
+        // Don't redefine standard lib types (Date, Error, etc) if they slipped through
+        if (name !== "__type" && name !== "default") {
+          this.collectDefinition(name, type, symbol);
 
-  for (const typeReference of typeReferences) {
-    // Recursively handle nested type arguments
-    let index = 0;
-    let currentNode: ts.TypeNode | undefined = extractTypeGeneric(
-      typeReference,
-      index,
+          // Handle Generics for the reference
+          return this.printReferenceWithGenerics(symbol, type, name);
+        }
+      }
+
+      // If we are here, it's either an Anonymous Object Literal OR a Function Signature
+      const callSignatures = type.getCallSignatures();
+      if (callSignatures.length > 0) {
+        const sig = callSignatures[0];
+        const params = sig.parameters
+          .map((p) => {
+            const pType = this.checker.getTypeOfSymbolAtLocation(
+              p,
+              p.valueDeclaration!,
+            );
+            const pName = p.getName();
+            const optional = (p.valueDeclaration as ts.ParameterDeclaration)
+              ?.questionToken
+              ? "?"
+              : "";
+            return `${pName}${optional}: ${this.typeToString(pType)}`;
+          })
+          .join(", ");
+        const ret = this.typeToString(sig.getReturnType());
+        return `(${params}) => ${ret}`;
+      }
+
+      // It is an object literal structure: { a: string, b: number }
+      const props = type.getProperties();
+      if (props.length > 0) {
+        const members = props.map((prop) => {
+          const propType = this.checker.getTypeOfSymbolAtLocation(
+            prop,
+            prop.valueDeclaration!,
+          );
+          const optional = (prop.valueDeclaration as ts.PropertyDeclaration)
+            ?.questionToken
+            ? "?"
+            : "";
+          return `${prop.getName()}${optional}: ${this.typeToString(propType)}`;
+        });
+        return `{ ${members.join("; ")} }`;
+      }
+
+      return "any";
+    } finally {
+      this.stack.delete(type);
+    }
+  }
+
+  // --- Helpers ---
+
+  private printReferenceWithGenerics(
+    symbol: ts.Symbol,
+    type: ts.Type,
+    name: string,
+  ): string {
+    // If the type has type arguments (it's a generic instance), we need to print them
+    // e.g. Backend.Response<User>
+    if ((type as any).typeArguments && (type as any).typeArguments.length > 0) {
+      const args = ((type as any).typeArguments as ts.Type[]).map((t) =>
+        this.typeToString(t),
+      );
+      return `${name}<${args.join(", ")}>`;
+    }
+    return name;
+  }
+
+  private isAnonymousObject(type: ts.Type): boolean {
+    return (
+      (type.flags & ts.TypeFlags.Object) !== 0 &&
+      (type as ts.ObjectType).objectFlags !== undefined &&
+      ((type as ts.ObjectType).objectFlags & ts.ObjectFlags.Anonymous) !== 0
+    );
+  }
+
+  private collectDefinition(name: string, type: ts.Type, symbol: ts.Symbol) {
+    if (this.definitions.has(name)) return;
+    this.definitions.set(name, `// Processing ${name}...`); // Placeholder
+
+    // We reconstruct the definition from the Type properties
+    // This implicitly "expands" it but using our clean rules
+
+    const isInterface = symbol.declarations?.some((d) =>
+      ts.isInterfaceDeclaration(d),
     );
 
-    while (currentNode) {
-      gatherImports(currentNode, importMap, sourceFile);
-      index++;
-      currentNode = extractTypeGeneric(typeReference, index);
+    let def = "";
+
+    // Handle Generic Type Parameters in Definition (e.g. interface Response<T>)
+    const declarations = symbol.getDeclarations();
+    let typeParamsStr = "";
+    if (declarations && declarations.length > 0) {
+      const decl = declarations[0] as
+        | ts.InterfaceDeclaration
+        | ts.TypeAliasDeclaration;
+      if (decl.typeParameters) {
+        typeParamsStr = `<${decl.typeParameters.map((tp) => tp.name.getText()).join(", ")}>`;
+      }
     }
 
-    let typeName: string;
-    let importModule: string | undefined;
-    let typeReferenceExportSource: string | null;
-    let importNames: string[] = [];
-
-    if (ts.isQualifiedName(typeReference.typeName)) {
-      const qualifier = typeReference.typeName.left.getText();
-      typeName = typeReference.typeName.right.getText();
-      importModule = importSourceMap[qualifier];
-      importNames = [qualifier]; // Import the namespace/qualifier
-      typeReferenceExportSource = null; // Assume qualified names are from imports, not local
+    // Check for Call Signatures (Functional Interfaces)
+    const callSigs = type.getCallSignatures();
+    if (callSigs.length > 0 && !isInterface) {
+      // It's likely a type alias for a function
+      const sig = callSigs[0];
+      const params = sig.parameters
+        .map((p) => {
+          const pt = this.checker.getTypeOfSymbolAtLocation(
+            p,
+            p.valueDeclaration!,
+          );
+          return `${p.getName()}: ${this.typeToString(pt)}`;
+        })
+        .join(", ");
+      const ret = this.typeToString(sig.getReturnType());
+      def = `export type ${name}${typeParamsStr} = (${params}) => ${ret};`;
     } else {
-      typeName = typeReference.typeName.getText();
-      importModule = importSourceMap[typeName];
-      importNames = [typeName];
-      typeReferenceExportSource = getExportSourceFileOrModule(
-        sourceFile,
-        typeName,
-      );
-    }
+      // Object / Interface
+      const props = type.getProperties();
+      const members = props
+        .map((p) => {
+          const pt = this.checker.getTypeOfSymbolAtLocation(
+            p,
+            p.valueDeclaration!,
+          );
+          const optional = (p.valueDeclaration as any)?.questionToken
+            ? "?"
+            : "";
+          return `  ${p.getName()}${optional}: ${this.typeToString(pt)};`;
+        })
+        .join("\n");
 
-    // Handle external imports
-    if (!typeReferenceExportSource && importModule) {
-      if (!Array.isArray(importMap[importModule])) {
-        importMap[importModule] = [];
-      }
-      importNames.forEach(name => {
-        if (!importMap[importModule].includes(name)) {
-          importMap[importModule].push(name);
-        }
-      });
-      continue;
-    }
-
-    // Handle types exported from this file
-    if (typeReferenceExportSource) {
-      if (typeReferenceExportSource in importMap) {
-        if (!importMap[typeReferenceExportSource].includes(typeName)) {
-          importMap[typeReferenceExportSource].push(typeName);
-        }
+      if (isInterface) {
+        def = `export interface ${name}${typeParamsStr} {\n${members}\n}`;
       } else {
-        importMap[typeReferenceExportSource] = [typeName];
+        def = `export type ${name}${typeParamsStr} = {\n${members}\n};`;
       }
     }
+
+    this.definitions.set(name, def);
   }
 
-  return importMap;
-};
+  private getPackageName(pathStr: string): string {
+    const parts = pathStr.split("node_modules" + path.sep);
+    if (parts.length > 1) {
+      const pkgParts = parts[parts.length - 1].split(path.sep);
+      const names = pkgParts.filter((p) => p !== "");
+      if (names[0].startsWith("@") && names.length > 1) {
+        return `${names[0]}/${names[1]}`;
+      }
+      return names[0];
+    }
+    return "";
+  }
 
-export interface TypesMeta {
-  api: APITypes;
-  imports: ImportMap;
+  private addImport(pkgName: string, typeName: string) {
+    if (!this.externalImports.has(pkgName)) {
+      this.externalImports.set(pkgName, new Set());
+    }
+    // Clean up "Backend.Response" -> "Backend"
+    const root = typeName.split(".")[0];
+    this.externalImports.get(pkgName)!.add(root);
+  }
+
+  public getImports(): string[] {
+    const lines: string[] = [];
+    for (const [pkg, types] of this.externalImports) {
+      lines.push(`import { ${Array.from(types).join(", ")} } from "${pkg}";`);
+    }
+    return lines;
+  }
+
+  public getDefinitions(): string[] {
+    return Array.from(this.definitions.values());
+  }
 }
 
-/**
- * Main generator: extracts all API type information from route handlers.
- */
+// --- Main Generator ---
+
 export async function generateTypes(routes: RouteMeta[]): Promise<TypesMeta> {
   const result: APITypes = {};
-  const imports: ImportMap = {};
 
   const program = ts.createProgram({
     rootNames: routes.map((r) => r.handlerPath),
     options: {
       target: ts.ScriptTarget.ESNext,
       module: ts.ModuleKind.CommonJS,
-      moduleResolution: ts.ModuleResolutionKind.NodeJs,
-      allowJs: true,
-      checkJs: false,
-      jsx: ts.JsxEmit.Preserve,
-      esModuleInterop: true,
       resolveJsonModule: true,
       skipLibCheck: true,
       strict: false,
     },
   });
 
-  // THIS IS ABSOLUTELY REQUIRED FOR NODE'S CORRECT PARENT RESOLUTION!
-  program.getTypeChecker();
+  const collector = new TypeCollector(program);
 
   for (const route of routes) {
     const file = program.getSourceFile(route.handlerPath);
-    if (!file) return { api: {}, imports: {} };
+    if (!file) continue;
 
     ts.forEachChild(file, (node) => {
       let name: ts.Identifier | undefined;
       let parameters: ts.NodeArray<ts.ParameterDeclaration> | undefined;
-
-      // ✅ Now supports MULTIPLE generics
       let generics: GenericParam[] = [];
 
+      // ... (Keep existing parser logic for VariableStatement and FunctionDeclaration) ...
+      // [Copy lines 284-315 from previous code, identical logic]
       if (ts.isVariableStatement(node)) {
         const decl = node.declarationList.declarations[0];
         if (
           ts.isVariableDeclaration(decl) &&
           ts.isIdentifier(decl.name) &&
-          decl.name.escapedText === route.handlerName &&
-          decl.initializer &&
-          ts.isArrowFunction(decl.initializer)
+          decl.name.text === route.handlerName &&
+          decl.initializer
         ) {
+          name = decl.name;
+          // @ts-ignore
+          parameters = decl.initializer.parameters;
+          // @ts-ignore
           if (decl.initializer.typeParameters) {
-            processTypeParameters(
-              decl.initializer.typeParameters,
-              imports,
-              file,
-              generics,
+            // @ts-ignore
+            decl.initializer.typeParameters.forEach((tp) =>
+              generics.push({
+                name: tp.name.getText(),
+                constraint: tp.constraint?.getText(),
+              }),
             );
           }
-          name = decl.name;
-          parameters = decl.initializer.parameters;
         }
-      }
-      // handle named functions
-      else if (
+      } else if (
         ts.isFunctionDeclaration(node) &&
-        node.name &&
-        ts.isIdentifier(node.name) &&
-        node.name.escapedText === route.handlerName
+        node.name?.text === route.handlerName
       ) {
         name = node.name;
         parameters = node.parameters;
         if (node.typeParameters) {
-          processTypeParameters(node.typeParameters, imports, file, generics);
+          node.typeParameters.forEach((tp) =>
+            generics.push({
+              name: tp.name.getText(),
+              constraint: tp.constraint?.getText(),
+            }),
+          );
         }
       }
 
       if (name && parameters) {
-        const reqType = parameters[0]?.type as ts.TypeReferenceNode | undefined;
-        const resType = parameters[1]?.type as ts.TypeReferenceNode | undefined;
+        const reqType = parameters[0]?.type;
+        const resType = parameters[1]?.type;
 
-        // Those are the path parameters: (/api/invoices/id/:invoice_id)
-        // defined in express as the first argument of the `Request` generic: P = core.ParamsDictionary
         const paramsDict = extractTypeGeneric(reqType, 0);
         const body = extractTypeGeneric(reqType, 2);
         const query = extractTypeGeneric(reqType, 3);
         const res = extractTypeGeneric(resType, 0);
 
-        //   The types inside a generic can be:
-        //         1. TypeReferenceNode: Generic<A>
-        //         2. ObjectTypeNode: Generic<{ message: string }>
-        //         3. UnionTypeNode: Generic<A | { ... }>
-        //         4. ArrayType: Generic<A[]>
-        gatherImports(body, imports, file);
-        gatherImports(query, imports, file);
-        gatherImports(res, imports, file);
-        gatherImports(paramsDict, imports, file);
+        // Use resolveTypeNode instead of visitNode
+        const bodyStr = collector.resolveTypeNode(body);
+        const queryStr = collector.resolveTypeNode(query);
+        const paramsStr = collector.resolveTypeNode(paramsDict);
+        const resStr = collector.resolveTypeNode(res);
 
         const key = path.join(route.prefix || "", route.path || "");
-        result[key] = {
-          ...result[key],
-          [route.method.toUpperCase()]:
-            generics.length > 0
-              ? {
-                  aliasName: key.concat(route.method || "").replace(/\//g, "_"),
-                  generics,
-                  types: {
-                    RequestParams: paramsDict?.getText(),
-                    RequestBody: body?.getText(),
-                    ResponseBody: res?.getText(),
-                    RequestQuery: query?.getText(),
-                    RequestForm: "",
-                  },
-                }
-              : {
-                  RequestParams: paramsDict?.getText(),
-                  RequestBody: body?.getText(),
-                  ResponseBody: res?.getText(),
-                  RequestQuery: query?.getText(),
-                  RequestForm: "",
-                },
+        const methodKey = route.method.toUpperCase();
+
+        if (!result[key]) result[key] = {};
+        const defObject = {
+          RequestParams: paramsStr,
+          RequestBody: bodyStr,
+          ResponseBody: resStr,
+          RequestQuery: queryStr,
         };
+
+        if (generics.length > 0) {
+          result[key][methodKey] = {
+            aliasName: key.concat(methodKey).replace(/[^a-zA-Z0-9]/g, "_"),
+            generics,
+            types: defObject,
+          };
+        } else {
+          result[key][methodKey] = defObject;
+        }
       }
     });
   }
-  return { api: result, imports };
+
+  return {
+    api: result,
+    imports: collector.getImports(),
+    definitions: collector.getDefinitions(),
+  };
 }
 
-/**
- * Extract a type argument from a TypeReferenceNode at a given index.
- * Example: Request<A, B, C> → extractTypeGeneric(node, 1) = B
- */
 function extractTypeGeneric(
   node: ts.TypeNode | undefined,
   index: number,
@@ -526,12 +480,7 @@ function extractTypeGeneric(
     node.typeArguments &&
     node.typeArguments.length > index
   ) {
-    const typeArg = node.typeArguments[index];
-    if (ts.isTypeNode(typeArg)) {
-      if (typeArg.getSourceFile()) {
-        return typeArg;
-      }
-    }
+    return node.typeArguments[index];
   }
   return undefined;
 }

@@ -2,22 +2,59 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "inputSrc": {
-      "type": "string",
-      "description": "Source directory for input files"
+    "input": {
+      "type": "object",
+      "description": "Input configuration",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "Directory to watch for incoming input files"
+        }
+      },
+      "required": ["dir"]
     },
-    "generatedDir": {
-      "type": "string",
-      "description": "Directory for generated outputs"
+    "output": {
+      "type": "object",
+      "description": "Output configuration",
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "Directory to write generated output files"
+        },
+        "file": {
+          "type": "string",
+          "description": "Name of the generated output file"
+        },
+        "typename": {
+          "type": "string",
+          "description": "Name of the generated type"
+        }
+      },
+      "required": ["dir"]
     },
-    "verdaccioPort": {
-      "type": "number",
-      "description": "Port for Verdaccio registry"
-    },
-    "apiName": {
-      "type": "string",
-      "description": "Name of the generated API type"
+    "registry": {
+      "type": "object",
+      "description": "Configuration related to the package registry",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the package registry"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the package registry"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL of the package registry"
+        },
+        "port": {
+          "type": "number",
+          "description": "Port number for the package registry"
+        }
+      },
+      "required": ["port"]
     }
   },
-  "required": ["inputSrc", "generatedDir", "verdaccioPort", "apiName"]
+  "required": ["input", "output", "registry"]
 }

@@ -6,12 +6,12 @@ export const generateAction = async (options: {
   output?: string;
 }) => {
   const config = loadConfig();
-  const output = options.output || config.generatedDir;
+  const output = options.output || config.output.dir;
 
   console.log("🔄 Generating API type definitions...");
 
   try {
-    const result = await generate({ generatedDir: output });
+    const result = await generate(config);
     console.log(`✅ Found ${result.routeMap.length} routes`);
     console.log("✅ Type generation complete!");
 
@@ -36,7 +36,7 @@ export const generateAction = async (options: {
       watcher.on("all", async (event, filePath) => {
         console.log(`[${event}] ${filePath}`);
         try {
-          await generate({ generatedDir: output });
+          await generate(config);
           console.log("✅ Regenerated types");
         } catch (error) {
           console.error("❌ Error regenerating types:", error);

@@ -732,3 +732,21 @@ export type CreateApiClient<
 ) => Promise<
   ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
 >;
+
+export interface AdiraConfig {
+  input: {
+    dir: string;
+  };
+  output: {
+    dir: string;
+    file?: string;
+    typename?: string;
+  };
+  registry: {
+    port: number;
+    url: string;
+    version: string;
+    name: string;
+  };
+  allowedDependencies: string[];
+}

@@ -1,9 +1,10 @@
-import { runCommand, startVerdaccio, stopVerdaccio } from "../utils";
+import { startVerdaccio, stopVerdaccio } from "../utils";
 import { loadConfig } from "../utils/config";
+import { removeTypes, publishTypes } from "../utils/publish-remove";
 
 export const publishAction = async (options: { port?: string }) => {
   const config = loadConfig();
-  const port = options.port || config.verdaccioPort.toString();
+  const port = options.port || config.registry.port.toString();
 
   console.log("📦 Publishing API types...");
 
@@ -14,20 +15,14 @@ export const publishAction = async (options: { port?: string }) => {
     // First, try to remove existing package (if it exists)
     console.log("🧹 Removing existing package...");
     try {
-      await runCommand(
-        'npm run types:remove || echo "No existing package to remove"',
-      );
+      await removeTypes(config.registry.name, `${config.registry.url}:${port}`);
     } catch (err) {
       console.log("⚠️  Could not remove existing package, continuing...");
     }
 
-    // Build the types package
-    console.log("🔨 Building types package...");
-    await runCommand("npm run types:build");
-
     // Publish the types
     console.log("📤 Publishing types...");
-    await runCommand("npm run types:publish");
+    await publishTypes("./packages/types", `${config.registry.url}:${port}`);
 
     console.log("✅ Types published successfully!");
 

@@ -1,12 +1,54 @@
 import fs from "fs";
 import path from "path";
 
-export const loadConfig = () => {
+export interface AdiraConfig {
+  input: {
+    dir: string;
+  };
+  output: {
+    dir: string;
+    file?: string;
+    typename?: string;
+  };
+  registry: {
+    port: number;
+    url: string;
+    version: string;
+    name: string;
+  };
+}
+export const loadConfig = (): AdiraConfig => {
   const configPath = path.join(process.cwd(), "config.adira.json");
-  const defaults = {
-    inputSrc: "./src",
-    generatedDir: "./types",
-    verdaccioPort: 8888,
+
+  // Get package.json for default name and version
+  let packageName: string = "@project/api";
+  let packageVersion: string = "1.0.0";
+  try {
+    const packagePath = path.join(process.cwd(), "package.json");
+    if (fs.existsSync(packagePath)) {
+      const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+      packageName = packageJson.name || packageName;
+      packageVersion = packageJson.version || packageVersion;
+    }
+  } catch (error) {
+    console.log("⚠️ Warning: Could not read package.json, using defaults");
+  }
+
+  const defaults: AdiraConfig = {
+    input: {
+      dir: "./src",
+    },
+    output: {
+      dir: "./types",
+      file: "index.api.ts",
+      typename: "ApiTypes",
+    },
+    registry: {
+      name: packageName,
+      version: packageVersion,
+      port: 8888,
+      url: "http://localhost",
+    },
   };
 
   if (!fs.existsSync(configPath)) {
@@ -18,7 +60,60 @@ export const loadConfig = () => {
 
   try {
     const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-    return { ...defaults, ...config };
+
+    // Handle legacy config format compatibility
+    const legacyConfig: Partial<AdiraConfig> = {};
+
+    if (config.inputSrc) {
+      legacyConfig.input = { dir: config.inputSrc };
+    }
+    if (config.generatedDir) {
+      legacyConfig.output = {
+        dir: config.generatedDir,
+        file: defaults.output.file,
+        typename: defaults.output.typename,
+      };
+    }
+    if (config.verdaccioPort) {
+      legacyConfig.registry = {
+        name: defaults.registry.name,
+        port: config.verdaccioPort,
+        url: defaults.registry.url,
+        version: defaults.registry.version,
+      };
+    }
+
+    // Merge: defaults -> legacyConfig -> config
+    const mergedConfig = {
+      ...defaults,
+      ...legacyConfig,
+      ...config,
+    };
+
+    // Ensure nested objects are properly merged
+    if (config.input || legacyConfig.input) {
+      mergedConfig.input = {
+        ...defaults.input,
+        ...legacyConfig.input,
+        ...config.input,
+      };
+    }
+    if (config.output || legacyConfig.output) {
+      mergedConfig.output = {
+        ...defaults.output,
+        ...legacyConfig.output,
+        ...config.output,
+      };
+    }
+    if (config.registry || legacyConfig.registry) {
+      mergedConfig.registry = {
+        ...defaults.registry,
+        ...legacyConfig.registry,
+        ...config.registry,
+      };
+    }
+
+    return mergedConfig;
   } catch (error) {
     console.error("❌ Error reading config.adira.json:", error);
     return defaults;

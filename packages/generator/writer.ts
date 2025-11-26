@@ -1,54 +1,105 @@
 import {
+  GenericParam,
   isGenericTypeDefinition,
   isSimpleTypeDefinition,
   SimpleTypeDefinition,
   TypesMeta,
-  GenericParam,
 } from "./typegen";
 import fs from "fs";
 import path from "path";
 
-// Utility function to get the relative import path
-const getRelativeImportPath = (from: string, to: string): string => {
-  // Ensure both paths are absolute
-  const absoluteFrom = path.resolve(from);
-  const absoluteTo = path.resolve(to);
+// --- Package JSON Generator Helper ---
 
-  // Get the relative path between the two
-  const relativePath = path.relative(absoluteFrom, absoluteTo);
+function generatePackageJson(
+  outputDir: string,
+  imports: string[],
+  apiName: string,
+) {
+  const rootPkgPath = path.resolve(process.cwd(), "package.json");
+  let rootPkg: any = {};
+  if (fs.existsSync(rootPkgPath)) {
+    rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, "utf-8"));
+  }
 
-  // Return the relative path with the correct module import style
-  return relativePath.replace(/\.ts$/, "");
-};
+  const allDeps = { ...rootPkg.dependencies, ...rootPkg.devDependencies };
+  const usedDeps: Record<string, string> = {};
+
+  // Extract package names from import statements (e.g. 'import { z } from "zod"' -> 'zod')
+  imports.forEach((line) => {
+    const match = line.match(/from "([^"]+)";/);
+    if (match) {
+      const pkgName = match[1];
+      if (allDeps[pkgName]) {
+        usedDeps[pkgName] = allDeps[pkgName];
+      } else {
+        // If not found in root, assume 'latest' or warn?
+        // For now, let's look for @types too
+        const typesPkg = `@types/${pkgName}`;
+        if (allDeps[typesPkg]) {
+          usedDeps[typesPkg] = allDeps[typesPkg];
+        }
+        // Don't add if we can't find a version, user can fix manually
+      }
+    }
+  });
+
+  const outPkg = {
+    name: `@generated/${apiName.toLowerCase()}`,
+    version: "0.0.1",
+    description: "Auto-generated API types",
+    main: "index.api.ts",
+    types: "index.api.ts",
+    peerDependencies: usedDeps,
+    devDependencies: usedDeps, // Allows local compilation to work immediately
+  };
+
+  fs.writeFileSync(
+    path.join(outputDir, "package.json"),
+    JSON.stringify(outPkg, null, 2),
+  );
+}
+
+// --- Main Writer ---
 
 export function writeTypes(
   types: TypesMeta,
   apiTypeName: string,
   generatedDir?: string,
 ) {
-  const { api, imports } = types;
+  const { api, imports, definitions } = types;
   let output = "";
 
   const outputDir =
     generatedDir || path.join(process.cwd(), "src", "generated");
 
-  // 🔹 Step 1: Write imports
-  for (const [pathName, typeReferences] of Object.entries(imports)) {
-    const importsJoined = typeReferences.join(", ");
-    if (pathName.startsWith("/")) {
-      const relativePath = getRelativeImportPath(outputDir, pathName);
-      output += `import { ${importsJoined} } from '${relativePath}';\n`;
-    } else {
-      output += `import { ${importsJoined} } from '${pathName}';\n`;
-    }
+  // 1. Write Imports (Whitelisted)
+  output += `// --------------------------------------------------------------------------\n`;
+  output += `// This file is auto-generated. Do not edit directly.\n`;
+  output += `// --------------------------------------------------------------------------\n\n`;
+
+  if (imports.length > 0) {
+    output += `// --- Whitelisted Dependencies ---\n`;
+    imports.forEach((line) => (output += `${line}\n`));
+    output += `\n`;
   }
 
-  // 🔹 Step 2: Collect unique aliases for generic definitions
+  // 2. Write Inlined Definitions
+  output += `// --- Inlined Backend Types ---\n`;
+
+  // Always provide ObjectIdLike fallback if Mongoose was stripped
+  if (!definitions.some((d) => d.includes("type ObjectIdLike"))) {
+    output += `export type ObjectIdLike = string;\n\n`;
+  }
+
+  definitions.forEach((def) => {
+    output += `${def}\n\n`;
+  });
+
+  // 3. Write Generic Aliases
   const uniqueAliases = new Map<
     string,
     { generics: GenericParam[]; types: SimpleTypeDefinition }
   >();
-
   for (const route of Object.values(api)) {
     for (const meta of Object.values(route)) {
       if (isGenericTypeDefinition(meta)) {
@@ -60,37 +111,30 @@ export function writeTypes(
     }
   }
 
-  // 🔹 Step 3: Write alias type definitions for generics
   for (const [aliasName, { generics, types }] of uniqueAliases) {
-    // Format generic parameter list, e.g. `<T extends Foo, U, V extends Bar>`
     const genericDecl = generics
       .map((g) => (g.constraint ? `${g.name} extends ${g.constraint}` : g.name))
       .join(", ");
 
-    output += `\nexport type ${aliasName}<${genericDecl}> = {\n`;
+    output += `export type ${aliasName}<${genericDecl}> = {\n`;
     for (const [key, type] of Object.entries(types)) {
       output += `  ${key}?: ${type || "unknown"};\n`;
     }
-    output += `};\n`;
+    output += `};\n\n`;
   }
 
-  // 🔹 Step 4: Write API type definition
-  output += `\nexport type ${apiTypeName} = {`;
-
-  // Iterating through each route and method
+  // 4. Write API Definition
+  output += `export type ${apiTypeName} = {`;
   for (const [route, methods] of Object.entries(api)) {
     output += `\n  "${route}": {\n`;
     for (const [method, def] of Object.entries(methods)) {
       if (isGenericTypeDefinition(def)) {
-        // Build generic parameter list for function signature
         const genericDecl = def.generics
           .map((g) =>
             g.constraint ? `${g.name} extends ${g.constraint}` : g.name,
           )
           .join(", ");
-
         const genericNames = def.generics.map((g) => g.name).join(", ");
-
         output += `    "${method}": <${genericDecl}>() => ${def.aliasName}<${genericNames}>;\n`;
       } else if (isSimpleTypeDefinition(def)) {
         output += `    "${method}": {\n`;
@@ -102,7 +146,6 @@ export function writeTypes(
     }
     output += `  };\n`;
   }
-
   output += `};\n`;
 
   // Ensure output directory exists
@@ -110,7 +153,9 @@ export function writeTypes(
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // 🔹 Step 5: Write file
   const outputPath = path.join(outputDir, "index.api.ts");
   fs.writeFileSync(outputPath, output);
+
+  // 5. Generate Package JSON
+  generatePackageJson(outputDir, imports, apiTypeName);
 }

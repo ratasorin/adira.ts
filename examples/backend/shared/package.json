@@ -1,0 +1,9 @@
+{
+  "name": "@generated/apitypes",
+  "version": "0.0.1",
+  "description": "Auto-generated API types",
+  "main": "index.api.ts",
+  "types": "index.api.ts",
+  "peerDependencies": {},
+  "devDependencies": {}
+}

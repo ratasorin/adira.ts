@@ -1,6 +1,16 @@
 {
-  "inputSrc": "./src",
-  "generatedDir": "./shared",
-  "verdaccioPort": 8888,
-  "apiName": "AdiraTypes"
+  "input": {
+    "dir": "./src"
+  },
+  "output": {
+    "dir": "shared",
+    "file": "index.api.ts",
+    "typename": "ApiTypes"
+  },
+  "registry": {
+    "name": "@demo/api",
+    "port": 8888,
+    "url": "http://localhost",
+    "version": "1.0.0"
+  }
 }

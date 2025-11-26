@@ -4,7 +4,6 @@ import { Command } from "commander";
 import { initAction } from "./src/commands/init";
 import { generateAction } from "./src/commands/generate";
 import { publishAction } from "./src/commands/publish";
-import { watchAction } from "./src/commands/watch";
 
 const program = new Command();
 
@@ -28,13 +27,6 @@ program
   .description("Publish generated API types to local registry")
   .option("-p, --port <port>", "Verdaccio port")
   .action(publishAction);
-
-// Define the watch command
-program
-  .command("watch")
-  .description("Watch for changes and regenerate API types")
-  .option("-o, --output <output>", "Output directory for generated types")
-  .action(watchAction);
 
 // Add version command
 program
