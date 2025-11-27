@@ -16,9 +16,7 @@ export type DeleteUserFn = typeof deleteUser;
 
 export const getUsersHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetUsersFn>>,
-  res: Response<
-    Backend.InferHandlerResponse<GetUsersFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<GetUsersFn, {}> | ErrorResponse>,
 ) => {
   try {
     const users = await getUsers(req.query);
@@ -33,9 +31,7 @@ export const getUsersHandler = async (
 
 export const createUserHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<CreateUserFn>>,
-  res: Response<
-    Backend.InferHandlerResponse<CreateUserFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<CreateUserFn, {}> | ErrorResponse>,
 ) => {
   try {
     const user = await createUser(req.query, req.body);
@@ -55,9 +51,7 @@ export const updateUserHandler = async (
     any,
     Backend.InferHandlerParams<UpdateUserFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<UpdateUserFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<UpdateUserFn, {}> | ErrorResponse>,
 ) => {
   try {
     const { id } = req.params;
@@ -83,9 +77,7 @@ export const deleteUserHandler = async (
     any,
     Backend.InferHandlerParams<DeleteUserFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<DeleteUserFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<DeleteUserFn, {}> | ErrorResponse>,
 ) => {
   try {
     const user = await deleteUser(req.params.id, req.query, {

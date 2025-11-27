@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IUser } from "./User";
-import { RefTo } from "@n/adira.core.ts";
+import { RefTo, Serialize } from "@n/adira.core.ts";
 
 export interface ICategory {
-  _id: mongoose.Types.ObjectId;
+  _id: Serialize<mongoose.Types.ObjectId, string>;
   name: string;
   description: string;
   slug: string;
-  parentCategory: mongoose.Types.ObjectId & RefTo<ICategory>;
-  createdBy: mongoose.Types.ObjectId & RefTo<IUser>;
+  parentCategory: Serialize<mongoose.Types.ObjectId, string> & RefTo<ICategory>;
+  createdBy: Serialize<mongoose.Types.ObjectId, string> & RefTo<IUser>;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

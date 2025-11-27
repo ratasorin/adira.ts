@@ -750,3 +750,5 @@ export interface AdiraConfig {
   };
   allowedDependencies: string[];
 }
+
+export type Serialize<T, R> = T & { __: R };

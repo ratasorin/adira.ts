@@ -4,12 +4,32 @@ import fs from "fs";
 import glob from "fast-glob";
 import { loadConfig } from "./config";
 
-export interface RouteMeta {
+/**
+ * API endpoint definition identified when scanning the express `routers`
+ */
+export interface DiscoveredRoute {
   method: string;
   path: string;
-  handlerName: string;
-  handlerPath: string;
-  middlewares: string[];
+
+  // The `handler` is a function used to process a request: router.get("/users", getUsersHandler)
+  handler: {
+    /**
+     * The generator uses this as an entry point for traversing the AST and finding type declarations for RequestBody, ResponseBody, RequestParams, RequestPath
+     */
+    name: string;
+    /**
+     * The absolute file system path to the TypeScript source file containing the handler.
+     *
+     * This is passed to `ts.createProgram` to load the file into the compiler context.
+     */
+    path: string;
+  };
+
+  /**
+   * An optional global prefix for the route (e.g., "/api/v1").
+   * If present, this is prepended to `path` to ensure the generated SDK
+   * uses the full, correct URL.
+   */
   prefix?: string;
 }
 
@@ -40,9 +60,9 @@ function resolveImport(
   return undefined;
 }
 
-export async function parseRoutes(): Promise<RouteMeta[]> {
+export async function parseRoutes(): Promise<DiscoveredRoute[]> {
   const files = getAllFiles();
-  const routeMetas: RouteMeta[] = [];
+  const routeMetas: DiscoveredRoute[] = [];
   const importMap: Record<string, string> = {};
   let prefixMap: Record<string, string> = {};
 
@@ -220,9 +240,10 @@ export async function parseRoutes(): Promise<RouteMeta[]> {
             routeMetas.push({
               method,
               path: routePath,
-              handlerName,
-              handlerPath,
-              middlewares,
+              handler: {
+                name: handlerName,
+                path: handlerPath,
+              },
               prefix,
             });
           }
