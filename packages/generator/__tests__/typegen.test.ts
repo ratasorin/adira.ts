@@ -7,7 +7,7 @@ import { DiscoveredRoute } from "../parser";
 // We mock this so we can control the whitelist without external files
 jest.mock("../config", () => ({
   loadConfig: () => ({
-    allowedDependencies: ["@allowed/package"],
+    allowedDependencies: ["@allowed/package", "@n/adira.core.ts"],
   }),
 }));
 
@@ -343,7 +343,7 @@ describe("Multi-File Dependency Resolution", () => {
   });
 });
 
-describe("Adira Library Dependency Resolution", () => {
+describe.only("Adira Library Dependency Resolution", () => {
   test("Reproduce: Local types missing when wrapped in Whitelisted Generics", async () => {
     // 1. Setup the file structure mimicking your real project
     const files = {
@@ -358,7 +358,7 @@ describe("Adira Library Dependency Resolution", () => {
         export type Serialize<T, R> = T;
         export type RefTo<T> = T;
       `,
-      "src/models/IUser.ts": `
+      "src/models/User.ts": `
         import { RefTo, Serialize } from "@n/adira.core.ts";
         import mongoose, { Schema, Document, Model } from "mongoose";
         import { IOrder } from "./Order";

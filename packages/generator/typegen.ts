@@ -41,8 +41,6 @@ export function isSimpleTypeDefinition(
   return !isGenericTypeDefinition(def);
 }
 
-// --- The Semantic Type Walker ---
-
 class TypeCollector {
   private checker: ts.TypeChecker;
   private config: AdiraConfig;
@@ -50,357 +48,278 @@ class TypeCollector {
   private definitions = new Map<string, string>();
   private externalImports = new Map<string, Set<string>>();
 
-  // Recursion guard stack
-  private stack = new Set<ts.Type>();
+  // Prevents infinite recursion (e.g. User -> Order -> User)
+  private processingStack = new Set<string>();
 
   constructor(program: ts.Program) {
     this.checker = program.getTypeChecker();
     this.config = loadConfig();
+
+    console.log({ config: this.config });
   }
 
   /**
-   * The entry point. Takes a TypeNode (from AST), gets its Semantic Type,
-   * and converts it to a string recursively.
+   * PURE SYNTACTIC RESOLVER
+   * Uses AST Node Kinds only. No checker.getTypeFromTypeNode().
    */
   public resolveTypeNode(node: ts.TypeNode | undefined): string {
-    if (!node) return "any";
+    if (!node) return "unknown";
 
-    // Unwrap Serialize<T, R> -> R logic
-    if (
-      ts.isTypeReferenceNode(node) &&
-      node.typeName.getText().endsWith("Serialize")
-    ) {
+    switch (node.kind) {
+      // 1. Primitives
+      case ts.SyntaxKind.StringKeyword:
+        return "string";
+      case ts.SyntaxKind.NumberKeyword:
+        return "number";
+      case ts.SyntaxKind.BooleanKeyword:
+        return "boolean";
+      case ts.SyntaxKind.VoidKeyword:
+        return "void";
+      case ts.SyntaxKind.UndefinedKeyword:
+        return "undefined";
+      case ts.SyntaxKind.NullKeyword:
+        return "null";
+      case ts.SyntaxKind.AnyKeyword:
+        return "any";
+      case ts.SyntaxKind.UnknownKeyword:
+        return "unknown";
+      case ts.SyntaxKind.NeverKeyword:
+        return "never";
+      case ts.SyntaxKind.ObjectKeyword:
+        return "object";
+
+      // 2. Arrays (Recursive)
+      case ts.SyntaxKind.ArrayType: {
+        const arr = node as ts.ArrayTypeNode;
+        return `${this.resolveTypeNode(arr.elementType)}[]`;
+      }
+
+      // 3. Unions (Recursive)
+      case ts.SyntaxKind.UnionType: {
+        const union = node as ts.UnionTypeNode;
+        const members = union.types.map((t) => this.resolveTypeNode(t));
+        return members.join(" | ");
+      }
+
+      // 4. Intersections (Recursive)
+      case ts.SyntaxKind.IntersectionType: {
+        const intersect = node as ts.IntersectionTypeNode;
+        const members = intersect.types.map((t) => this.resolveTypeNode(t));
+        return members.join(" & ");
+      }
+
+      // 5. References (The Core Logic)
+      case ts.SyntaxKind.TypeReference: {
+        return this.handleTypeReference(node as ts.TypeReferenceNode);
+      }
+
+      // 6. Inline Object Literals { a: string }
+      case ts.SyntaxKind.TypeLiteral: {
+        return this.handleTypeLiteral(node as ts.TypeLiteralNode);
+      }
+
+      // 7. Literals ("hello", 123)
+      case ts.SyntaxKind.LiteralType: {
+        const lit = node as ts.LiteralTypeNode;
+        // @ts-ignore
+        if (lit.literal.text) return `"${lit.literal.text}"`;
+        // @ts-ignore
+        return lit.literal.text || "unknown";
+      }
+
+      default:
+        return "unknown";
+    }
+  }
+
+  private handleTypeReference(node: ts.TypeReferenceNode): string {
+    const rawName = this.getEntityName(node.typeName);
+    const nameParts = rawName.split(".");
+    const simpleName = nameParts[nameParts.length - 1];
+
+    // --- RULE 0: DATES -> STRING ---
+    // JSON APIs serialize Dates as ISO strings.
+    // We catch this Syntactically before looking up definitions.
+    if (simpleName === "Date") {
+      return "string";
+    }
+
+    // --- RULE 1: HANDLE `Serialize` ONLY ---
+    if (simpleName === "Serialize") {
       if (node.typeArguments && node.typeArguments.length >= 2) {
         return this.resolveTypeNode(node.typeArguments[1]);
       }
+      return "unknown";
     }
 
-    const type = this.checker.getTypeFromTypeNode(node);
-    return this.typeToString(type, node);
-  }
+    // --- RULE 2: RESOLVE ARGUMENTS FIRST ---
+    // We resolve these immediately so we have the string ready (e.g. "<ICategory>")
+    const generics = node.typeArguments
+      ? `<${node.typeArguments.map((arg) => this.resolveTypeNode(arg)).join(", ")}>`
+      : "";
 
-  /**
-   * Recursively converts a TS Type object to a code string.
-   */
-  private typeToString(type: ts.Type, contextNode?: ts.Node): string {
-    // 1. Handle Primitives (Keep this first for performance/safety)
-    if (type.flags & ts.TypeFlags.String) return "string";
-    if (type.flags & ts.TypeFlags.Number) return "number";
-    if (type.flags & ts.TypeFlags.Boolean) return "boolean";
-    if (type.flags & ts.TypeFlags.Void) return "void";
-    if (type.flags & ts.TypeFlags.Undefined) return "undefined";
-    if (type.flags & ts.TypeFlags.Null) return "null";
-    if (type.flags & ts.TypeFlags.Any) return "any";
-    if (type.flags & ts.TypeFlags.Unknown) return "unknown";
-
-    // --- 2. CHECK FOR NAMED TYPES (Moved Up!) ---
-    // We check this BEFORE Literals/Unions to ensure we capture the Alias name (e.g. "Status")
-    // instead of expanding it immediately.
-
-    const symbol = type.getSymbol() || type.aliasSymbol;
+    // --- RULE 3: RESOLVE SYMBOL & FOLLOW ALIASES (THE FIX) ---
+    let symbol = this.checker.getSymbolAtLocation(node.typeName);
 
     if (symbol) {
-      const name = symbol.getName();
-
-      // Filter out standard library types or internals we don't want to redefine
-      // (Unless they are actual Arrays, which we handle specifically later)
-      if (name !== "__type" && name !== "Array" && name !== "Promise") {
-        const declarations = symbol.getDeclarations();
-
-        // A. Handle External Imports (node_modules)
-        if (declarations && declarations.length > 0) {
-          const sourceFile = declarations[0].getSourceFile();
-          if (sourceFile.fileName.includes("node_modules")) {
-            const pkgName = this.getPackageName(sourceFile.fileName);
-            if (this.config.allowedDependencies.includes(pkgName)) {
-              this.addImport(pkgName, name);
-
-              let args = (type as any).typeArguments as ts.Type[];
-              if (
-                (!args || args.length === 0) &&
-                (type as any).aliasTypeArguments
-              ) {
-                args = (type as any).aliasTypeArguments as ts.Type[];
-              }
-
-              // Recursively visit arguments to ensure their definitions are collected
-              if (args && args.length > 0) {
-                args.forEach((arg) => this.typeToString(arg));
-              }
-
-              return this.printReferenceWithGenerics(symbol, type, name);
-            }
-            // If external but not allowed, fallback to 'unknown'
-            return "unknown";
-          }
-        }
-
-        // B. Handle Local Definitions
-        // If it has a name and isn't an anonymous object literal
-        if (!this.isAnonymousObject(type)) {
-          // Check recursion stack to prevent infinite loops,
-          // but allow the first pass to register the definition
-          if (!this.stack.has(type)) {
-            this.stack.add(type);
-            this.collectDefinition(name, type, symbol);
-            this.stack.delete(type);
-          }
-          return this.printReferenceWithGenerics(symbol, type, name);
-        }
+      // CRITICAL FIX: If this symbol is just an import (Alias), follow it to the real definition
+      if (symbol.flags & ts.SymbolFlags.Alias) {
+        symbol = this.checker.getAliasedSymbol(symbol);
       }
     }
 
-    // --- 3. Structural Types (Unions, Literals, Arrays) ---
-
-    // Handle Arrays explicitly (case: string[])
-    if (this.checker.isArrayType(type)) {
-      // @ts-ignore
-      const typeArgs = type.typeArguments || [];
-      if (typeArgs.length > 0) {
-        return `${this.typeToString(typeArgs[0])}[]`;
-      }
-      return "any[]";
+    if (!symbol) {
+      // It's likely a Generic Parameter (T) or global that TS can't resolve contextually
+      return rawName + generics;
     }
-
-    // Handle Unions (A | B)
-    if (type.isUnion()) {
-      return type.types.map((t) => this.typeToString(t)).join(" | ");
-    }
-
-    // Handle Intersections (A & B)
-    if (type.isIntersection()) {
-      return type.types.map((t) => this.typeToString(t)).join(" & ");
-    }
-
-    // Handle Literal Types ("hello", 123)
-    if (type.isLiteral()) {
-      if (type.isStringLiteral()) return `"${type.value}"`;
-      if (type.isNumberLiteral()) return `${type.value}`;
-      // @ts-ignore
-      if (type.intrinsicName === "false") return "false";
-      // @ts-ignore
-      if (type.intrinsicName === "true") return "true";
-    }
-
-    // --- 4. Special Objects ---
-
-    // Handle Promise<T>
-    if (symbol && symbol.getName() === "Promise") {
-      const typeArgs = (type as any).typeArguments || [];
-      if (typeArgs.length > 0) {
-        return `Promise<${this.typeToString(typeArgs[0])}>`;
-      }
-      return "Promise<any>";
-    }
-
-    if (this.stack.has(type)) return "any";
-    this.stack.add(type);
-
-    try {
-      const callSignatures = type.getCallSignatures();
-      if (callSignatures.length > 0) {
-        // ... (Keep your existing function signature logic)
-        const sig = callSignatures[0];
-        const params = sig.parameters
-          .map((p) => {
-            const pType = this.checker.getTypeOfSymbolAtLocation(
-              p,
-              p.valueDeclaration!,
-            );
-            const optional = (p.valueDeclaration as ts.ParameterDeclaration)
-              ?.questionToken
-              ? "?"
-              : "";
-            return `${p.getName()}${optional}: ${this.typeToString(pType)}`;
-          })
-          .join(", ");
-        const ret = this.typeToString(sig.getReturnType());
-        return `(${params}) => ${ret}`;
-      }
-
-      const props = type.getProperties();
-      if (props.length > 0) {
-        // ... (Keep your existing object literal logic)
-        const members = props.map((prop) => {
-          const propType = this.checker.getTypeOfSymbolAtLocation(
-            prop,
-            prop.valueDeclaration!,
-          );
-          const optional = (prop.valueDeclaration as ts.PropertyDeclaration)
-            ?.questionToken
-            ? "?"
-            : "";
-          return `${prop.getName()}${optional}: ${this.typeToString(propType)}`;
-        });
-        return `{ ${members.join("; ")} }`;
-      }
-
-      return "any";
-    } finally {
-      this.stack.delete(type);
-    }
-  }
-  // --- Helpers ---
-  private printReferenceWithGenerics(
-    symbol: ts.Symbol,
-    type: ts.Type,
-    name: string,
-  ): string {
-    // 1. Check for standard Class/Interface Generics
-    let args = (type as any).typeArguments as ts.Type[];
-
-    // 2. If empty, check for Type Alias Generics (CRITICAL FIX)
-    if ((!args || args.length === 0) && (type as any).aliasTypeArguments) {
-      args = (type as any).aliasTypeArguments as ts.Type[];
-    }
-
-    // 3. Recurse into arguments
-    if (args && args.length > 0) {
-      const argStrings = args.map((t) => this.typeToString(t));
-      return `${name}<${argStrings.join(", ")}>`;
-    }
-
-    return name;
-  }
-
-  private isAnonymousObject(type: ts.Type): boolean {
-    return (
-      (type.flags & ts.TypeFlags.Object) !== 0 &&
-      (type as ts.ObjectType).objectFlags !== undefined &&
-      ((type as ts.ObjectType).objectFlags & ts.ObjectFlags.Anonymous) !== 0
-    );
-  }
-
-  private collectDefinition(name: string, type: ts.Type, symbol: ts.Symbol) {
-    if (this.definitions.has(name)) return;
-    this.definitions.set(name, `// Processing ${name}...`);
 
     const declarations = symbol.getDeclarations();
-    let typeParamsStr = "";
-    if (declarations && declarations.length > 0) {
-      const decl = declarations[0] as
-        | ts.InterfaceDeclaration
-        | ts.TypeAliasDeclaration;
-      if (decl.typeParameters) {
-        typeParamsStr = `<${decl.typeParameters.map((tp) => tp.name.getText()).join(", ")}>`;
+    if (!declarations || declarations.length === 0) return "unknown";
+
+    const declaration = declarations[0];
+    const sourceFile = declaration.getSourceFile();
+    console.log({ sourceFile });
+    const isNodeModule = sourceFile.fileName.includes("node_modules");
+
+    // A. External Imports (e.g. Backend.ExecuteGET)
+    if (isNodeModule) {
+      const pkgName = this.getPackageName(sourceFile.fileName);
+      if (this.config.allowedDependencies.includes(pkgName)) {
+        const rootName = nameParts[0];
+        this.addImport(pkgName, rootName);
+        return rawName + generics;
       }
+      return "unknown";
     }
 
-    let def = "";
+    // B. Local Definitions
+    // Now that we followed the alias, `declaration` is the actual Interface/Type/Enum
+    if (
+      ts.isInterfaceDeclaration(declaration) ||
+      ts.isTypeAliasDeclaration(declaration) ||
+      ts.isEnumDeclaration(declaration) ||
+      ts.isClassDeclaration(declaration)
+    ) {
+      // We queue the definition using the simple name (e.g. "ICategory")
+      this.queueDefinition(simpleName, declaration);
+      return simpleName + generics;
+    }
 
-    // 1. Unions (A | B)
-    if (type.isUnion()) {
-      const unionBody = type.types.map((t) => this.typeToString(t)).join(" | ");
-      def = `export type ${name}${typeParamsStr} = ${unionBody};`;
-    }
-    // 2. Intersections (A & B)
-    else if (type.isIntersection()) {
-      const intersectBody = type.types
-        .map((t) => this.typeToString(t))
-        .join(" & ");
-      def = `export type ${name}${typeParamsStr} = ${intersectBody};`;
-    }
-    // 3. Literals
-    else if (type.isLiteral()) {
-      let val = "";
-      if (type.isStringLiteral()) val = `"${type.value}"`;
-      else if (type.isNumberLiteral()) val = `${type.value}`;
-      // @ts-ignore
-      else if (type.intrinsicName === "false") val = "false";
-      // @ts-ignore
-      else if (type.intrinsicName === "true") val = "true";
+    return "unknown";
+  }
 
-      def = `export type ${name}${typeParamsStr} = ${val};`;
-    }
-    // 4. PRIMITIVE GUARDS (Critical Logic)
-    // This stops the code from treating 'string' as an object with methods.
-    else if (type.flags & ts.TypeFlags.String) {
-      def = `export type ${name}${typeParamsStr} = string;`;
-    } else if (type.flags & ts.TypeFlags.Number) {
-      def = `export type ${name}${typeParamsStr} = number;`;
-    } else if (type.flags & ts.TypeFlags.Boolean) {
-      def = `export type ${name}${typeParamsStr} = boolean;`;
-    } else if (type.flags & ts.TypeFlags.Void) {
-      def = `export type ${name}${typeParamsStr} = void;`;
-    }
-    // 5. Functions
-    else if (type.getCallSignatures().length > 0) {
-      const sig = type.getCallSignatures()[0];
-      const params = sig.parameters
-        .map((p) => {
-          const pt = this.checker.getTypeOfSymbolAtLocation(
-            p,
-            p.valueDeclaration!,
+  private handleTypeLiteral(node: ts.TypeLiteralNode): string {
+    const members = node.members
+      .map((m) => this.printMember(m))
+      .filter((m) => m !== "")
+      .join("\n");
+    return `{\n${members}\n}`;
+  }
+
+  // --- DEFINITION GENERATION ---
+
+  private queueDefinition(name: string, declaration: ts.Declaration) {
+    if (this.definitions.has(name) || this.processingStack.has(name)) return;
+    this.processingStack.add(name);
+
+    // Placeholder to handle circular refs during recursion
+    this.definitions.set(name, `// Processing ${name}...`);
+
+    let defString = "";
+
+    try {
+      if (ts.isInterfaceDeclaration(declaration)) {
+        // interface IUser { ... }
+        const members = declaration.members
+          .map((m) => this.printMember(m))
+          .join("\n");
+
+        let extendsClause = "";
+        if (declaration.heritageClauses) {
+          const extendsTypes = declaration.heritageClauses[0].types.map(
+            // @ts-expect-error bleh
+            (t) => this.handleTypeReference(t), // Reuse reference handler for 'extends'
           );
-          return `${p.getName()}: ${this.typeToString(pt)}`;
-        })
-        .join(", ");
-      const ret = this.typeToString(sig.getReturnType());
-      def = `export type ${name}${typeParamsStr} = (${params}) => ${ret};`;
-    }
-    // 6. Objects / Interfaces
-    else {
-      const props = type.getProperties();
+          if (extendsTypes.length > 0) {
+            extendsClause = ` extends ${extendsTypes.join(", ")}`;
+          }
+        }
 
-      const members = props
-        .filter((p) => {
-          // --- FILTER FIX ---
-          // 1. Remove internal/private properties
-          if (p.getName().startsWith("__")) return false;
-
-          // 2. Check where this property comes from
-          const decls = p.getDeclarations();
-
-          // If no declaration found (synthetic), keep it (safe default)
-          if (!decls || decls.length === 0) return true;
-
-          // 3. Check the file source
-          const sourceFile = decls[0].getSourceFile();
-          const fileName = sourceFile.fileName;
-
-          // If the property is defined in the default TypeScript libraries
-          // (like lib.es5.d.ts, which defines Object.prototype, String.prototype, etc.)
-          // we exclude it.
-          if (fileName.includes("typescript/lib")) return false;
-          if (fileName.includes("node_modules/typescript")) return false;
-
-          return true;
-        })
-        .map((p) => {
-          const pt = this.checker.getTypeOfSymbolAtLocation(
-            p,
-            p.valueDeclaration!,
-          );
-          const optional = (p.valueDeclaration as any)?.questionToken
-            ? "?"
-            : "";
-          return `  ${p.getName()}${optional}: ${this.typeToString(pt)};`;
-        })
-        .join("\n");
-
-      const isInterface = declarations?.some((d) =>
-        ts.isInterfaceDeclaration(d),
-      );
-
-      if (isInterface) {
-        def = `export interface ${name}${typeParamsStr} {\n${members}\n}`;
-      } else {
-        def = `export type ${name}${typeParamsStr} = {\n${members}\n};`;
+        const params = this.printTypeParams(declaration.typeParameters);
+        defString = `export interface ${name}${params}${extendsClause} {\n${members}\n}`;
+      } else if (ts.isTypeAliasDeclaration(declaration)) {
+        // type X = ...
+        // We MUST resolve the TypeNode of the alias to capture dependencies
+        const targetType = this.resolveTypeNode(declaration.type);
+        const params = this.printTypeParams(declaration.typeParameters);
+        defString = `export type ${name}${params} = ${targetType};`;
+      } else if (ts.isEnumDeclaration(declaration)) {
+        const members = declaration.members
+          .map((m) => {
+            const val = m.initializer ? ` = ${m.initializer.getText()}` : "";
+            return `  ${m.name.getText()}${val},`;
+          })
+          .join("\n");
+        defString = `export enum ${name} {\n${members}\n}`;
       }
+    } catch (e) {
+      console.error(`Failed to generate definition for ${name}`, e);
+      defString = `export type ${name} = any; // Error`;
     }
 
-    this.definitions.set(name, def);
+    this.definitions.set(name, defString);
+    this.processingStack.delete(name);
+  }
+
+  private printMember(member: ts.TypeElement): string {
+    if (ts.isPropertySignature(member)) {
+      // Exclude internals
+      if (member.name.getText().startsWith("__")) return "";
+
+      const pName = member.name.getText();
+      const optional = member.questionToken ? "?" : "";
+      // Recursively resolve the property type
+      const typeStr = this.resolveTypeNode(member.type);
+
+      return `  ${pName}${optional}: ${typeStr};`;
+    }
+    return "";
+  }
+
+  // --- HELPERS ---
+
+  private getEntityName(name: ts.EntityName): string {
+    if (ts.isIdentifier(name)) {
+      return name.text;
+    }
+    return `${this.getEntityName(name.left)}.${name.right.text}`;
+  }
+
+  private printTypeParams(
+    params?: ts.NodeArray<ts.TypeParameterDeclaration>,
+  ): string {
+    if (!params || params.length === 0) return "";
+    const inner = params
+      .map((p) => {
+        const constraint = p.constraint
+          ? ` extends ${this.resolveTypeNode(p.constraint)}`
+          : "";
+        const def = p.default ? ` = ${this.resolveTypeNode(p.default)}` : "";
+        return `${p.name.getText()}${constraint}${def}`;
+      })
+      .join(", ");
+    return `<${inner}>`;
   }
 
   private getPackageName(pathStr: string): string {
     const parts = pathStr.split("node_modules" + path.sep);
     if (parts.length > 1) {
       const pkgParts = parts[parts.length - 1].split(path.sep);
-      const names = pkgParts.filter((p) => p !== "");
-      if (names[0].startsWith("@") && names.length > 1) {
-        return `${names[0]}/${names[1]}`;
+      const scope = pkgParts[0];
+      if (scope.startsWith("@") && pkgParts.length > 1) {
+        return `${scope}/${pkgParts[1]}`;
       }
-      return names[0];
+      return scope;
     }
     return "";
   }
@@ -409,9 +328,7 @@ class TypeCollector {
     if (!this.externalImports.has(pkgName)) {
       this.externalImports.set(pkgName, new Set());
     }
-    // Clean up "Backend.Response" -> "Backend"
-    const root = typeName.split(".")[0];
-    this.externalImports.get(pkgName)!.add(root);
+    this.externalImports.get(pkgName)!.add(typeName);
   }
 
   public getImports(): string[] {
@@ -426,7 +343,6 @@ class TypeCollector {
     return Array.from(this.definitions.values());
   }
 }
-
 // --- Main Generator ---
 
 export async function generateTypes(
