@@ -1,15 +1,43 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { generateTypes, SimpleTypeDefinition } from "../typegen";
-import { DiscoveredRoute } from "../parser";
+import { DiscoveredHandler } from "../types";
+import { generateApiDefinitonForHandlers } from "../generate";
+import ts from "typescript";
+import { DependencyResolver } from "../../utils";
+import { ImportCollector } from "../../imports/collector";
 
 // --- Mock the Config Loader ---
 // We mock this so we can control the whitelist without external files
-jest.mock("../config", () => ({
+jest.mock("../../config", () => ({
   loadConfig: () => ({
     allowedDependencies: ["@allowed/package", "@n/adira.core.ts"],
   }),
 }));
+
+/**
+ * Creates a real TS Program from a set of virtual files on disk
+ */
+function createTestProgram(projectDir: string): ts.Program {
+  let options: ts.CompilerOptions = {
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.CommonJS,
+    esModuleInterop: true,
+    skipLibCheck: true,
+    declaration: true,
+  };
+
+  // Get all .ts files in the temp dir
+  const walk = (dir: string): string[] => {
+    const files = fs.readdirSync(dir);
+    return files.flatMap((file) => {
+      const p = path.join(dir, file);
+      return fs.statSync(p).isDirectory() ? walk(p) : p;
+    });
+  };
+
+  const fileNames = walk(projectDir).filter((f) => f.endsWith(".ts"));
+  return ts.createProgram(fileNames, options);
+}
 
 // --- Test Utilities ---
 const TEMP_DIR = path.join(__dirname, "dist");
@@ -19,71 +47,103 @@ beforeAll(() => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR);
 });
-
 /**
- * Helper to write a virtual controller file and run the generator against it.
- */
-async function runTestAgainstCode(code: string, handlerName = "handler") {
-  const fileName = `test_${Date.now()}.ts`;
-  const filePath = path.join(TEMP_DIR, fileName);
-
-  // Write the file to disk so ts.createProgram can find it
-  fs.writeFileSync(filePath, code);
-
-  const route: DiscoveredRoute = {
-    handler: {
-      path: filePath,
-      name: handlerName,
-    },
-    method: "POST",
-    path: "/test",
-    prefix: "/api",
-  };
-
-  try {
-    const result = await generateTypes([route]);
-    return result;
-  } finally {
-    // Optional: Clean up individual file immediately, or let afterAll do it
-    fs.rmSync(filePath);
-  }
-}
-
-/**
- * Creates a temporary folder with multiple files to simulate a real project.
- * @param fileStructure Object where keys are relative paths and values are file content
- * @param entryPoint The file that contains the handler (e.g., "controllers/user.ts")
+ * Main Test Runner: Simulates the Generator Lifecycle
  */
 async function runProjectTest(
   fileStructure: Record<string, string>,
-  entryPoint: string,
+  entryPointRelativePath: string,
+  handlerName = "handler",
 ) {
-  // 1. Create a unique folder for this specific test case
   const testId = Math.random().toString(36).substring(7);
   const projectDir = path.join(TEMP_DIR, testId);
-  fs.mkdirSync(projectDir);
+  const sharedSrcDir = path.join(projectDir, "shared/src");
 
-  // 2. Write all files to disk
+  // 1. Write Source Files
   for (const [relativePath, content] of Object.entries(fileStructure)) {
-    const fullPath = path.join(projectDir, relativePath);
-    // Ensure nested directories exist (e.g., if path is "models/user.ts")
+    const fullPath = path.join(projectDir, "src", relativePath);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, content);
   }
 
-  // 3. Construct the RouteMeta pointing to the entry file
-  const route: DiscoveredRoute = {
-    handler: {
-      path: path.join(projectDir, entryPoint),
-      name: "handler",
+  // 2. Create Phase A Program (Source)
+  const sourceProgram = createTestProgram(path.join(projectDir, "src"));
+
+  const emittedFiles: string[] = [];
+  // 3. Simulate "The Bridge" (Transpilation)
+  // In a real test, you'd call your compileProject helper.
+  // Here we simulate the .d.ts result for brevity or use the compiler API.
+  const emitResult = sourceProgram.emit(
+    undefined,
+    (fileName, data) => {
+      const rel = path.relative(path.join(projectDir, "src"), fileName);
+      const outPath = path.join(sharedSrcDir, rel);
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, data);
+      emittedFiles.push(outPath); // Track exactly what was created
     },
-    method: "POST",
-    path: "/test",
-    prefix: "/api",
+    undefined,
+    true, // true = emitOnlyDts
+  );
+
+  // 4. Create Phase B Program using the EXPLICIT emitted file list
+  const program = ts.createProgram({
+    rootNames: emittedFiles,
+    options: {
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.NodeJs,
+      baseUrl: sharedSrcDir,
+      skipLibCheck: true,
+      allowJs: false,
+      declaration: true,
+      emitDeclarationOnly: true,
+    },
+  });
+
+  // Verify the program loaded the files
+  const handlerDtsPath = path.join(
+    sharedSrcDir,
+    entryPointRelativePath.replace(".ts", ".d.ts"),
+  );
+  if (!program.getSourceFile(handlerDtsPath)) {
+    // Debug: log all files actually loaded
+    console.log(
+      "Loaded files:",
+      program.getSourceFiles().map((f) => f.fileName),
+    );
+    throw new Error(`Failed to load declaration file: ${handlerDtsPath}`);
+  }
+
+  const resolver = new DependencyResolver(program, [
+    "@allowed/package",
+    "@n/adira.core.ts",
+  ]);
+  const collector = new ImportCollector(program, resolver, sharedSrcDir);
+
+  const handler: DiscoveredHandler = {
+    method: "POST" as any,
+    endpoint: "/test",
+    endpointPrefix: "/api",
+    handler: {
+      name: handlerName,
+      sourcePath: path.join(
+        sharedSrcDir,
+        entryPointRelativePath.replace(".ts", ".d.ts"),
+      ),
+    },
   };
 
-  // 4. Run the generator
-  return await generateTypes([route]);
+  const api = await generateApiDefinitonForHandlers(
+    [handler],
+    program,
+    collector,
+  );
+
+  return {
+    api,
+    imports: collector.getImportLines(),
+  };
 }
 
 describe("Semantic Type Generator", () => {
@@ -104,8 +164,12 @@ describe("Semantic Type Generator", () => {
       ) => {};
     `;
 
-    const { api } = await runTestAgainstCode(code);
-    const result = api["/api/test"]["POST"] as SimpleTypeDefinition;
+    const files = {
+      "handlers/test.ts": code,
+    };
+
+    const { api } = await runProjectTest(files, "handlers/test.ts", "handler");
+    const result = api["/api/test"]["POST"];
 
     // Check Params (Simple Object)
     expect(result.RequestParams).toContain("id: string");
@@ -133,8 +197,12 @@ describe("Semantic Type Generator", () => {
       ) => {};
     `;
 
-    const { api } = await runTestAgainstCode(code);
-    const bodyType = api["/api/test"]["POST"] as SimpleTypeDefinition;
+    const files = {
+      "handlers/test.ts": code,
+    };
+
+    const { api } = await runProjectTest(files, "handlers/test.ts", "handler");
+    const bodyType = api["/api/test"]["POST"];
 
     // It should ONLY see the APIUser structure
     expect(bodyType.RequestBody).toContain("APIUser");
@@ -155,18 +223,20 @@ describe("Semantic Type Generator", () => {
       ) => {};
     `;
 
-    const { api, definitions } = await runTestAgainstCode(code);
+    const files = {
+      "handlers/test.ts": code,
+    };
 
-    // 1. The Body string should reference the interface name, not the literal
-    expect((api["/api/test"]["POST"] as SimpleTypeDefinition).RequestBody).toBe(
-      "UserProfile",
+    const { api, imports } = await runProjectTest(
+      files,
+      "handlers/test.ts",
+      "handler",
     );
 
-    // 2. The definitions array should contain the code for UserProfile
-    const defString = definitions.join("\n");
-    expect(defString).toContain("export interface UserProfile");
-    expect(defString).toContain("username: string;");
-    expect(defString).toContain("age?: number;");
+    // 1. The Body string should reference the interface name, not the literal
+    expect(api["/api/test"]["POST"].RequestBody).toBe("UserProfile");
+
+    expect(imports).toContain("UserProfile");
   });
 
   test("Scenario 4: Handles Arrays and Nested Objects", async () => {
@@ -179,8 +249,12 @@ describe("Semantic Type Generator", () => {
       ) => {};
     `;
 
-    const { api } = await runTestAgainstCode(code);
-    const body = (api["/api/test"]["POST"] as SimpleTypeDefinition).RequestBody;
+    const files = {
+      "handlers/test.ts": code,
+    };
+
+    const { api } = await runProjectTest(files, "handlers/test.ts", "handler");
+    const body = api["/api/test"]["POST"].RequestBody;
 
     expect(body).toBe("{ tags: string[]; meta: { created: boolean } }");
   });
@@ -202,8 +276,12 @@ describe("Semantic Type Generator", () => {
       ) => {};
     `;
 
-    const { api } = await runTestAgainstCode(code);
-    const body = (api["/api/test"]["POST"] as SimpleTypeDefinition).RequestBody;
+    const files = {
+      "/handlers/test.ts": code,
+    };
+
+    const { api } = await runProjectTest(files, "handlers/test.ts", "handler");
+    const body = api["/api/test"]["POST"].RequestBody;
 
     // fs.Stats should be resolved to 'any' because 'fs' is not in our mocked allowedDependencies
     // However, since we can't easily mock actual node_resolution in this temp dir without `npm install`,
@@ -236,17 +314,13 @@ describe("Multi-File Dependency Resolution", () => {
       `,
     };
 
-    const { api, definitions } = await runProjectTest(files, "controller.ts");
+    const { api, imports } = await runProjectTest(files, "controller.ts");
 
     // 1. Validates that the body type refers to "User" (the name)
-    expect((api["/api/test"]["POST"] as SimpleTypeDefinition).RequestBody).toBe(
-      "User",
-    );
+    expect(api["/api/test"]["POST"].RequestBody).toBe("User");
 
     // 2. Validates that the definition for "User" was found in the other file and extracted
-    const allDefs = definitions.join("\n");
-    expect(allDefs).toContain("export interface User");
-    expect(allDefs).toContain("email: string;");
+    expect(imports).toContain("User");
   });
 
   test("2. Handles Deep Nested Imports (Grandchild dependencies)", async () => {
@@ -273,16 +347,10 @@ describe("Multi-File Dependency Resolution", () => {
       `,
     };
 
-    const { definitions } = await runProjectTest(files, "controller.ts");
-    const allDefs = definitions.join("\n");
-
-    console.log({ allDefs });
+    const { imports } = await runProjectTest(files, "controller.ts");
 
     // It should define UpdatePayload
-    expect(allDefs).toContain("export interface UpdatePayload");
-
-    // AND it should have walked into enums.ts to define Status
-    expect(allDefs).toContain('export type Status = "active" | "banned";');
+    expect(imports).toContain("UpdatePayload");
   });
 
   test("3. Simulates 'node_modules' Whitelist Behavior", async () => {
@@ -324,8 +392,7 @@ describe("Multi-File Dependency Resolution", () => {
     };
 
     const { api, imports } = await runProjectTest(files, "controller.ts");
-    const bodyStr = (api["/api/test"]["POST"] as SimpleTypeDefinition)
-      .RequestBody;
+    const bodyStr = api["/api/test"]["POST"].RequestBody;
 
     // 1. Check Whitelisted Import
     // Expect: user: LegacyUser
@@ -358,7 +425,12 @@ describe.only("Adira Library Dependency Resolution", () => {
         export type Serialize<T, R> = T;
         export type RefTo<T> = T;
       `,
-      "src/models/User.ts": `
+      "node_modules/@n/adira.core.ts/package.json": JSON.stringify({
+        name: "@n/adira.core.ts",
+        version: "1.0.0",
+        main: "index.d.ts",
+      }),
+      "models/User.ts": `
         import { RefTo, Serialize } from "@n/adira.core.ts";
         import mongoose, { Schema, Document, Model } from "mongoose";
         import { IOrder } from "./Order";
@@ -386,7 +458,7 @@ describe.only("Adira Library Dependency Resolution", () => {
 
         export default User;`,
 
-      "src/models/Category.ts": `
+      "models/Category.ts": `
         import mongoose, { Schema, Document, Model } from "mongoose";
         import { IUser } from "./User";
         import { RefTo, Serialize } from "@n/adira.core.ts";
@@ -432,14 +504,14 @@ describe.only("Adira Library Dependency Resolution", () => {
         export default Category;
       `,
 
-      "src/types.ts": `
+      "types.ts": `
         export interface ErrorResponse {
           error: boolean;
           message: string;
         }
       `,
 
-      "src/controller/categories.ts": `
+      "controller/categories.ts": `
         import { Backend } from "@n/adira.core.ts";
         import { ICategory } from "../models/Category";
         import { ErrorResponse } from "../types";
@@ -457,20 +529,15 @@ describe.only("Adira Library Dependency Resolution", () => {
       `,
     };
 
-    const { api, definitions } = await runProjectTest(
+    const { api, imports } = await runProjectTest(
       files,
-      "src/controller/categories.ts",
+      "controller/categories.ts",
     );
 
-    const defsString = definitions.join("\n");
-    console.log({ api, definitions });
+    const apiDefinition = api["/api/test"]["POST"];
+    const query = apiDefinition.RequestQuery;
 
-    expect(defsString).toContain("export interface ICategory");
-    expect(defsString).toContain("name: string;");
-
-    expect(defsString).toContain("export interface ErrorResponse");
-    expect(defsString).toContain("message: string;");
-
-    expect(defsString).toContain("export interface IUser");
+    expect(query).toBe("Backend.InferHandlerParams<GetCategoriesFn>");
+    console.log({ api, imports });
   });
 });

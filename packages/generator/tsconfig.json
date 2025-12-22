@@ -27,6 +27,6 @@
       "@n/adira.core.ts": ["../core/index"]
     }
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**/*"]
+  "include": ["src/**/*.ts", "src/config.tssrc/writer.tsr.ts"],
+  "exclude": ["node_modules", "dist"]
 }

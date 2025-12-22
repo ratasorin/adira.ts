@@ -1,22 +1,7 @@
+import { AdiraConfig } from "@n/adira.core.ts";
 import fs from "fs";
 import path from "path";
 
-export interface AdiraConfig {
-  input: {
-    dir: string;
-  };
-  output: {
-    dir: string;
-    file?: string;
-    typename?: string;
-  };
-  registry: {
-    port: number;
-    url: string;
-    version: string;
-    name: string;
-  };
-}
 export const loadConfig = (): AdiraConfig => {
   const configPath = path.join(process.cwd(), "config.adira.json");
 
@@ -35,9 +20,6 @@ export const loadConfig = (): AdiraConfig => {
   }
 
   const defaults: AdiraConfig = {
-    input: {
-      dir: "./src",
-    },
     output: {
       dir: "./types",
       file: "index.api.ts",
@@ -49,6 +31,7 @@ export const loadConfig = (): AdiraConfig => {
       port: 8888,
       url: "http://localhost",
     },
+    allowedDependencies: ["@n/adira.core.tsw"],
   };
 
   if (!fs.existsSync(configPath)) {
@@ -64,9 +47,6 @@ export const loadConfig = (): AdiraConfig => {
     // Handle legacy config format compatibility
     const legacyConfig: Partial<AdiraConfig> = {};
 
-    if (config.inputSrc) {
-      legacyConfig.input = { dir: config.inputSrc };
-    }
     if (config.generatedDir) {
       legacyConfig.output = {
         dir: config.generatedDir,
@@ -90,14 +70,6 @@ export const loadConfig = (): AdiraConfig => {
       ...config,
     };
 
-    // Ensure nested objects are properly merged
-    if (config.input || legacyConfig.input) {
-      mergedConfig.input = {
-        ...defaults.input,
-        ...legacyConfig.input,
-        ...config.input,
-      };
-    }
     if (config.output || legacyConfig.output) {
       mergedConfig.output = {
         ...defaults.output,

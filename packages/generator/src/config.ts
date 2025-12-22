@@ -24,10 +24,6 @@ export const loadConfig = (): AdiraConfig => {
 
   // Return defaults merged with user config
   return {
-    input: {
-      dir: "./src",
-      ...userConfig.input,
-    },
     output: {
       dir: "./shared",
       file: "index.api.ts",

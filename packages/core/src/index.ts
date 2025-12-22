@@ -734,9 +734,6 @@ export type CreateApiClient<
 >;
 
 export interface AdiraConfig {
-  input: {
-    dir: string;
-  };
   output: {
     dir: string;
     file?: string;
