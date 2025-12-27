@@ -183,6 +183,7 @@ export class DependencyResolver {
     symbol: ts.Symbol,
   ): { module: string; isExternal: boolean } | undefined {
     const decls = symbol.getDeclarations();
+    console.log({ symbol: symbol.getName(), decls });
     if (!decls || decls.length === 0) return undefined;
 
     const sourceFile = decls[0].getSourceFile();
@@ -191,11 +192,10 @@ export class DependencyResolver {
       return undefined;
     }
 
-    const isExternal = sourceFile.fileName.includes("node_modules");
+    const isExternal = this.program.isSourceFileFromExternalLibrary(sourceFile);
 
     if (isExternal) {
       const packageName = this.resolvePackageName(sourceFile.fileName);
-      console.log({ isExternal, packageName, symbol: symbol.getName() });
       if (packageName && this.whitelist.includes(packageName)) {
         return {
           module: packageName,
@@ -206,11 +206,6 @@ export class DependencyResolver {
       return undefined;
     }
 
-    console.log({
-      isExternal,
-      sourceFile: sourceFile.fileName,
-      symbol: symbol.getName(),
-    });
     return { module: sourceFile.fileName, isExternal: false };
   }
 
