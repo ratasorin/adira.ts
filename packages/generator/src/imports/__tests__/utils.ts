@@ -80,3 +80,7 @@ export const has = (set: Set<ts.Symbol>, name: string) =>
 
 export const getSymbols = (set: Set<ts.Symbol>) =>
   new Set([...set].map((s) => s.name));
+
+export const printSymbols = (set: Set<ts.Symbol>) => {
+  console.log("Collected Symbols:", [...set].map((s) => s.name).join(", "));
+};
