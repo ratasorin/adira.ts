@@ -1,7 +1,7 @@
 import { createTestProgram, getSymbols, has } from "./utils";
 
 describe("SymbolCollector - Basic Scenarios", () => {
-  test.only("1. Direct Link: properties in same file", () => {
+  test("1. Direct Link: properties in same file", () => {
     const { collector } = createTestProgram({
       "/src/index.ts": `
         export interface Profile { name: string }
@@ -10,7 +10,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     });
     const set = collector.collect(["User"]);
 
-    expect(getSymbols(set)).toEqual(["User", "Profile"]);
+    expect(getSymbols(set)).toEqual(new Set(["User", "Profile"]));
   });
 
   test("2. File Alias: imports from another file", () => {
@@ -23,21 +23,21 @@ describe("SymbolCollector - Basic Scenarios", () => {
     });
     const set = collector.collect(["Box"]);
 
-    expect(getSymbols(set)).toEqual(["Box", "Item"]);
+    expect(getSymbols(set)).toEqual(new Set(["Box", "Item"]));
   });
 
-  test("3. Transitive Alias: A -> B -> C", () => {
+  test("3. Transitive Alias: A -> ... -> C", () => {
     const { collector } = createTestProgram({
       "/src/c.ts": `export interface CCore { val: boolean }`,
       "/src/b.ts": `export { CCore as BCore } from './c';`, // Re-export
       "/src/index.ts": `
-        import { CCore as Core } from './b';
+        import { BCore as Core } from './b';
         export interface App { core: Core }
       `,
     });
     const set = collector.collect(["App"]);
 
-    expect(getSymbols(set)).toEqual(["App", "Core", "BCore", "CCore"]);
+    expect(getSymbols(set)).toEqual(new Set(["App", "CCore"]));
   });
 
   test("4. Heritage: extends interface", () => {
@@ -49,7 +49,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     });
     const set = collector.collect(["User"]);
 
-    expect(getSymbols(set)).toEqual(["User", "Base"]);
+    expect(getSymbols(set)).toEqual(new Set(["User", "Base"]));
   });
 
   test("5. Blacklisted Dependency: explicit exclusion", () => {
@@ -66,7 +66,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     ); // Empty whitelist
     const set = collector.collect(["User"]);
 
-    expect(getSymbols(set)).toEqual(["User"]);
+    expect(getSymbols(set)).toEqual(new Set(["User"]));
     expect(getSymbols(set)).not.toContain("Bad");
   });
 
@@ -83,7 +83,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["good-lib"],
     ); // Whitelisted
     const set = collector.collect(["User"]);
-    expect(getSymbols(set)).toEqual(["User", "Good"]);
+    expect(getSymbols(set)).toEqual(new Set(["User", "Good"]));
   });
 
   test("7. External Boundary: whitelisted but don't crawl deep", () => {
@@ -103,7 +103,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     );
     const set = collector.collect(["User"]);
 
-    expect(getSymbols(set)).toEqual(["User", "Good"]);
+    expect(getSymbols(set)).toEqual(new Set(["User", "Good"]));
     expect(has(set, "Deep")).toBe(false); // Should NOT crawl inside external lib
   });
 
@@ -125,7 +125,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     );
     const set = collector.collect(["User"]);
 
-    expect(getSymbols(set)).toEqual(["User", "GoodProp"]);
+    expect(getSymbols(set)).toEqual(new Set(["User", "GoodProp"]));
     expect(getSymbols(set)).not.toContain("Bad");
   });
 
@@ -138,7 +138,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
     });
     const set = collector.collect(["List"]);
 
-    expect(getSymbols(set)).toEqual(["List", "Item"]);
+    expect(getSymbols(set)).toEqual(new Set(["List", "Item"]));
   });
 
   test("10. Function Signature: Arguments and Return", () => {

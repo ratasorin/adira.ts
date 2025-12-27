@@ -183,7 +183,6 @@ export class DependencyResolver {
     symbol: ts.Symbol,
   ): { module: string; isExternal: boolean } | undefined {
     const decls = symbol.getDeclarations();
-    console.log({ symbol: symbol.getName(), decls });
     if (!decls || decls.length === 0) return undefined;
 
     const sourceFile = decls[0].getSourceFile();

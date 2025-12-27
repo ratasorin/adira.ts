@@ -13,6 +13,7 @@ module.exports = {
       },
     ],
   },
+  silent: false,
 
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
 };

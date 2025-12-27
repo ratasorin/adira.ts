@@ -55,7 +55,6 @@ export class SymbolCollector {
    */
   private passiveClimbToParent(symbol: ts.Symbol) {
     const ContainerFlags =
-      ts.SymbolFlags.Module |
       ts.SymbolFlags.NamespaceModule |
       ts.SymbolFlags.Class |
       ts.SymbolFlags.RegularEnum;
@@ -78,51 +77,61 @@ export class SymbolCollector {
     if (this.visitedTypes.has(type)) return;
     this.visitedTypes.add(type);
 
-    // 2. Check for symbols (The "Side Effect")
-    // If this structure happens to have a name (e.g. 'User'), registers it.
     const s = type.getSymbol() || type.aliasSymbol;
+
+    // Don't "crawlStructure" of types from external modules, but do register them (as they are probably used!)
     if (s) {
-      // We do NOT return here. We register the symbol and KEEP CRAWLING.
-      // This ensures we catch 'User & { extra: string }'
-      this.crawl(s);
+      const info = this.resolver.getModuleInfo(s);
+      if (info && info.isExternal) {
+        this.crawl(s);
+        return;
+      }
     }
 
-    // 3. Generics (Type Arguments)
+    // 2. Generics (Type Arguments) - early because we must grab this before we discard the "Envelope" (Std Lib Type) to prevent recursing into "string", "push", "pop", etc.
     // e.g. Array<User>, Promise<T>
+    if ((type as ts.TypeReference).typeArguments) {
+      (type as ts.TypeReference).typeArguments?.forEach((arg) =>
+        this.crawlStructure(arg),
+      );
+    }
+
+    // 3. The Barrier (Discard the Envelope)
+    // If it is Array, Promise, Map, etc., we stop here.
+    // We don't want to crawl 'push', 'pop', 'length'.
+    if (this.isStandardLibraryOrPrimitive(type)) {
+      return;
+    }
+
+    // 4. Check for symbols (The "Side Effect")
+    // If this structure happens to have a name (e.g. 'User'), registers it.
+    if (s) {
+      const isMember =
+        s.flags &
+        (ts.SymbolFlags.Method |
+          ts.SymbolFlags.Property |
+          ts.SymbolFlags.Accessor);
+
+      // We register the symbol of the type we are currently looking at.
+      // BUT we must filter out "Members" (properties/methods) because they are
+      // owned by their parent (API) and shouldn't appear in the top-level keepSet.
+      if (!isMember) {
+        this.crawl(s);
+      }
+    }
+
     if ((type as ts.TypeReference).typeArguments) {
       (type as ts.TypeReference).typeArguments?.forEach((arg) => {
         this.crawlStructure(arg);
       });
     }
 
-    // 4. Signatures (Call/Construct)
+    // 5. Signatures (Call/Construct)
     // e.g. (x: Input) => Output, or new (x: Config) => App
-    const signatures = [
-      ...this.checker.getSignaturesOfType(type, ts.SignatureKind.Call),
-      ...this.checker.getSignaturesOfType(type, ts.SignatureKind.Construct),
-    ];
-    for (const sig of signatures) {
-      this.crawlStructure(sig.getReturnType());
-      sig.getParameters().forEach((param) => {
-        const decl = param.valueDeclaration || param.declarations?.[0];
-        if (decl) {
-          const paramType = this.checker.getTypeOfSymbolAtLocation(param, decl);
-          this.crawlStructure(paramType);
-        }
-      });
 
-      // Also check type parameters of the function itself (e.g. <T>(arg: T) => void)
-      if (sig.getTypeParameters()) {
-        sig.getTypeParameters()?.forEach((tp) => {
-          // Usually type parameters are placeholders, but checking constraints is good
-          // e.g. <T extends User>
-          const constraint = this.checker.getBaseConstraintOfType(tp);
-          if (constraint) this.crawlStructure(constraint);
-        });
-      }
-    }
+    this.crawlSignatures(type);
 
-    // 5. Properties (Named Keys)
+    // 6. Properties (Named Keys)
     // e.g. { name: string, process: (i: Input) => Output }
     type.getProperties().forEach((prop) => {
       const decl = prop.valueDeclaration || prop.declarations?.[0];
@@ -132,14 +141,14 @@ export class SymbolCollector {
       }
     });
 
-    // 6. Index Signatures
+    // 7. Index Signatures
     // e.g. { [id: string]: User }
     const indexInfos = this.checker.getIndexInfosOfType(type);
     indexInfos.forEach((info) => {
       this.crawlStructure(info.type);
     });
 
-    // 7. Heritage (Base Types)
+    // 8. Heritage (Base Types)
     // e.g. interface User extends Base
     if (type.isClassOrInterface()) {
       this.checker.getBaseTypes(type).forEach((base) => {
@@ -147,7 +156,7 @@ export class SymbolCollector {
       });
     }
 
-    // 8. Unions / Intersections
+    // 9. Unions / Intersections
     // e.g. User | Admin, User & Identifiable
     if (type.isUnionOrIntersection()) {
       type.types.forEach((subType) => {
@@ -155,7 +164,7 @@ export class SymbolCollector {
       });
     }
 
-    // 9. TypeOf (Value Modules)
+    // 10. TypeOf (Value Modules)
     const typeQuerySymbol = type.getSymbol();
     if (typeQuerySymbol && typeQuerySymbol.flags & ts.SymbolFlags.ValueModule) {
       this.crawl(typeQuerySymbol);
@@ -170,6 +179,39 @@ export class SymbolCollector {
         if (s) this.crawl(s);
       });
     }
+  }
+
+  /**
+   * Helper: Returns true for Primitives (string, number) AND
+   * types defined in the default library (Array, Map, Promise).
+   */
+  private isStandardLibraryOrPrimitive(type: ts.Type): boolean {
+    // 1. Check Primitives & Literals (string, 42, true, etc)
+    if (
+      type.flags &
+      (ts.TypeFlags.String |
+        ts.TypeFlags.Number |
+        ts.TypeFlags.Boolean |
+        ts.TypeFlags.Void |
+        ts.TypeFlags.Undefined |
+        ts.TypeFlags.Null |
+        ts.TypeFlags.Never |
+        ts.TypeFlags.Any)
+    ) {
+      return true;
+    }
+    if (type.isLiteral()) return true;
+
+    // 2. Check Definition Source (Array, Promise, etc)
+    const symbol = type.getSymbol();
+    if (!symbol) return false;
+
+    // If a type has no declarations (rare), assume safe to crawl or ignore.
+    const decls = symbol.getDeclarations();
+    if (!decls || decls.length === 0) return false;
+
+    // Check if the file is a default library (lib.d.ts)
+    return this.program.isSourceFileDefaultLibrary(decls[0].getSourceFile());
   }
 
   private crawlSignatures(type: ts.Type) {
