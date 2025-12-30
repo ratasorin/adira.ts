@@ -28,11 +28,6 @@ export class SymbolCollector {
       rootSymbol = nextSymbol;
     }
 
-    console.log({
-      chain: chain.map((s) => s.name),
-      rootSymbol: rootSymbol.name,
-    });
-
     // 2. Already processed?
     if (this.keepSet.has(rootSymbol)) return;
 
@@ -214,24 +209,9 @@ export class SymbolCollector {
     }
   }
 
-  public collect(whitelistedTypeNames: string[]): Set<ts.Symbol> {
-    for (const sourceFile of this.program.getSourceFiles()) {
-      if (this.program.isSourceFileFromExternalLibrary(sourceFile)) continue;
-      ts.forEachChild(sourceFile, (node) => {
-        if (
-          (ts.isInterfaceDeclaration(node) ||
-            ts.isClassDeclaration(node) ||
-            ts.isTypeAliasDeclaration(node) ||
-            ts.isEnumDeclaration(node) ||
-            ts.isVariableDeclaration(node) ||
-            ts.isFunctionDeclaration(node)) &&
-          node.name &&
-          whitelistedTypeNames.includes(node.name.getText())
-        ) {
-          const symbol = this.checker.getSymbolAtLocation(node.name);
-          if (symbol) this.crawl(symbol);
-        }
-      });
+  public collect(symbols: Set<ts.Symbol>): Set<ts.Symbol> {
+    for (const symbol of symbols) {
+      this.crawl(symbol);
     }
     return this.keepSet;
   }

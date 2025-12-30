@@ -1,15 +1,16 @@
 import fs from "fs";
 import path from "path";
 import ts from "typescript";
-import { SymbolCollector } from "../collector";
-import { DependencyResolver } from "../../utils";
+import { SymbolCollector } from "../imports/collector";
+import { DependencyResolver } from ".";
 
 /**
  * Creates a real file system structure in ./dist/temp-tests and runs the collector against it.
  */
 export function createTestProgram(
   files: Record<string, string>,
-  whitelist: string[] = [],
+  entryPointNames: string[], // Names of symbols you want to retrieveimmediately
+  whitelistedPackageNames: string[] = [],
 ) {
   // 1. Setup a clean test directory
   const testRoot = path.resolve(__dirname, "dist/temp-tests_" + Date.now());
@@ -48,7 +49,6 @@ export function createTestProgram(
   };
 
   // 4. Create Program (Standard Disk-Based)
-  // We use the standard host (ts.createCompilerHost w/o arguments uses ts.sys which reads disk)
   const host = ts.createCompilerHost(compilerOptions);
 
   // We need to tell the host to look in our test folder for current directory resolution
@@ -61,24 +61,74 @@ export function createTestProgram(
     .map((f) => path.join(testRoot, f.startsWith("/") ? f.slice(1) : f));
 
   const program = ts.createProgram(rootFiles, compilerOptions, host);
+  const checker = program.getTypeChecker();
 
   // 5. Initialize your tools
-  const resolver = new DependencyResolver(program, whitelist, host as any);
+  const resolver = new DependencyResolver(
+    program,
+    whitelistedPackageNames,
+    host as any,
+  );
   const collector = new SymbolCollector(program, resolver);
+
+  // 6. Resolve Entry Point Symbols
+  const symbols = new Set<ts.Symbol>();
+
+  // We iterate over non-library source files to find the matching symbols
+  for (const sourceFile of program.getSourceFiles()) {
+    if (program.isSourceFileFromExternalLibrary(sourceFile)) continue;
+
+    ts.forEachChild(sourceFile, (node) => {
+      // Check standard declaration types that have names
+      if (
+        (ts.isInterfaceDeclaration(node) ||
+          ts.isClassDeclaration(node) ||
+          ts.isTypeAliasDeclaration(node) ||
+          ts.isEnumDeclaration(node) ||
+          ts.isFunctionDeclaration(node) ||
+          ts.isModuleDeclaration(node)) &&
+        node.name &&
+        entryPointNames.includes(node.name.getText())
+      ) {
+        const symbol = checker.getSymbolAtLocation(node.name);
+        if (symbol) {
+          symbols.add(symbol);
+        }
+      }
+
+      // Handle "export const X = ..." wrapped in VariableStatement
+      if (ts.isVariableStatement(node)) {
+        node.declarationList.declarations.forEach((decl) => {
+          if (
+            decl.name &&
+            ts.isIdentifier(decl.name) &&
+            entryPointNames.includes(decl.name.text)
+          ) {
+            const symbol = checker.getSymbolAtLocation(decl.name);
+            if (symbol) symbols.add(symbol);
+          }
+        });
+      }
+    });
+  }
+
+  if (symbols.size === 0 && entryPointNames.length > 0) {
+    console.warn(
+      `WARNING: No symbols found for names: [${entryPointNames.join(", ")}] in files: ${rootFiles.join(", ")}`,
+    );
+  }
 
   return {
     collector,
     program,
-    // Helper to get absolute path for assertions if needed
-    resolvePath: (p: string) =>
-      path.join(testRoot, p.startsWith("/") ? p.slice(1) : p),
+    symbols,
   };
 }
 
 export const has = (set: Set<ts.Symbol>, name: string) =>
   [...set].some((s) => s.name === name);
 
-export const getSymbols = (set: Set<ts.Symbol>) =>
+export const getSymbolsName = (set: Set<ts.Symbol>) =>
   new Set([...set].map((s) => s.name));
 
 export const printSymbols = (set: Set<ts.Symbol>) => {
