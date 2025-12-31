@@ -12,6 +12,7 @@ function emitPruned(
   whitelistedPackageNames: string[] = [],
 ): Record<string, string> {
   const { program, collector, symbols } = createTestProgram(
+    "src/pruner/__tests__",
     files,
     entryPointNames,
     whitelistedPackageNames,
@@ -106,6 +107,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("import { Item } from './other'");
     expect(content).toContain("interface Box");
+    expect(content).toContain("item: Item");
     // The import statement for Unused should be cleaned up or the specifier removed
     expect(content).not.toContain("Unused");
   });
@@ -131,6 +133,14 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const bContent = normalize(outputs["/src/b.d.ts"]);
     expect(bContent).toContain("export { CCore as BCore } from './c'");
     expect(bContent).not.toContain("UnusedAlias");
+
+    const cContent = normalize(outputs["/src/c.d.ts"]);
+    expect(cContent).toContain("export interface CCore");
+
+    const indexContent = normalize(outputs["/src/index.d.ts"]);
+    expect(indexContent).toContain("export interface A");
+    expect(indexContent).toContain("core: Core");
+    expect(indexContent).toContain("import { BCore as Core } from './b'");
   });
 
   test("4. Heritage: prunes unused interface with inheritance", () => {
@@ -174,6 +184,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("interface User");
+    expect(content).toContain("b: unknown");
     expect(content).not.toContain("UnusedClass");
 
     // Since 'Bad' is blacklisted, the import should be pruned
@@ -201,6 +212,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("interface User");
     expect(content).toContain("import { Good }");
+    expect(content).toContain("g: Good");
     expect(content).not.toContain("UnusedParent");
     expect(content).not.toContain("UnusedChild");
   });
@@ -229,6 +241,8 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("interface User");
+    expect(content).toContain("g: Good");
+    expect(content).toContain("import { Good }");
     expect(content).not.toContain("UnusedPoly");
   });
 
@@ -256,6 +270,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("interface User");
     expect(content).toContain("interface GoodProp");
+    expect(content).not.toContain("Bad");
     expect(content).not.toContain("UnusedObj");
   });
 
@@ -298,6 +313,8 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/src/index.d.ts"]);
     expect(content).toContain("interface API");
+    expect(content).toContain("Input");
+    expect(content).toContain("Output");
     expect(content).not.toContain("unusedFunc");
   });
 
@@ -321,6 +338,8 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/index.d.ts"]);
     expect(content).toContain("namespace Level1");
+    expect(content).toContain("namespace Level2");
+    expect(content).toContain("Target");
     expect(content).not.toContain("UnusedNS");
   });
 
@@ -328,18 +347,19 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     // Junk: Enum Declaration
     const outputs = emitPruned(
       {
-        "/a.d.ts": `import { B } from './b'; export interface A { b: B }`,
+        "/a.d.ts": `import { A } from './a'; export interface A { b: B }`,
         "/b.d.ts": `
         import { A } from './a'; 
         export interface B { a: A }
         export enum UnusedEnum { A, B }
       `,
       },
-      ["A"],
+      ["B"],
     );
 
     const bContent = normalize(outputs["/b.d.ts"]);
     expect(bContent).toContain("interface B");
+    expect(bContent).toContain("a: A");
     expect(bContent).not.toContain("UnusedEnum");
   });
 
@@ -348,17 +368,17 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const outputs = emitPruned(
       {
         "/index.d.ts": `
-            export declare const Config = { port: 3000 };
+            export declare const Config: { port: 3000 };
             export type AppConfig = typeof Config;
             
-            export const UnusedConfig = { host: 'localhost' };
+            export declare const UnusedConfig: { host: 'localhost' };
           `,
       },
       ["AppConfig"],
     );
 
     const content = normalize(outputs["/index.d.ts"]);
-    expect(content).toContain("const Config");
+    expect(content).toContain("Config");
     expect(content).toContain("type AppConfig");
     expect(content).not.toContain("UnusedConfig");
   });
@@ -394,8 +414,8 @@ describe("Pruner - Tree Shaking Scenarios", () => {
         "/index.d.ts": `
             import * as Lib from 'good-lib';
             export interface User { item: Lib.Item }
-            
-            export const X = 1, Y = 2; // Both unused
+
+            export declare const X: 1, Y: 2; // Both unused
           `,
       },
       ["User"],
@@ -404,8 +424,9 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/index.d.ts"]);
     expect(content).toContain("import * as Lib");
-    expect(content).not.toContain("const X");
-    expect(content).not.toContain("Y = 2");
+    expect(content).toContain("Lib.Item");
+    expect(content).not.toContain("X");
+    expect(content).not.toContain("Y");
   });
 
   test("16. Intersection with Blacklisted: prunes unused intersection", () => {
@@ -428,6 +449,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const content = normalize(outputs["/index.d.ts"]);
     expect(content).toContain("type Mixed");
     expect(content).not.toContain("UnusedIntersection");
+    expect(content).not.toContain("Bad");
   });
 
   test("17. Default Import: prunes unused default export assignment", () => {
@@ -452,6 +474,9 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const indexContent = normalize(outputs["/index.d.ts"]);
     expect(indexContent).toContain("import MyDefault");
     expect(indexContent).not.toContain("UnusedDefault");
+
+    const unusedContent = normalize(outputs["/unused.d.ts"]);
+    expect(unusedContent).not.toContain("interface UnusedDefault");
   });
 
   test("18. Class Static Property: prunes unused static member access", () => {
@@ -492,6 +517,7 @@ describe("Pruner - Tree Shaking Scenarios", () => {
 
     const content = normalize(outputs["/index.d.ts"]);
     expect(content).toContain("interface User");
+    expect(content).toContain("interface Key");
     expect(content).not.toContain("UnusedDeep");
   });
 
@@ -501,9 +527,10 @@ describe("Pruner - Tree Shaking Scenarios", () => {
       {
         "/index.d.ts": `
             enum Roles { ADMIN }
+            enum UnusedRoles { GUEST }
+
             export interface User { role: Roles.ADMIN }
             
-            enum UnusedRoles { GUEST }
           `,
       },
       ["User"],
@@ -512,5 +539,58 @@ describe("Pruner - Tree Shaking Scenarios", () => {
     const content = normalize(outputs["/index.d.ts"]);
     expect(content).toContain("enum Roles");
     expect(content).not.toContain("UnusedRoles");
+  });
+
+  test.only("21. Special Helper: Serialize<T, R> unwraps to R", () => {
+    const outputs = emitPruned(
+      {
+        "/node_modules/bad-lib/package.json": `{"name": "bad-lib"}`,
+        "/node_modules/bad-lib/index.d.ts": `export interface Bad {}`,
+
+        "/src/utils.d.ts": `
+            // The helper definition
+            export type Serialize<T, R> = R;
+        `,
+        "/src/types.d.ts": `
+            export interface MongooseID { _id: string }
+        `,
+        "/src/index.d.ts": `
+            import { Serialize } from './utils';
+            import { MongooseID } from './types';
+            import { Bad } from 'bad-lib';
+
+            export interface User {
+              // Case A: Simple Replacement
+              // Expected: id: string;
+              id: Serialize<MongooseID, string>;
+
+              // Case B: Recursive Replacement with Object Literal
+              // Expected: meta: { created: string };
+              meta: Serialize<MongooseID, { created: string }>;
+              
+              // Case C: Recursive Sanitization (The result contains a blacklisted type)
+              // Expected: badRef: unknown; (Because Bad is blacklisted)
+              badRef: Serialize<MongooseID, Bad>;
+            }
+        `,
+      },
+      ["User"],
+      [], // Empty whitelist means 'bad-lib' is blacklisted
+    );
+
+    const content = normalize(outputs["/src/index.d.ts"]);
+
+    // 1. Check basic unwrapping (id: string)
+    expect(content).toContain("id: string");
+    expect(content).not.toContain("Serialize<MongooseID, string>");
+
+    // 2. Check structural unwrapping
+    expect(content).toContain("meta: {");
+    expect(content).toContain("created: string");
+
+    // 3. Check recursive sanitization (Bad -> unknown)
+    // The pruner unwraps to 'Bad', then visits 'Bad', sees it's excluded, and turns it to unknown
+    expect(content).toContain("badRef: unknown");
+    expect(content).not.toContain("badRef: Bad");
   });
 });

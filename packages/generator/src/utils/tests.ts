@@ -8,12 +8,16 @@ import { DependencyResolver } from ".";
  * Creates a real file system structure in ./dist/temp-tests and runs the collector against it.
  */
 export function createTestProgram(
+  where: string,
   files: Record<string, string>,
   entryPointNames: string[], // Names of symbols you want to retrieveimmediately
   whitelistedPackageNames: string[] = [],
 ) {
   // 1. Setup a clean test directory
-  const testRoot = path.resolve(__dirname, "dist/temp-tests_" + Date.now());
+  const testRoot = path.resolve(
+    process.cwd(),
+    where + "dist/temp-tests_" + Date.now(),
+  );
 
   if (fs.existsSync(testRoot)) {
     fs.rmSync(testRoot, { recursive: true, force: true });

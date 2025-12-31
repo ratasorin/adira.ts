@@ -1,14 +1,14 @@
-import { ImportCollector } from "src/imports/collector";
 import { DiscoveredHandler } from "./types";
 import { extractTypeGeneric, matchHandlerDeclaration } from "../utils";
 import ts from "typescript";
+import { SymbolCollector } from "src/imports/collector";
 
 export type HandlerApiDefinition = {
-  RequestParams?: string;
-  RequestBody?: string;
-  ResponseBody?: string;
-  RequestQuery?: string;
-  RequestForm?: string;
+  RequestParams?: ts.Symbol;
+  RequestBody?: ts.Symbol;
+  ResponseBody?: ts.Symbol;
+  RequestQuery?: ts.Symbol;
+  RequestForm?: ts.Symbol;
 };
 
 export type ApiDefinition = {
@@ -28,9 +28,10 @@ const httpJoin = (...segments: string[]) => {
 export async function generateApiDefinitonForHandlers(
   handlers: DiscoveredHandler[],
   program: ts.Program,
-  importCollector: ImportCollector,
+  symbolCollecor: SymbolCollector,
 ): Promise<ApiDefinition> {
   const definitions: ApiDefinition = {};
+  const checker = program.getTypeChecker();
 
   for (const {
     endpoint,
@@ -63,15 +64,24 @@ export async function generateApiDefinitonForHandlers(
       const reqBodyNode = extractTypeGeneric(reqType, 2);
       const reqQueryNode = extractTypeGeneric(reqType, 3);
 
-      const paramsStr = paramsNode?.getText();
-      const bodyStr = reqBodyNode?.getText();
-      const queryStr = reqQueryNode?.getText();
-      const responseStr = resBodyNode?.getText();
+      if (!paramsNode || !reqBodyNode || !reqQueryNode || !resBodyNode) {
+        throw new Error(
+          `[API Object Generator] Failed to extract all required nodes from '${handlerName}'`,
+        );
+      }
 
-      importCollector.collectDependeciesOf(paramsNode);
-      importCollector.collectDependeciesOf(reqBodyNode);
-      importCollector.collectDependeciesOf(reqQueryNode);
-      importCollector.collectDependeciesOf(resBodyNode);
+      const params = checker.getSymbolAtLocation(paramsNode);
+      const body = checker.getSymbolAtLocation(reqBodyNode);
+      const query = checker.getSymbolAtLocation(reqQueryNode);
+      const response = checker.getSymbolAtLocation(resBodyNode);
+
+      if (!params || !body || !query || !response) {
+        throw new Error(
+          `[API Object Generator] Failed to extract all required symbols from '${handlerName}'`,
+        );
+      }
+
+      symbolCollecor.collect(new Set([params, body, query, response]));
 
       // Normalize endpoint key: prefix + path
       const httpPath = httpJoin(
@@ -83,10 +93,10 @@ export async function generateApiDefinitonForHandlers(
       if (!definitions[httpPath]) definitions[httpPath] = {};
 
       definitions[httpPath][method.toUpperCase()] = {
-        RequestParams: paramsStr,
-        RequestBody: bodyStr,
-        RequestQuery: queryStr,
-        ResponseBody: responseStr,
+        RequestParams: params,
+        RequestBody: body,
+        RequestQuery: query,
+        ResponseBody: response,
       };
     });
   }

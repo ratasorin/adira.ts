@@ -208,7 +208,7 @@ export class DependencyResolver {
     return { module: sourceFile.fileName, isExternal: false };
   }
 
-  private resolvePackageName(filePath: string): string | undefined {
+  public resolvePackageName(filePath: string): string | undefined {
     let currentDir = path.dirname(filePath);
 
     // Stop only when we reach the root of the file system (e.g. "/" or "C:\")

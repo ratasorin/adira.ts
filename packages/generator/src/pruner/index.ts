@@ -229,6 +229,59 @@ export class Pruner {
           }
         }
 
+        // --- 8. DEEP SANITIZATION: Type References ---
+        // This handles: interface A { prop: Bad }, type B = Good & Bad, etc.
+        else if (ts.isTypeReferenceNode(node)) {
+          const typeNameText = node.typeName.getText();
+          if (
+            typeNameText === "Serialize" ||
+            typeNameText.endsWith(".Serialize")
+          ) {
+            // Check if we have exactly 2 type arguments: <Original, Serialized>
+            if (node.typeArguments && node.typeArguments.length === 2) {
+              // Replace the entire 'Serialize<A, B>' node with 'B'
+              // We must recursively visit 'B' to ensure it doesn't contain other disallowed types!
+              return ts.visitNode(node.typeArguments[1], visit) as ts.TypeNode;
+            }
+          }
+
+          // 1. Resolve the symbol for the type name (e.g., "Bad")
+          const symbol = this.checker.getSymbolAtLocation(node.typeName);
+
+          // 2. If it's a generic parameter (e.g., T in <T>), it won't be in keepSet
+          // but should be kept. Generally, local type parameters don't have 'declarations'
+          // reachable via normal crawl unless checked specifically.
+          // However, for Pruner context, checking if it is a TypeParameter is a safe guard.
+          const isTypeParameter =
+            symbol && symbol.flags & ts.SymbolFlags.TypeParameter;
+
+          // 3. If symbol exists, is not a generic type param, and NOT in keepSet -> Sanitized
+          if (symbol && !isTypeParameter && !this.keepSet.has(symbol)) {
+            // Replace with 'unknown'
+            return factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+          }
+        }
+
+        // --- 9. Heritage Clauses (extends Bad) ---
+        // If we extend a blacklisted class/interface, we must remove that clause entirely,
+        // otherwise `extends unknown` is a syntax error.
+        else if (ts.isHeritageClause(node)) {
+          const validTypes = node.types.filter((t) => {
+            // Check the expression (e.g., "Bad" in "extends Bad")
+            const symbol = this.checker.getSymbolAtLocation(t.expression);
+            return !symbol || this.keepSet.has(symbol);
+          });
+
+          if (validTypes.length === 0) return undefined; // Remove "extends ..." block entirely
+
+          if (validTypes.length !== node.types.length) {
+            return factory.updateHeritageClause(
+              node,
+              factory.createNodeArray(validTypes),
+            );
+          }
+        }
+
         return ts.visitEachChild(node, visit, context);
       };
 

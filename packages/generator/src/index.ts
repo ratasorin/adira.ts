@@ -1,6 +1,6 @@
 import { AdiraConfig } from "@n/adira.core.ts";
 import { loadConfig } from "./config";
-import { writeTypes } from "./writer";
+import { writeAPI } from "./writer";
 import { discoverRouterDefinitions } from "src/handler/discover";
 import {
   compileProject,
@@ -11,8 +11,8 @@ import {
 } from "src/utils";
 import { generateApiDefinitonForHandlers } from "src/handler/generate";
 import ts from "typescript";
-import { ImportCollector } from "src/imports/collector";
 import path from "path";
+import { SymbolCollector } from "./imports/collector";
 
 export interface GeneratorResult {
   routeMap: any[];
@@ -61,24 +61,27 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
     config.allowedDependencies,
   );
 
-  const importCollector = new ImportCollector(
-    program,
-    dependencyResolver,
-    sharedDir,
-  );
+  const symbolCollector = new SymbolCollector(program, dependencyResolver);
 
   const apiDefiniton = await generateApiDefinitonForHandlers(
     handlers,
     program,
-    importCollector,
+    symbolCollector,
   );
 
-  writeTypes(
-    apiDefiniton,
-    importCollector.getImportLines(),
-    config.output.typename || "ApiTypes",
-    config.output.dir,
-  );
+  writeAPI({
+    api: apiDefiniton,
+    config: {
+      // Todo: Add a description parameter to AdiraConfig
+      description: "<API Description>",
+      outputDir: config.output.dir,
+      whitelistedPackages: config.allowedDependencies,
+      packageName: config.registry.name,
+      version: config.registry.version,
+    },
+    dependencyResolver,
+    program,
+  });
 };
 
 export const generate = async (config?: Partial<AdiraConfig>) => {

@@ -8,6 +8,7 @@ import {
 describe("SymbolCollector - Basic Scenarios", () => {
   test("1. Direct Link: properties in same file", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/src/index.d.ts": `
           export interface Profile { name: string }
@@ -23,6 +24,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("2. File Alias: imports from another file", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/src/other.d.ts": `export interface Item { id: number }`,
         "/src/index.d.ts": `
@@ -39,6 +41,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("3. Transitive Alias: A -> ... -> C", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/src/c.d.ts": `export interface CCore { val: boolean }`,
         "/src/b.d.ts": `export { CCore as BCore } from './c';`,
@@ -58,6 +61,8 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("4. Heritage: extends interface", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
+
       {
         "/src/index.d.ts": `
           interface Base { id: string }
@@ -73,6 +78,8 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("5. Blacklisted Dependency: explicit exclusion", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
+
       {
         "/node_modules/bad-lib/package.json": `{"name": "bad-lib"}`,
         "/node_modules/bad-lib/index.d.ts": `export interface Bad {}`,
@@ -92,6 +99,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("6. Whitelisted Dependency: explicit inclusion", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/node_modules/good-lib/package.json": `{"name": "good-lib"}`,
         "/node_modules/good-lib/index.d.ts": `export interface Good {}`,
@@ -110,6 +118,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("7. External Boundary: whitelisted but don't crawl deep", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/node_modules/good-lib/package.json": `{"name": "good-lib"}`,
         "/node_modules/good-lib/index.d.ts": `
@@ -132,6 +141,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("8. Partial Infection: Mix of good and bad props", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/node_modules/bad-lib/package.json": `{"name": "bad-lib"}`,
         "/node_modules/bad-lib/index.d.ts": `export interface Bad {}`,
@@ -155,6 +165,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("9. Basic Generic: Array<T>", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/src/index.d.ts": `
           interface Item {}
@@ -170,6 +181,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 
   test("10. Function Signature: Arguments and Return", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/src/index.d.ts": `
           interface Input {}
@@ -190,6 +202,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
 describe("SymbolCollector - Complex Scenarios", () => {
   test("11. Qualified Namespace: Passive Climb", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           namespace Level1 {
@@ -211,6 +224,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("12. Circular Dependency: A -> B -> A", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/a.d.ts": `import { B } from './b'; export interface A { b: B }`,
         "/b.d.ts": `import { A } from './a'; export interface B { a: A }`,
@@ -225,6 +239,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("13. Value-as-Type (typeof const)", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           export declare const Config = { port: 3000 };
@@ -240,6 +255,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("14. Mapped Types (keyof)", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           interface Dictionary { id: number }
@@ -255,6 +271,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("15. Whitelisted Namespace Import", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/node_modules/good-lib/package.json": `{"name": "good-lib"}`,
         "/node_modules/good-lib/index.d.ts": `export interface Item {}`,
@@ -273,6 +290,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("16. Intersection with Blacklisted", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/node_modules/bad-lib/package.json": `{"name": "bad-lib"}`,
         "/node_modules/bad-lib/index.d.ts": `export interface Bad {}`,
@@ -292,6 +310,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("17. Default Import", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/def.d.ts": `export default interface MyDefault {}`,
         "/index.d.ts": `
@@ -310,6 +329,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("18. Class Static Property Access", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           class Config { static readonly TIMEOUT = 1000; }
@@ -326,6 +346,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("19. Deep Nested Generics", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           interface User {}
@@ -345,6 +366,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
 
   test("20. Enum Member Access", () => {
     const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
       {
         "/index.d.ts": `
           enum Roles { ADMIN }
