@@ -5,11 +5,30 @@ export class SymbolCollector {
   private checker: ts.TypeChecker;
   private keepSet: Set<ts.Symbol> = new Set();
 
+  public collectedSymbols() {
+    return this.keepSet;
+  }
+
   constructor(
     private program: ts.Program,
     private resolver: DependencyResolver,
   ) {
     this.checker = program.getTypeChecker();
+  }
+
+  /**
+   * Helper: unwraps imports/exports to find the original source definition.
+   * e.g. import { X } from './b' -> resolves to X in './b'
+   */
+  private resolveSymbol(symbol: ts.Symbol): ts.Symbol {
+    let current = symbol;
+    // Walk the chain of aliases until we hit the bedrock definition
+    while (current.flags & ts.SymbolFlags.Alias) {
+      const next = this.checker.getAliasedSymbol(current);
+      if (!next || next === current) break;
+      current = next;
+    }
+    return current;
   }
 
   /**
@@ -124,14 +143,21 @@ export class SymbolCollector {
   /**
    * Recursively walks the TypeNode AST.
    */
-  private crawlTypeNode(node: ts.Node | undefined) {
+  private crawlTypeNode(
+    node: ts.Node | undefined,
+    onSymbol?: (symbol: ts.Symbol) => void,
+  ) {
     if (!node) return;
 
     // Type References (User, API.Response)
     if (ts.isTypeReferenceNode(node)) {
       // 1. Resolve the leaf (i.e. Response)
       const symbol = this.checker.getSymbolAtLocation(node.typeName);
-      if (symbol) this.crawl(symbol);
+      if (symbol) {
+        if (onSymbol) {
+          onSymbol(symbol);
+        } else this.crawl(symbol);
+      }
 
       // 2. Resolve the Qualifier (i.e. API)
       let entityName = node.typeName;
@@ -150,45 +176,55 @@ export class SymbolCollector {
           const isAlias = qualifierSymbol.flags & ts.SymbolFlags.Alias;
 
           if (isAlias && !isRawModule) {
-            this.crawl(qualifierSymbol);
+            if (onSymbol) {
+              onSymbol(qualifierSymbol);
+            } else this.crawl(qualifierSymbol);
           }
         }
         entityName = entityName.left;
       }
-      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg));
+      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg, onSymbol));
     }
     // typeof References
     else if (ts.isTypeQueryNode(node)) {
       const symbol = this.checker.getSymbolAtLocation(node.exprName);
-      if (symbol) this.crawl(symbol);
+      if (symbol) {
+        if (onSymbol) {
+          onSymbol(symbol);
+        } else this.crawl(symbol);
+      }
     }
     // Inline Import Types (import('./x').Y)
     else if (ts.isImportTypeNode(node)) {
       const symbol = this.checker.getSymbolAtLocation(node.qualifier || node);
-      if (symbol) this.crawl(symbol);
-      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg));
+      if (symbol) {
+        if (onSymbol) {
+          onSymbol(symbol);
+        } else this.crawl(symbol);
+      }
+      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg, onSymbol));
     }
     // Conditional Branches (T extends U ? A : B) - Keeps BOTH
     else if (ts.isConditionalTypeNode(node)) {
-      this.crawlTypeNode(node.checkType);
-      this.crawlTypeNode(node.extendsType);
-      this.crawlTypeNode(node.trueType);
-      this.crawlTypeNode(node.falseType);
+      this.crawlTypeNode(node.checkType, onSymbol);
+      this.crawlTypeNode(node.extendsType, onSymbol);
+      this.crawlTypeNode(node.trueType, onSymbol);
+      this.crawlTypeNode(node.falseType, onSymbol);
     }
     // Logical Composition (A | B, A & B)
     else if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
-      node.types.forEach((t) => this.crawlTypeNode(t));
+      node.types.forEach((t) => this.crawlTypeNode(t, onSymbol));
     }
     // Mapped Types
     else if (ts.isMappedTypeNode(node)) {
-      this.crawlTypeNode(node.typeParameter.constraint);
-      this.crawlTypeNode(node.nameType);
-      this.crawlTypeNode(node.type);
+      this.crawlTypeNode(node.typeParameter.constraint, onSymbol);
+      this.crawlTypeNode(node.nameType, onSymbol);
+      this.crawlTypeNode(node.type, onSymbol);
     }
     // General Fallback (Arrays, Tuples, Parentheses)
     else {
       ts.forEachChild(node, (child) => {
-        if (ts.isTypeNode(child)) this.crawlTypeNode(child);
+        if (ts.isTypeNode(child)) this.crawlTypeNode(child, onSymbol);
       });
     }
   }
@@ -209,10 +245,40 @@ export class SymbolCollector {
     }
   }
 
-  public collect(symbols: Set<ts.Symbol>): Set<ts.Symbol> {
+  public collectFromSymbols(symbols: Set<ts.Symbol>): Set<ts.Symbol> {
     for (const symbol of symbols) {
       this.crawl(symbol);
     }
     return this.keepSet;
+  }
+
+  /**
+   * Entry point for collecting symbols from an anonymous TypeNode
+   * (e.g., the return type of a function, or a generic parameter).
+   * * Note: This does NOT collect the node itself (it's not a symbol),
+   * but it collects all symbols referenced within that node.
+   */
+  public collectFromNodes(nodes: Set<ts.TypeNode>): Set<ts.Symbol> {
+    nodes.forEach((node) => this.crawlTypeNode(node));
+    return this.keepSet;
+  }
+
+  /**
+   * Scans a TypeNode and collects all referenced symbols within it.
+   * Does NOT crawl into those symbols' definitions.
+   * Used for generating imports.
+   */
+  public collectRootReferences(node: ts.Node): Set<ts.Symbol> {
+    const refs = new Set<ts.Symbol>();
+
+    this.crawlTypeNode(node, (symbol) => {
+      const resolved = this.resolveSymbol(symbol);
+      // Optional: Resolve aliases if you want the underlying type,
+      // or keep the alias if you want to import the alias.
+      // Usually for imports, we want the symbol as it appears in the code.
+      refs.add(resolved);
+    });
+
+    return refs;
   }
 }

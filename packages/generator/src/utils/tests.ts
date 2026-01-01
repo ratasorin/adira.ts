@@ -138,3 +138,103 @@ export const getSymbolsName = (set: Set<ts.Symbol>) =>
 export const printSymbols = (set: Set<ts.Symbol>) => {
   console.log("Collected Symbols:", [...set].map((s) => s.name).join(", "));
 };
+
+/**
+ * Creates a real file system structure, compiles it, and searches for a specific TypeNode
+ * matching the provided text fragment.
+ */
+export function createTypeNodeTestProgram(
+  where: string,
+  files: Record<string, string>,
+  targetTypeNodeText: string,
+  whitelistedPackageNames: string[] = [],
+) {
+  // 1. Setup a clean test directory
+  const testRoot = path.resolve(
+    process.cwd(),
+    where + "dist/temp-tests_node_" + Date.now(),
+  );
+
+  if (fs.existsSync(testRoot)) {
+    fs.rmSync(testRoot, { recursive: true, force: true });
+  }
+  fs.mkdirSync(testRoot, { recursive: true });
+
+  // 2. Write all files to disk
+  Object.entries(files).forEach(([virtualPath, content]) => {
+    const relativePath = virtualPath.startsWith("/")
+      ? virtualPath.slice(1)
+      : virtualPath;
+    const fullPath = path.join(testRoot, relativePath);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content);
+  });
+
+  // 3. Configure TypeScript
+  const compilerOptions: ts.CompilerOptions = {
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.CommonJS,
+    moduleResolution: ts.ModuleResolutionKind.NodeJs,
+    declaration: true,
+    emitDeclarationOnly: true,
+    skipLibCheck: true,
+    strict: true,
+    baseUrl: testRoot,
+    paths: { "*": ["*"] },
+  };
+
+  // 4. Create Program
+  const host = ts.createCompilerHost(compilerOptions);
+  const originalCwd = process.cwd();
+  host.getCurrentDirectory = () => testRoot;
+
+  const rootFiles = Object.keys(files)
+    .filter((f) => f.endsWith(".ts") && !f.includes("node_modules"))
+    .map((f) => path.join(testRoot, f.startsWith("/") ? f.slice(1) : f));
+
+  const program = ts.createProgram(rootFiles, compilerOptions, host);
+
+  // 5. Initialize tools
+  const resolver = new DependencyResolver(
+    program,
+    whitelistedPackageNames,
+    host as any,
+  );
+  const collector = new SymbolCollector(program, resolver);
+
+  // 6. Locate the specific TypeNode
+  let foundNode: ts.TypeNode | undefined;
+
+  // Helper to walk the tree
+  const visit = (node: ts.Node) => {
+    if (foundNode) return; // Stop if already found
+
+    // Check if this is a TypeNode and matches our target text
+    // We use getText() to see the full representation (e.g. "Backend.Infer<T>")
+    if (ts.isTypeNode(node) && node.getText().includes(targetTypeNodeText)) {
+      foundNode = node;
+      return;
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  for (const sourceFile of program.getSourceFiles()) {
+    if (program.isSourceFileFromExternalLibrary(sourceFile)) continue;
+    visit(sourceFile);
+    if (foundNode) break;
+  }
+
+  if (!foundNode) {
+    throw new Error(
+      `Could not find any TypeNode containing text: "${targetTypeNodeText}" in files: ${rootFiles.join(", ")}`,
+    );
+  }
+
+  return {
+    collector,
+    program,
+    typeNode: foundNode,
+  };
+}

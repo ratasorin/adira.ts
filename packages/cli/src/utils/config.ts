@@ -31,7 +31,7 @@ export const loadConfig = (): AdiraConfig => {
       port: 8888,
       url: "http://localhost",
     },
-    allowedDependencies: ["@n/adira.core.tsw"],
+    allowedDependencies: ["@n/adira.core.ts"],
   };
 
   if (!fs.existsSync(configPath)) {

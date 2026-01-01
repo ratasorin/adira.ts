@@ -1,5 +1,6 @@
 import {
   createTestProgram,
+  createTypeNodeTestProgram,
   getSymbolsName,
   has,
   printSymbols,
@@ -18,7 +19,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["User"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "Profile"]));
   });
 
@@ -35,7 +36,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["Box"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["Box", "Item"]));
   });
 
@@ -53,7 +54,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["App"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(
       new Set(["App", "CCore", "Core", "BCore"]),
     );
@@ -72,7 +73,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["User"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "Base"]));
   });
 
@@ -92,7 +93,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       [], // empty whitelist
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User"]));
     expect(has(set, "Bad")).toBe(false);
   });
@@ -112,7 +113,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["good-lib"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "Good"]));
   });
 
@@ -134,7 +135,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["good-lib"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "Good"]));
     expect(has(set, "Deep")).toBe(false);
   });
@@ -158,7 +159,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       [],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "GoodProp"]));
     expect(has(set, "Bad")).toBe(false);
   });
@@ -175,7 +176,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["List"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["List", "Item"]));
   });
 
@@ -194,7 +195,7 @@ describe("SymbolCollector - Basic Scenarios", () => {
       ["API"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["API", "Input", "Output"]));
   });
 });
@@ -216,7 +217,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["Root"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Target")).toBe(true);
     expect(has(set, "Level2")).toBe(true);
     expect(has(set, "Level1")).toBe(true);
@@ -232,7 +233,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["A"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "A")).toBe(true);
     expect(has(set, "B")).toBe(true);
   });
@@ -249,7 +250,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["AppConfig"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Config")).toBe(true);
   });
 
@@ -265,7 +266,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["MapX"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Dictionary")).toBe(true);
   });
 
@@ -284,7 +285,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["good-lib"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(new Set(["User", "Item", "Lib"]));
   });
 
@@ -303,7 +304,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["Mixed"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Good")).toBe(true);
     expect(has(set, "Bad")).toBe(false);
   });
@@ -321,7 +322,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["User"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(getSymbolsName(set)).toEqual(
       new Set(["User", "MyDefault", "default"]),
     );
@@ -339,7 +340,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["Timeout"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Config")).toBe(true);
     expect(has(set, "TIMEOUT")).toBe(true);
   });
@@ -359,7 +360,7 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["Cache"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "User")).toBe(true);
     expect(has(set, "Key")).toBe(true);
   });
@@ -376,8 +377,41 @@ describe("SymbolCollector - Complex Scenarios", () => {
       ["User"],
     );
 
-    const set = collector.collect(symbols);
+    const set = collector.collectFromSymbols(symbols);
     expect(has(set, "Roles")).toBe(true);
     expect(has(set, "ADMIN")).toBe(true);
+  });
+
+  test.only("21. Start from Type Arguments", () => {
+    const { collector, typeNode } = createTypeNodeTestProgram(
+      "src/imports/__tests__",
+      {
+        "/models/Category": `
+          export interface ICategory { id: number; name: string; }
+        `,
+        "/node_modules/@n/adira.core.ts/index.d.ts": `
+          export namespace Backend {
+            export type InferHandlerParams<T> = T extends (req: infer R, res: infer S) => any ? R : never;
+            export type ExecuteGET<T, Q> = (params: T, query: Q) => Promise<any>;
+          }
+        `,
+        "/node_modules/@n/adira.core.ts/package.json": `{"name": "@n/adira.core.ts"}`,
+        "/index.d.ts": `
+          import { Backend } from '@n/adira.core.ts';
+          import { ICategory } from './models/Category';
+
+          declare const getUsers: Backend.ExecuteGET<ICategory, {}>;
+          type GetUsersFn = typeof getUsers;
+          export declare const getUsersHandler = (req: Request<any, any, any, Backend.InferHandlerParams<GetUsersFn>>, res: any) => Promise<void>;
+        `,
+      },
+      "Backend.InferHandlerParams<GetUsersFn>",
+      ["@n/adira.core.ts"],
+    );
+
+    const set = collector.collectFromNodes(new Set([typeNode]));
+    console.log(getSymbolsName(set));
+    expect(has(set, "Backend")).toBe(true);
+    expect(has(set, "ICategory")).toBe(true);
   });
 });

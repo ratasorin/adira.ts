@@ -9,37 +9,30 @@ import {
 export async function discoverRouterDefinitions(
   sourceFiles: readonly ts.SourceFile[],
   tsConfig: ts.CompilerOptions,
+  checker: ts.TypeChecker,
 ): Promise<DiscoveredHandler[]> {
   const DiscoveredHandler: DiscoveredHandler[] = [];
   const importMap: Record<string, ImportInfo> = {};
 
-  /**
-   * Maps a router's import path to the URL prefix where that router
-   * is mounted via `app.use(prefix, router)`.
-   * Example: if `app.use('/api', userRouter)` and `userRouter` resolves to
-   * '/abs/path/src/routes/user.ts', then:
-   * routerMountMap['/abs/path/src/routes/user.ts'] === '/api'
-   */
-  let routerMountMap: Record<string, string> = {};
-
-  for (const source of sourceFiles) {
-    // correlate each symbol with it's absolute import path
-    ts.forEachChild(source, (node) => {
-      trackImports(source.fileName, node, tsConfig, importMap);
-    });
-  }
+  const routerMountMap: Record<string, string> = {};
 
   for (const source of sourceFiles) {
     // Detect app.use("/prefix", router)
     ts.forEachChild(source, (node) => {
-      const mainRouterDef = detectMainAppRouter(node);
+      const mainRouterDef = detectMainAppRouter(node, checker);
       if (mainRouterDef) {
-        const { prefix, routerName } = mainRouterDef;
-        const routerImportAbsolutePath = importMap[routerName];
+        const { prefix, router } = mainRouterDef;
+        if (!router) {
+          throw new Error("Router not found");
+        }
+
+        const routerImportAbsolutePath = router
+          ?.getDeclarations()?.[0]
+          .getSourceFile().fileName;
 
         if (routerImportAbsolutePath) {
           // Store the prefix using the absolute path of the router file
-          routerMountMap[routerImportAbsolutePath.file] = prefix;
+          routerMountMap[routerImportAbsolutePath] = prefix;
         }
       }
     });
@@ -66,17 +59,18 @@ export async function discoverRouterDefinitions(
             ? args[0].text
             : undefined;
 
-          const originalHandler = args.slice(-1)[0].getText();
+          const handler = args.slice(-1)[0];
+          const handlerSymbol = checker.getSymbolAtLocation(handler)!;
+          const originalHandlerSymbol =
+            checker.getAliasedSymbol(handlerSymbol)!;
+
+          const handlerName = handlerSymbol.getName();
+          const handlerPath =
+            originalHandlerSymbol.declarations?.[0].getSourceFile().fileName;
 
           const endpointPrefix = sourceFilename
             ? routerMountMap[sourceFilename]
             : "";
-
-          const { handlerName, handlerPath } = findRouteHandlerDefiniton(
-            originalHandler,
-            importMap,
-            tsConfig,
-          );
 
           if (endpoint && handlerPath) {
             DiscoveredHandler.push({

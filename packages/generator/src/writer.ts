@@ -2,8 +2,6 @@ import fs from "fs";
 import path from "path";
 import { ApiDefinition, HandlerApiDefinition } from "src/handler/generate";
 
-const OUTPUT_FILE_NAME = "api.d.ts";
-
 /**
  * Generates a package.json for the output artifact.
  * Scans the root package.json to resolve versions for whitelisted dependencies.
@@ -37,6 +35,7 @@ export function generatePackageJson(props: {
     ...rootPkg.peerDependencies,
   };
 
+  console.log({ w: props.whitelistedPackages });
   const resolvedDeps: Record<string, string> = {};
 
   props.whitelistedPackages.forEach((pkg) => {
@@ -89,12 +88,16 @@ function sortObject(obj: Record<string, string>): Record<string, string> {
 
 import ts from "typescript";
 import { DependencyResolver } from "./utils";
+import { SymbolCollector } from "./imports/collector";
+import { get } from "http";
+import { getSymbolsName } from "./utils/tests";
 
 /**
  * Generates valid TypeScript import statements for the provided symbols
  * relative to a target file path (e.g., src/index.d.ts).
  */
 export function generateImports(
+  collector: SymbolCollector,
   program: ts.Program,
   dependencyResolver: DependencyResolver,
   apiDefiniton: ApiDefinition,
@@ -106,11 +109,13 @@ export function generateImports(
   // 1. Flatten and Deduplicate Symbols
   const uniqueSymbols = new Set<ts.Symbol>();
 
-  for (const group of endpoints) {
-    Object.values(group).forEach((symbol) => {
-      if (symbol) uniqueSymbols.add(symbol);
-    });
+  for (const endpoint of endpoints) {
+    for (const node of Object.values(endpoint)) {
+      const nodeSymbols = collector.collectRootReferences(node);
+      nodeSymbols.forEach((s) => uniqueSymbols.add(s));
+    }
   }
+  console.log({ nodeSymbols: getSymbolsName(uniqueSymbols) });
 
   // 2. Group Symbols by Module Specifier (File Path or Package Name)
   // Map<ModuleSpecifier, Set<SymbolName>>
@@ -159,6 +164,8 @@ export function generateImports(
     // For this snippet, we assume named exports which is standard for DTOs.
     importsMap.get(moduleSpecifier || "")!.add(symbol.name);
   }
+
+  console.log({ importsMap });
 
   // 3. Create AST Nodes for Imports
   const factory = ts.factory;
@@ -217,20 +224,29 @@ export function writeAPI({
   program,
   dependencyResolver,
   api,
+  collector,
 }: {
   config: {
     outputDir: string;
     whitelistedPackages: string[];
+    outputFile: string;
     packageName: string;
     version: string;
     description: string;
   };
+  collector: SymbolCollector;
   program: ts.Program;
   dependencyResolver: DependencyResolver;
   api: ApiDefinition;
 }) {
-  const outputFile = path.join(config.outputDir, "src", OUTPUT_FILE_NAME);
-  const imports = generateImports(program, dependencyResolver, api, outputFile);
+  const outputFile = path.join(config.outputDir, "src", config.outputFile);
+  const imports = generateImports(
+    collector,
+    program,
+    dependencyResolver,
+    api,
+    outputFile,
+  );
 
   // --- 2. Build AST for API Definition ---
   // We want to build: export type API = { "/route": { "GET": { ... } } }
@@ -245,14 +261,14 @@ export function writeAPI({
       const endpointMembers: ts.TypeElement[] = [];
 
       // Helper to add Request/Response members safely
-      const addMember = (name: string, symbol?: ts.Symbol) => {
-        if (!symbol) return;
+      const addMember = (name: string, node: ts.TypeNode | undefined) => {
+        if (!node) return;
         endpointMembers.push(
           factory.createPropertySignature(
             undefined,
-            factory.createIdentifier(name), // Key: RequestBody
+            factory.createIdentifier(name), // Key
             undefined,
-            factory.createTypeReferenceNode(symbol.name), // Value: User
+            factory.createTypeReferenceNode(node.getText()), // Value
           ),
         );
       };
@@ -294,7 +310,7 @@ export function writeAPI({
 
   // --- 3. Print AST to String ---
   const resultFile = ts.createSourceFile(
-    "temp.ts",
+    outputFile,
     "",
     ts.ScriptTarget.Latest,
     false,
@@ -308,8 +324,8 @@ export function writeAPI({
   );
 
   // --- 4. Write to File ---
-  if (!fs.existsSync(outputFile)) {
-    fs.mkdirSync(outputFile, { recursive: true });
+  if (!fs.existsSync(config.outputDir)) {
+    fs.mkdirSync(config.outputDir, { recursive: true });
   }
 
   const fileContent = imports + "\n\n" + apiDefinitionCode;

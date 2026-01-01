@@ -1,0 +1,54 @@
+import { ICategory } from "../models/Category";
+import { Backend } from "@n/adira.core.ts";
+declare const getCategories: Backend.ExecuteGET<ICategory, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    slug: string;
+    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
+    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const createCategory: Backend.ExecutePOST<ICategory, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    slug: string;
+    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
+    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const updateCategory: Backend.ExecutePATCH<ICategory, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    slug: string;
+    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
+    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const deleteCategory: Backend.ExecuteDELETE<ICategory, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    slug: string;
+    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
+    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+export type GetCategoriesFn = typeof getCategories;
+export type CreateCategoryFn = typeof createCategory;
+export type UpdateCategoryFn = typeof updateCategory;
+export type DeleteCategoryFn = typeof deleteCategory;

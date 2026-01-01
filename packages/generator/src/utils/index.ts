@@ -45,9 +45,10 @@ export function getParsedCommandLine(configPath: string): ts.ParsedCommandLine {
  * Correctly retrieves the SourceFiles for a project by respecting
  * the user's tsconfig.json (includes, excludes, and files).
  */
-export function getProjectFiles(
-  parsedConfig: ts.ParsedCommandLine,
-): readonly ts.SourceFile[] {
+export function createProject(parsedConfig: ts.ParsedCommandLine): {
+  files: readonly ts.SourceFile[];
+  program: ts.Program;
+} {
   // 1. Create the program using the files and options found in tsconfig
   const program = ts.createProgram({
     rootNames: parsedConfig.fileNames,
@@ -57,11 +58,18 @@ export function getProjectFiles(
   // 2. Get all source files
   const allFiles = program.getSourceFiles();
 
-  // 3. Filter out standard library files (like lib.d.ts, lib.es5.d.ts)
-  // and node_modules, so you only process the user's actual source code.
-  return allFiles.filter((file) => {
-    return !file.isDeclarationFile && !file.fileName.includes("node_modules");
+  const userFiles = allFiles.filter((file) => {
+    return (
+      !file.isDeclarationFile &&
+      !file.fileName.includes("node_modules") &&
+      !program.isSourceFileDefaultLibrary(file) &&
+      !program.isSourceFileFromExternalLibrary(file)
+    );
   });
+
+  program.getTypeChecker();
+
+  return { files: userFiles, program };
 }
 
 export function readTsConfig(tsConfigPath: string): ts.CompilerOptions {
@@ -100,28 +108,32 @@ export function matchHandlerDeclaration(
   node: ts.Node,
   handlerName: string,
 ): { parameters: ts.NodeArray<ts.ParameterDeclaration> } | undefined {
-  // Case 1: function foo(req, res): void; (Standard Function Declaration)
-  if (ts.isFunctionDeclaration(node) && node.name?.text === handlerName) {
+  // Case 1: declare function foo(req, res): ReturnType;
+  if (
+    ts.isFunctionDeclaration(node) &&
+    node.name?.text === handlerName &&
+    node.body === undefined // declaration-only
+  ) {
     return { parameters: node.parameters };
   }
 
-  // Case 2: const foo: (req, res) => void; (Variable Declaration in .d.ts)
+  // Case 2: declare const foo: (req, res) => ReturnType;
   if (ts.isVariableStatement(node)) {
-    for (const decl of node.declarationList.declarations) {
-      if (ts.isIdentifier(decl.name) && decl.name.text === handlerName) {
-        // Check for .d.ts style: const handler: (req, res) => void
-        if (decl.type && ts.isFunctionTypeNode(decl.type)) {
-          return { parameters: decl.type.parameters };
-        }
+    // Must be a declare statement in .d.ts
+    if (!node.modifiers?.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) {
+      return undefined;
+    }
 
-        // Check for .ts style: const handler = (req, res) => {}
-        if (
-          decl.initializer &&
-          (ts.isArrowFunction(decl.initializer) ||
-            ts.isFunctionExpression(decl.initializer))
-        ) {
-          return { parameters: decl.initializer.parameters };
-        }
+    for (const decl of node.declarationList.declarations) {
+      if (!ts.isIdentifier(decl.name)) continue;
+      if (decl.name.text !== handlerName) continue;
+
+      // Explicitly require a type annotation
+      if (!decl.type) continue;
+
+      // Only allow function type nodes
+      if (ts.isFunctionTypeNode(decl.type)) {
+        return { parameters: decl.type.parameters };
       }
     }
   }
@@ -245,15 +257,13 @@ export async function compileProject(
   fileNames: string[],
   options: ts.CompilerOptions,
   outputDir: string,
-): Promise<string> {
-  const outDir = path.join(outputDir, "src");
-
+): Promise<ts.Program> {
   // Override options for Phase B preparation
   const compilerOptions: ts.CompilerOptions = {
     ...options,
     declaration: true,
     emitDeclarationOnly: true,
-    outDir,
+    outDir: outputDir,
     // Ensure we don't accidentally check the whole project's types
     // if we just want the output
     skipLibCheck: true,
@@ -287,5 +297,32 @@ export async function compileProject(
     throw new Error("Failed to emit declaration files for the shared folder.");
   }
 
-  return outDir;
+  // 1. Find all .d.ts files in the output directory
+  const declarationFiles = ts.sys.readDirectory(
+    outputDir,
+    [".d.ts"], // extensions to include
+    undefined, // excludes
+    undefined, // includes
+  );
+
+  // 2. Define options for the new program
+  // We usually want these to be "Type Check only" options
+  const dtsOptions: ts.CompilerOptions = {
+    ...options,
+    allowJs: true,
+    checkJs: true,
+    noEmit: true, // We only want to analyze, not emit again
+    baseUrl: outputDir, // Important for resolving internal paths in the output
+  };
+
+  // 3. Create the second program
+  const declarationProgram = ts.createProgram({
+    rootNames: declarationFiles,
+    options: dtsOptions,
+  });
+
+  // Optional: Force parent pointers if you need .getText()
+  declarationProgram.getTypeChecker();
+
+  return declarationProgram;
 }

@@ -112,18 +112,10 @@ export const trackImports = (
   }
 };
 
-/**
- * Detects Express-style router mounting statements like:
- *   app.use("/prefix", router)
- *
- * Returns the router name and prefix if matched.
- *
- * @param node The AST node to inspect.
- * @returns An object with `{ routerName, prefix }` or undefined if not a router mount.
- */
 export function detectMainAppRouter(
   node: ts.Node,
-): { routerName: string; prefix: string } | undefined {
+  checker: ts.TypeChecker,
+): { router: ts.Symbol | undefined; prefix: string } | undefined {
   if (!ts.isExpressionStatement(node)) return undefined;
   const expr = node.expression;
   if (!ts.isCallExpression(expr)) return undefined;
@@ -137,12 +129,14 @@ export function detectMainAppRouter(
   ) {
     const [prefixArg, routerArg] = args;
 
-    if (ts.isStringLiteral(prefixArg) && ts.isIdentifier(routerArg)) {
-      return {
-        routerName: routerArg.getText(),
-        prefix: prefixArg.text,
-      };
-    }
+    if (!ts.isStringLiteral(prefixArg)) return undefined;
+
+    const symbol = checker.getSymbolAtLocation(routerArg);
+
+    return {
+      router: symbol,
+      prefix: prefixArg.text,
+    };
   }
 
   return undefined;

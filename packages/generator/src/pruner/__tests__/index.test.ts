@@ -1,5 +1,5 @@
 import { createTestProgram, getSymbolsName } from "../../utils/tests";
-import { Pruner } from "..";
+import { SymbolPruner } from "..";
 import fs from "fs";
 import path from "path";
 
@@ -20,10 +20,10 @@ function emitPruned(
 
   const checker = program.getTypeChecker();
   // 1. Collect Symbols
-  const allowedSymbols = collector.collect(symbols);
+  const allowedSymbols = collector.collectFromSymbols(symbols);
 
   // 2. Create Transformer
-  const pruner = new Pruner(checker, allowedSymbols);
+  const pruner = new SymbolPruner(checker, allowedSymbols);
 
   // 3. Emit with Transformer
   const outputs: Record<string, string> = {};
@@ -69,7 +69,7 @@ function emitPruned(
  */
 const normalize = (str?: string) => str?.replace(/\s+/g, " ").trim();
 
-describe("Pruner - Tree Shaking Scenarios", () => {
+describe("SymbolPruner - Tree Shaking Scenarios", () => {
   test("1. Direct Link: prunes unused const declarations", () => {
     // Junk: Unused const
     const outputs = emitPruned(

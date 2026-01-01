@@ -1,7 +1,7 @@
 import ts from "typescript";
 import fs from "fs";
 
-export class Pruner {
+export class SymbolPruner {
   constructor(
     private checker: ts.TypeChecker,
     private keepSet: Set<ts.Symbol>,
@@ -251,7 +251,7 @@ export class Pruner {
           // 2. If it's a generic parameter (e.g., T in <T>), it won't be in keepSet
           // but should be kept. Generally, local type parameters don't have 'declarations'
           // reachable via normal crawl unless checked specifically.
-          // However, for Pruner context, checking if it is a TypeParameter is a safe guard.
+          // However, for SymbolPruner context, checking if it is a TypeParameter is a safe guard.
           const isTypeParameter =
             symbol && symbol.flags & ts.SymbolFlags.TypeParameter;
 

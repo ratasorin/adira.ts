@@ -11,9 +11,7 @@ export const generateAction = async (options: {
   console.log("🔄 Generating API type definitions...");
 
   try {
-    const result = await generate(config);
-    console.log(`✅ Found ${result.routeMap.length} routes`);
-    console.log("✅ Type generation complete!");
+    await generate(config);
 
     // If watch mode is enabled, start watching
     if (options.watch) {

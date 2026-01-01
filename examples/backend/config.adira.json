@@ -4,7 +4,7 @@
   },
   "output": {
     "dir": "shared",
-    "file": "index.api.ts",
+    "file": "index.api.d.ts",
     "typename": "ApiTypes"
   },
   "registry": {

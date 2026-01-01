@@ -1,0 +1,58 @@
+import { IProduct } from "../models/Product";
+import { Backend } from "@n/adira.core.ts";
+declare const getProducts: Backend.ExecuteGET<IProduct, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    price: number;
+    category: import("@n/adira.core.ts").ObjectIdLike;
+    owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    stock: number;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const createProduct: Backend.ExecutePOST<IProduct, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    price: number;
+    category: import("@n/adira.core.ts").ObjectIdLike;
+    owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    stock: number;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const updateProduct: Backend.ExecutePATCH<IProduct, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    price: number;
+    category: import("@n/adira.core.ts").ObjectIdLike;
+    owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    stock: number;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+declare const deleteProduct: Backend.ExecuteDELETE<IProduct, {
+    _id: import("@n/adira.core.ts").ObjectIdLike;
+    name: string;
+    description: string;
+    price: number;
+    category: import("@n/adira.core.ts").ObjectIdLike;
+    owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
+    stock: number;
+    isActive: boolean;
+    createdAt: unknown;
+    updatedAt: unknown;
+    deletedAt?: unknown | undefined;
+}>;
+export type GetProductsFn = typeof getProducts;
+export type CreateProductFn = typeof createProduct;
+export type UpdateProductFn = typeof updateProduct;
+export type DeleteProductFn = typeof deleteProduct;
