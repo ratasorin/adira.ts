@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { DependencyResolver } from "../utils";
+import { DependencyResolver } from "src/utils/dependency-resolver";
 
 export class SymbolCollector {
   private checker: ts.TypeChecker;
@@ -145,7 +145,7 @@ export class SymbolCollector {
    */
   private crawlTypeNode(
     node: ts.Node | undefined,
-    onSymbol?: (symbol: ts.Symbol) => void,
+    onSymbol?: (symbol: ts.Symbol, location: ts.Node) => void,
   ) {
     if (!node) return;
 
@@ -155,7 +155,7 @@ export class SymbolCollector {
       const symbol = this.checker.getSymbolAtLocation(node.typeName);
       if (symbol) {
         if (onSymbol) {
-          onSymbol(symbol);
+          onSymbol(symbol, node.typeName);
         } else this.crawl(symbol);
       }
 
@@ -177,7 +177,7 @@ export class SymbolCollector {
 
           if (isAlias && !isRawModule) {
             if (onSymbol) {
-              onSymbol(qualifierSymbol);
+              onSymbol(qualifierSymbol, entityName.left);
             } else this.crawl(qualifierSymbol);
           }
         }
@@ -190,8 +190,24 @@ export class SymbolCollector {
       const symbol = this.checker.getSymbolAtLocation(node.exprName);
       if (symbol) {
         if (onSymbol) {
-          onSymbol(symbol);
+          onSymbol(symbol, node.exprName);
         } else this.crawl(symbol);
+      }
+
+      let entityName = node.exprName;
+      while (ts.isQualifiedName(entityName)) {
+        const qualifierSymbol = this.checker.getSymbolAtLocation(entityName.left);
+        if (qualifierSymbol) {
+           if (onSymbol) {
+              onSymbol(qualifierSymbol, entityName.left);
+           } else {
+              // Same check as above for recursion safety
+              const isRawModule = qualifierSymbol.flags & (ts.SymbolFlags.Module | ts.SymbolFlags.ValueModule);
+              const isAlias = qualifierSymbol.flags & ts.SymbolFlags.Alias;
+              if (isAlias && !isRawModule) this.crawl(qualifierSymbol);
+           }
+        }
+        entityName = entityName.left;
       }
     }
     // Inline Import Types (import('./x').Y)
@@ -199,7 +215,7 @@ export class SymbolCollector {
       const symbol = this.checker.getSymbolAtLocation(node.qualifier || node);
       if (symbol) {
         if (onSymbol) {
-          onSymbol(symbol);
+          onSymbol(symbol, node.qualifier || node);
         } else this.crawl(symbol);
       }
       node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg, onSymbol));
@@ -264,6 +280,37 @@ export class SymbolCollector {
   }
 
   /**
+   * Returns true if the symbol is a member of a Namespace, Class, or Enum.
+   * Returns false if the symbol is a top-level file export.
+   */
+  private isNestedSymbol(symbol: ts.Symbol): boolean {
+    const parent = (symbol as any).parent as ts.Symbol | undefined;
+    
+    if (!parent) return false; // No parent (e.g. globals) -> Not nested
+
+    // If the parent has declarations, we can check if it's a File or a Module/Class
+    if (parent.declarations && parent.declarations.length > 0) {
+      const parentDecl = parent.declarations[0];
+      
+      // If parent is a SourceFile, then our symbol is Top-Level. -> Keep it.
+      if (ts.isSourceFile(parentDecl)) {
+        return false; 
+      }
+      
+      // If parent is a Module (Namespace), Class, or Enum -> Our symbol is Nested. -> Skip it.
+      if (
+        ts.isModuleDeclaration(parentDecl) || 
+        ts.isClassDeclaration(parentDecl) ||
+        ts.isEnumDeclaration(parentDecl)
+      ) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
    * Scans a TypeNode and collects all referenced symbols within it.
    * Does NOT crawl into those symbols' definitions.
    * Used for generating imports.
@@ -271,12 +318,19 @@ export class SymbolCollector {
   public collectRootReferences(node: ts.Node): Set<ts.Symbol> {
     const refs = new Set<ts.Symbol>();
 
-    this.crawlTypeNode(node, (symbol) => {
+    this.crawlTypeNode(node, (symbol, location) => {
+      // If the location is a QualifiedName (e.g. "Backend.Infer"), 
+      // 'symbol' corresponds to "Infer".
+      // We ignore "Infer" because we know "Backend" (the left side) 
+      // will be visited separately by the walker.
+      if (ts.isQualifiedName(location)) {
+        return; 
+      }
       const resolved = this.resolveSymbol(symbol);
-      // Optional: Resolve aliases if you want the underlying type,
-      // or keep the alias if you want to import the alias.
-      // Usually for imports, we want the symbol as it appears in the code.
-      refs.add(resolved);
+      if(this.isNestedSymbol(resolved)) return;
+
+      // Add the origianl symbol to preserve aliasing
+      refs.add(symbol);
     });
 
     return refs;

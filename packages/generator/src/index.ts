@@ -7,8 +7,8 @@ import {
   findProjectConfig,
   createProject,
   getParsedCommandLine,
-  DependencyResolver,
 } from "./utils";
+import { DependencyResolver } from "./utils/dependency-resolver";
 import { generateApiDefinitonForHandlers } from "./handler/generate";
 import ts from "typescript";
 import path from "path";

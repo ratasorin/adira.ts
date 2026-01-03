@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import ts from "typescript";
 import { SymbolCollector } from "../imports/collector";
-import { DependencyResolver } from ".";
+import { DependencyResolver } from "./dependency-resolver";
+import { generateImports } from "./import-generator";
 
 /**
  * Creates a real file system structure in ./dist/temp-tests and runs the collector against it.
@@ -237,4 +238,92 @@ export function createTypeNodeTestProgram(
     program,
     typeNode: foundNode,
   };
+}
+
+export function runImportsTest(
+  files: Record<string, string>,
+  targetTypeName: string, // The name of the type to inspect (e.g. "TestType")
+  targetOutputFilePath: string = "/src/generated.ts"
+) {
+  // 1. Setup Temp Directory
+  const testRoot = path.resolve(process.cwd(), "dist/test-imports_" + Date.now());
+  if (fs.existsSync(testRoot)) fs.rmSync(testRoot, { recursive: true, force: true });
+  fs.mkdirSync(testRoot, { recursive: true });
+
+  // 2. Write Files (handling node_modules automatically)
+  Object.entries(files).forEach(([virtualPath, content]) => {
+    // If user writes "node_modules/..." treat it relative to root
+    const filePath = virtualPath.startsWith("/") ? virtualPath.slice(1) : virtualPath;
+    const fullPath = path.join(testRoot, filePath);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content);
+  });
+
+  // 3. Configure TypeScript
+  const compilerOptions: ts.CompilerOptions = {
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.CommonJS,
+    moduleResolution: ts.ModuleResolutionKind.NodeJs,
+    strict: true,
+    baseUrl: testRoot,
+    paths: { "*": ["*"] }, // Helps resolve absolute paths in test
+    // Critical for node_modules resolution in temp dir:
+    typeRoots: [path.join(testRoot, "node_modules")] 
+  };
+
+  const host = ts.createCompilerHost(compilerOptions);
+  host.getCurrentDirectory = () => testRoot;
+
+  const rootFiles = Object.keys(files)
+    .filter(f => f.endsWith(".ts") && !f.includes("node_modules"))
+    .map(f => path.join(testRoot, f.startsWith("/") ? f.slice(1) : f));
+
+  const program = ts.createProgram(rootFiles, compilerOptions, host);
+  
+  // 4. Initialize Tools
+  const resolver = new DependencyResolver(program, [], host as any);
+  const collector = new SymbolCollector(program, resolver);
+
+  // 5. Find the Target TypeNode
+  // We look for: type TestType = ...
+  let targetNode: ts.TypeNode | undefined;
+  
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    
+    ts.forEachChild(sourceFile, (node) => {
+      if (ts.isTypeAliasDeclaration(node) && node.name.text === targetTypeName) {
+        targetNode = node.type;
+      }
+    });
+    if (targetNode) break;
+  }
+
+  if (!targetNode) {
+    throw new Error(`Could not find type alias "${targetTypeName}" in source files.`);
+  }
+
+  // 6. Mock ApiDefinition
+  // construct a fake structure that matches what generateImports expects
+  const mockApiDefinition = {
+    "test-group": {
+      "test-endpoint": {
+        // We pass the collected node as the "RequestQuery" (or any field)
+        RequestQuery: targetNode 
+      }
+    }
+  };
+
+  // 7. Run Generator
+  const absoluteTargetPath = path.join(testRoot, targetOutputFilePath.startsWith("/") ? targetOutputFilePath.slice(1) : targetOutputFilePath);
+  
+  const output = generateImports(
+    collector,
+    program,
+    resolver,
+    mockApiDefinition as any, // Cast to any to bypass strict structure checks if needed
+    absoluteTargetPath
+  );
+
+  return { output, testRoot };
 }
