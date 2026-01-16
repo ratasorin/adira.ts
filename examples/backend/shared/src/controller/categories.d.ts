@@ -1,5 +1,6 @@
 import { ICategory } from "../models/Category";
 import { Backend } from "@n/adira.core.ts";
+import { ErrorResponse } from "../types";
 declare const getCategories: Backend.ExecuteGET<ICategory, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
     name: string;

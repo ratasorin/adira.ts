@@ -1,8 +1,11 @@
+import { RefTo } from "@n/adira.core.ts";
+import { IUser } from "./User";
+import { IProduct } from "./Product";
 export interface IOrder {
     _id: unknown;
-    user: unknown & unknown;
+    user: unknown & RefTo<IUser>;
     products: {
-        product: unknown & unknown;
+        product: unknown & RefTo<IProduct>;
         quantity: number;
         priceAtPurchase: number;
     }[];

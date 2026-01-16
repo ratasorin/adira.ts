@@ -541,7 +541,7 @@ describe("SymbolPruner - Tree Shaking Scenarios", () => {
     expect(content).not.toContain("UnusedRoles");
   });
 
-  test.only("21. Special Helper: Serialize<T, R> unwraps to R", () => {
+  test("21. Special Helper: Serialize<T, R> unwraps to R", () => {
     const outputs = emitPruned(
       {
         "/node_modules/bad-lib/package.json": `{"name": "bad-lib"}`,
@@ -592,5 +592,23 @@ describe("SymbolPruner - Tree Shaking Scenarios", () => {
     // The pruner unwraps to 'Bad', then visits 'Bad', sees it's excluded, and turns it to unknown
     expect(content).toContain("badRef: unknown");
     expect(content).not.toContain("badRef: Bad");
+  });
+
+  test.only("22. Handle Inline Imports", () => {
+    const outputs = emitPruned(
+      {
+        "/node_modules/good-import/index.d.ts": `
+          export interface GoodImport {}
+        `,
+        "/node_modules/good-import/package.json": `{"name": "good-import"}`,
+        "/index.d.ts": `
+          export interface IGoodImportWrapper {
+            good: import("good-import").GoodImport;
+          }
+        `,
+      },
+      ["IGoodImportWrapper"],
+    );
+    console.log(outputs);
   });
 });

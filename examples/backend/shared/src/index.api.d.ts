@@ -1,9 +1,9 @@
-import { Backend } from "../../../../packages/core/dist/helpers/backend";
 import { CreateCategoryFn, DeleteCategoryFn, GetCategoriesFn, UpdateCategoryFn } from "./controller/categories";
 import { CreateOrderFn, DeleteOrderFn, GetOrdersFn, UpdateOrderFn } from "./controller/orders";
 import { CreateProductFn, DeleteProductFn, GetProductsFn, UpdateProductFn } from "./controller/products";
 import { CreateUserFn, DeleteUserFn, GetUsersFn, UpdateUserFn } from "./controller/users";
 import { ErrorResponse } from "./types/index";
+import { Backend } from "@n/adira.core.ts";
 
 
 export type API = {

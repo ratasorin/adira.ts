@@ -1,5 +1,6 @@
 import { IProduct } from "../models/Product";
 import { Backend } from "@n/adira.core.ts";
+import { ErrorResponse } from "../types";
 declare const getProducts: Backend.ExecuteGET<IProduct, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
     name: string;
