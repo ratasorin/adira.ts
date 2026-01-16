@@ -4,6 +4,7 @@ import { DependencyResolver } from "src/utils/dependency-resolver";
 export class SymbolCollector {
   private checker: ts.TypeChecker;
   private keepSet: Set<ts.Symbol> = new Set();
+  private processedSymbols: Set<ts.Symbol> = new Set();
 
   public collectedSymbols() {
     return this.keepSet;
@@ -36,6 +37,9 @@ export class SymbolCollector {
    * Handles Alias resolution, Border Patrol, and Vertical Passive climbing.
    */
   public crawl(symbol: ts.Symbol) {
+    if (this.processedSymbols.has(symbol)) return;
+    this.processedSymbols.add(symbol);
+
     // 1. Resolve the chain to find the actual definition (rootSymbol)
     const chain: ts.Symbol[] = [];
     let rootSymbol = symbol;
@@ -48,7 +52,6 @@ export class SymbolCollector {
     }
 
     // 2. Already processed?
-    if (this.keepSet.has(rootSymbol)) return;
 
     // 3. BORDER PATROL: Check the root definition
     const info = this.resolver.getModuleInfo(rootSymbol);
@@ -76,68 +79,8 @@ export class SymbolCollector {
     // 6. AST Exploration
     // We crawl ALL declarations to handle (potential) file
     rootSymbol.declarations?.forEach((decl) => {
-      this.exploreDeclaration(decl);
+      this.crawlTypeNode(decl);
     });
-  }
-
-  /**
-   * Inspects the "Box" a type lives in (Heritage, Signatures, etc.)
-   */
-  private exploreDeclaration(decl: ts.Declaration) {
-    // 1. Heritage Clauses (extends/implements) - CRITICAL
-    if (ts.isInterfaceDeclaration(decl) || ts.isClassDeclaration(decl)) {
-      decl.heritageClauses?.forEach((clause) => {
-        clause.types.forEach((t) => {
-          const s = this.checker.getSymbolAtLocation(t.expression);
-          if (s) this.crawl(s);
-          t.typeArguments?.forEach((arg) => this.crawlTypeNode(arg));
-        });
-      });
-    }
-
-    // 2. Type Nodes (Standard definitions)
-    const typeNode = (decl as any).type as ts.TypeNode | undefined;
-    if (typeNode) {
-      this.crawlTypeNode(typeNode);
-    }
-
-    // 3. Functional Members (Parameters & Returns)
-    if (ts.isFunctionLike(decl)) {
-      decl.parameters.forEach((p) => this.crawlTypeNode(p.type));
-      this.crawlTypeNode(decl.type);
-      decl.typeParameters?.forEach((tp) => {
-        this.crawlTypeNode(tp.constraint);
-        this.crawlTypeNode(tp.default);
-      });
-    }
-
-    // 4. Structure for Interfaces/Object Literals
-    // Note: We avoid Namespaces/Modules here to keep the climb "passive"
-    if (ts.isInterfaceDeclaration(decl) || ts.isTypeLiteralNode(decl)) {
-      decl.members.forEach((member) => {
-        // 1. Properties (name: Type)
-        if (ts.isPropertySignature(member)) {
-          this.crawlTypeNode(member.type);
-        }
-        // 2. Methods (name(): Type)
-        else if (ts.isMethodSignature(member)) {
-          this.crawlTypeNode(member.type);
-          member.parameters.forEach((p) => this.crawlTypeNode(p.type));
-        }
-        // 3. Call Signatures ( (): Type )
-        else if (
-          ts.isCallSignatureDeclaration(member) ||
-          ts.isConstructSignatureDeclaration(member)
-        ) {
-          this.crawlTypeNode(member.type);
-          member.parameters.forEach((p) => this.crawlTypeNode(p.type));
-        }
-        // 4. Index Signatures ( [key: string]: Type )
-        else if (ts.isIndexSignatureDeclaration(member)) {
-          this.crawlTypeNode(member.type);
-        }
-      });
-    }
   }
 
   /**
@@ -148,7 +91,6 @@ export class SymbolCollector {
     onSymbol?: (symbol: ts.Symbol, location: ts.Node) => void,
   ) {
     if (!node) return;
-
     // Type References (User, API.Response)
     if (ts.isTypeReferenceNode(node)) {
       // 1. Resolve the leaf (i.e. Response)
@@ -196,16 +138,20 @@ export class SymbolCollector {
 
       let entityName = node.exprName;
       while (ts.isQualifiedName(entityName)) {
-        const qualifierSymbol = this.checker.getSymbolAtLocation(entityName.left);
+        const qualifierSymbol = this.checker.getSymbolAtLocation(
+          entityName.left,
+        );
         if (qualifierSymbol) {
-           if (onSymbol) {
-              onSymbol(qualifierSymbol, entityName.left);
-           } else {
-              // Same check as above for recursion safety
-              const isRawModule = qualifierSymbol.flags & (ts.SymbolFlags.Module | ts.SymbolFlags.ValueModule);
-              const isAlias = qualifierSymbol.flags & ts.SymbolFlags.Alias;
-              if (isAlias && !isRawModule) this.crawl(qualifierSymbol);
-           }
+          if (onSymbol) {
+            onSymbol(qualifierSymbol, entityName.left);
+          } else {
+            // Same check as above for recursion safety
+            const isRawModule =
+              qualifierSymbol.flags &
+              (ts.SymbolFlags.Module | ts.SymbolFlags.ValueModule);
+            const isAlias = qualifierSymbol.flags & ts.SymbolFlags.Alias;
+            if (isAlias && !isRawModule) this.crawl(qualifierSymbol);
+          }
         }
         entityName = entityName.left;
       }
@@ -240,7 +186,7 @@ export class SymbolCollector {
     // General Fallback (Arrays, Tuples, Parentheses)
     else {
       ts.forEachChild(node, (child) => {
-        if (ts.isTypeNode(child)) this.crawlTypeNode(child, onSymbol);
+        this.crawlTypeNode(child, onSymbol);
       });
     }
   }
@@ -285,28 +231,28 @@ export class SymbolCollector {
    */
   private isNestedSymbol(symbol: ts.Symbol): boolean {
     const parent = (symbol as any).parent as ts.Symbol | undefined;
-    
+
     if (!parent) return false; // No parent (e.g. globals) -> Not nested
 
     // If the parent has declarations, we can check if it's a File or a Module/Class
     if (parent.declarations && parent.declarations.length > 0) {
       const parentDecl = parent.declarations[0];
-      
+
       // If parent is a SourceFile, then our symbol is Top-Level. -> Keep it.
       if (ts.isSourceFile(parentDecl)) {
-        return false; 
+        return false;
       }
-      
+
       // If parent is a Module (Namespace), Class, or Enum -> Our symbol is Nested. -> Skip it.
       if (
-        ts.isModuleDeclaration(parentDecl) || 
+        ts.isModuleDeclaration(parentDecl) ||
         ts.isClassDeclaration(parentDecl) ||
         ts.isEnumDeclaration(parentDecl)
       ) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -319,15 +265,15 @@ export class SymbolCollector {
     const refs = new Set<ts.Symbol>();
 
     this.crawlTypeNode(node, (symbol, location) => {
-      // If the location is a QualifiedName (e.g. "Backend.Infer"), 
+      // If the location is a QualifiedName (e.g. "Backend.Infer"),
       // 'symbol' corresponds to "Infer".
-      // We ignore "Infer" because we know "Backend" (the left side) 
+      // We ignore "Infer" because we know "Backend" (the left side)
       // will be visited separately by the walker.
       if (ts.isQualifiedName(location)) {
-        return; 
+        return;
       }
       const resolved = this.resolveSymbol(symbol);
-      if(this.isNestedSymbol(resolved)) return;
+      if (this.isNestedSymbol(resolved)) return;
 
       // Add the origianl symbol to preserve aliasing
       refs.add(symbol);

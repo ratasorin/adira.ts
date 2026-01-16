@@ -386,14 +386,20 @@ describe("SymbolCollector - Complex Scenarios", () => {
     const { collector, typeNode } = createTypeNodeTestProgram(
       "src/imports/__tests__",
       {
-        "/models/Category": `
-          export interface ICategory { id: number; name: string; }
+        "/models/Tag.ts": `
+          export interface ITag { id: string; name: string; }
+        `,
+        "/models/Category.ts": `
+          import { ITag } from './Tag';
+          import { RefTo } from '@n/adira.core.ts';
+          export interface ICategory { id: string; tags: string & RefTo<ITag>; name: string; }
         `,
         "/node_modules/@n/adira.core.ts/index.d.ts": `
           export namespace Backend {
             export type InferHandlerParams<T> = T extends (req: infer R, res: infer S) => any ? R : never;
             export type ExecuteGET<T, Q> = (params: T, query: Q) => Promise<any>;
           }
+          export type RefTo<T> = T extends { id: infer I } ? I : never;
         `,
         "/node_modules/@n/adira.core.ts/package.json": `{"name": "@n/adira.core.ts"}`,
         "/index.d.ts": `
@@ -410,8 +416,33 @@ describe("SymbolCollector - Complex Scenarios", () => {
     );
 
     const set = collector.collectFromNodes(new Set([typeNode]));
-    console.log(getSymbolsName(set));
+    console.log([...set].map((s) => s.name));
     expect(has(set, "Backend")).toBe(true);
     expect(has(set, "ICategory")).toBe(true);
+    expect(has(set, "ITag")).toBe(true);
+    expect(has(set, "RefTo")).toBe(true);
+  });
+
+  test("22. Handle Inline Imports", () => {
+    const { collector, symbols } = createTestProgram(
+      "src/imports/__tests__",
+      {
+        "/node_modules/good-import/index.d.ts": `
+        export type GoodImport = { id: string; name: string; };
+      `,
+        "/node_modules/good-import/package.json": `{"name": "good-import"}`,
+        "/index.d.ts": `
+        export interface IGoodImportWrapper {
+          goodImport: import('good-import').GoodImport;
+        }
+      `,
+      },
+      ["IGoodImportWrapper"],
+      ["good-import"],
+    );
+
+    const set = collector.collectFromSymbols(symbols);
+    expect(has(set, "GoodImport")).toBe(true);
+    expect(has(set, "IGoodImportWrapper")).toBe(true);
   });
 });

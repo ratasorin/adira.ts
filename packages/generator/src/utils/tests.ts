@@ -17,7 +17,7 @@ export function createTestProgram(
   // 1. Setup a clean test directory
   const testRoot = path.resolve(
     process.cwd(),
-    where + "dist/temp-tests_" + Date.now(),
+    path.join(where, "dist/temp" + Date.now()),
   );
 
   if (fs.existsSync(testRoot)) {
@@ -153,7 +153,7 @@ export function createTypeNodeTestProgram(
   // 1. Setup a clean test directory
   const testRoot = path.resolve(
     process.cwd(),
-    where + "dist/temp-tests_node_" + Date.now(),
+    path.join(where, "dist/temp" + Date.now()),
   );
 
   if (fs.existsSync(testRoot)) {
@@ -243,17 +243,23 @@ export function createTypeNodeTestProgram(
 export function runImportsTest(
   files: Record<string, string>,
   targetTypeName: string, // The name of the type to inspect (e.g. "TestType")
-  targetOutputFilePath: string = "/src/generated.ts"
+  targetOutputFilePath: string = "/src/generated.ts",
 ) {
   // 1. Setup Temp Directory
-  const testRoot = path.resolve(process.cwd(), "dist/test-imports_" + Date.now());
-  if (fs.existsSync(testRoot)) fs.rmSync(testRoot, { recursive: true, force: true });
+  const testRoot = path.resolve(
+    process.cwd(),
+    "dist/test-imports_" + Date.now(),
+  );
+  if (fs.existsSync(testRoot))
+    fs.rmSync(testRoot, { recursive: true, force: true });
   fs.mkdirSync(testRoot, { recursive: true });
 
   // 2. Write Files (handling node_modules automatically)
   Object.entries(files).forEach(([virtualPath, content]) => {
     // If user writes "node_modules/..." treat it relative to root
-    const filePath = virtualPath.startsWith("/") ? virtualPath.slice(1) : virtualPath;
+    const filePath = virtualPath.startsWith("/")
+      ? virtualPath.slice(1)
+      : virtualPath;
     const fullPath = path.join(testRoot, filePath);
     fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, content);
@@ -268,18 +274,18 @@ export function runImportsTest(
     baseUrl: testRoot,
     paths: { "*": ["*"] }, // Helps resolve absolute paths in test
     // Critical for node_modules resolution in temp dir:
-    typeRoots: [path.join(testRoot, "node_modules")] 
+    typeRoots: [path.join(testRoot, "node_modules")],
   };
 
   const host = ts.createCompilerHost(compilerOptions);
   host.getCurrentDirectory = () => testRoot;
 
   const rootFiles = Object.keys(files)
-    .filter(f => f.endsWith(".ts") && !f.includes("node_modules"))
-    .map(f => path.join(testRoot, f.startsWith("/") ? f.slice(1) : f));
+    .filter((f) => f.endsWith(".ts") && !f.includes("node_modules"))
+    .map((f) => path.join(testRoot, f.startsWith("/") ? f.slice(1) : f));
 
   const program = ts.createProgram(rootFiles, compilerOptions, host);
-  
+
   // 4. Initialize Tools
   const resolver = new DependencyResolver(program, [], host as any);
   const collector = new SymbolCollector(program, resolver);
@@ -287,12 +293,15 @@ export function runImportsTest(
   // 5. Find the Target TypeNode
   // We look for: type TestType = ...
   let targetNode: ts.TypeNode | undefined;
-  
+
   for (const sourceFile of program.getSourceFiles()) {
     if (sourceFile.isDeclarationFile) continue;
-    
+
     ts.forEachChild(sourceFile, (node) => {
-      if (ts.isTypeAliasDeclaration(node) && node.name.text === targetTypeName) {
+      if (
+        ts.isTypeAliasDeclaration(node) &&
+        node.name.text === targetTypeName
+      ) {
         targetNode = node.type;
       }
     });
@@ -300,7 +309,9 @@ export function runImportsTest(
   }
 
   if (!targetNode) {
-    throw new Error(`Could not find type alias "${targetTypeName}" in source files.`);
+    throw new Error(
+      `Could not find type alias "${targetTypeName}" in source files.`,
+    );
   }
 
   // 6. Mock ApiDefinition
@@ -309,20 +320,25 @@ export function runImportsTest(
     "test-group": {
       "test-endpoint": {
         // We pass the collected node as the "RequestQuery" (or any field)
-        RequestQuery: targetNode 
-      }
-    }
+        RequestQuery: targetNode,
+      },
+    },
   };
 
   // 7. Run Generator
-  const absoluteTargetPath = path.join(testRoot, targetOutputFilePath.startsWith("/") ? targetOutputFilePath.slice(1) : targetOutputFilePath);
-  
+  const absoluteTargetPath = path.join(
+    testRoot,
+    targetOutputFilePath.startsWith("/")
+      ? targetOutputFilePath.slice(1)
+      : targetOutputFilePath,
+  );
+
   const output = generateImports(
     collector,
     program,
     resolver,
     mockApiDefinition as any, // Cast to any to bypass strict structure checks if needed
-    absoluteTargetPath
+    absoluteTargetPath,
   );
 
   return { output, testRoot };

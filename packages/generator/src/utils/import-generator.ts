@@ -5,11 +5,10 @@ import ts from "typescript";
 import { DependencyResolver } from "./dependency-resolver";
 
 type ImportBucket = {
-  defaultImport?: string;      // e.g. "React" from "import React from 'react'"
-  namespaceImport?: string;    // e.g. "fs" from "import * as fs from 'fs'"
-  namedImports: Set<string>;   // e.g. "useState", "useEffect as useE"
+  defaultImport?: string; // e.g. "React" from "import React from 'react'"
+  namespaceImport?: string; // e.g. "fs" from "import * as fs from 'fs'"
+  namedImports: Set<string>; // e.g. "useState", "useEffect as useE"
 };
-
 
 /**
  * Generates valid TypeScript import statements for the provided symbols
@@ -21,12 +20,12 @@ export function generateImports(
   program: ts.Program,
   dependencyResolver: DependencyResolver,
   apiDefiniton: ApiDefinition,
-  targetFilePath: string
+  targetFilePath: string,
 ): string {
   const checker = program.getTypeChecker();
 
   const endpoints: HandlerApiDefinition[] = Object.values(apiDefiniton).flatMap(
-    (v) => Object.values(v)
+    (v) => Object.values(v),
   );
   // 1. Flatten and Deduplicate Symbols
   const uniqueSymbols = new Set<ts.Symbol>();
@@ -54,18 +53,23 @@ export function generateImports(
 
     const sourceFile = decl.getSourceFile();
     if (program.isSourceFileDefaultLibrary(sourceFile)) {
-       continue;
+      continue;
     }
-    if (path.resolve(sourceFile.fileName) === path.resolve(targetFilePath)) continue;
+    if (path.resolve(sourceFile.fileName) === path.resolve(targetFilePath))
+      continue;
 
     // C. Calculate Module Path
     let moduleSpecifier: string = "";
     if (program.isSourceFileFromExternalLibrary(sourceFile)) {
-      moduleSpecifier = dependencyResolver.resolvePackageName(sourceFile.fileName) || "";
+      moduleSpecifier =
+        dependencyResolver.resolvePackageName(sourceFile.fileName) || "";
     } else {
       let relativePath = path.relative(targetDir, sourceFile.fileName);
       if (!relativePath.startsWith(".")) relativePath = "./" + relativePath;
-      moduleSpecifier = relativePath.replace(/(\.d\.ts|\.ts)$/, "").split(path.sep).join("/");
+      moduleSpecifier = relativePath
+        .replace(/(\.d\.ts|\.ts)$/, "")
+        .split(path.sep)
+        .join("/");
     }
 
     const localDecl = localSymbol.getDeclarations()?.[0];
@@ -91,26 +95,27 @@ export function generateImports(
     // CASE C: Named Import (import { Backend })
     // Includes ImportSpecifier, or if the symbol is not an import (e.g. ClassDeclaration)
     else {
-       // STRATEGY: Look at the AST Node to see if it was aliased.
-       // This works perfectly for "Backend as BBackend" because the AST holds both names.
-       
-       if (localDecl && ts.isImportSpecifier(localDecl)) {
-          if (localDecl.propertyName) {
-             // It has an alias: import { Real as Local }
-             bucket.namedImports.add(`${localDecl.propertyName.text} as ${localDecl.name.text}`);
-          } else {
-             // No alias: import { Real }
-             bucket.namedImports.add(localDecl.name.text);
-          }
-       } 
-       // Fallback: If it's not an import specifier (e.g. it was a local variable we are exporting)
-       // We use the simple name.
-       else {
-          bucket.namedImports.add(localSymbol.name);
-       }
+      // STRATEGY: Look at the AST Node to see if it was aliased.
+      // This works perfectly for "Backend as BBackend" because the AST holds both names.
+
+      if (localDecl && ts.isImportSpecifier(localDecl)) {
+        if (localDecl.propertyName) {
+          // It has an alias: import { Real as Local }
+          bucket.namedImports.add(
+            `${localDecl.propertyName.text} as ${localDecl.name.text}`,
+          );
+        } else {
+          // No alias: import { Real }
+          bucket.namedImports.add(localDecl.name.text);
+        }
+      }
+      // Fallback: If it's not an import specifier (e.g. it was a local variable we are exporting)
+      // We use the simple name.
+      else {
+        bucket.namedImports.add(localSymbol.name);
+      }
     }
   }
-
 
   // 3. Create AST Nodes for Imports
   const factory = ts.factory;
@@ -124,30 +129,36 @@ export function generateImports(
 
     // --- CASE 1: Default Import (import X from '...') ---
     if (bucket.defaultImport) {
-      nodes.push(factory.createImportDeclaration(
-        undefined,
-        factory.createImportClause(
-          false,
-          factory.createIdentifier(bucket.defaultImport), // Name of default import
-          undefined // No named bindings here
+      nodes.push(
+        factory.createImportDeclaration(
+          undefined,
+          factory.createImportClause(
+            false,
+            factory.createIdentifier(bucket.defaultImport), // Name of default import
+            undefined, // No named bindings here
+          ),
+          factory.createStringLiteral(modulePath),
+          undefined,
         ),
-        factory.createStringLiteral(modulePath),
-        undefined
-      ));
+      );
     }
 
     // --- CASE 2: Namespace Import (import * as X from '...') ---
     if (bucket.namespaceImport) {
-      nodes.push(factory.createImportDeclaration(
-        undefined,
-        factory.createImportClause(
-          false,
+      nodes.push(
+        factory.createImportDeclaration(
           undefined,
-          factory.createNamespaceImport(factory.createIdentifier(bucket.namespaceImport))
+          factory.createImportClause(
+            false,
+            undefined,
+            factory.createNamespaceImport(
+              factory.createIdentifier(bucket.namespaceImport),
+            ),
+          ),
+          factory.createStringLiteral(modulePath),
+          undefined,
         ),
-        factory.createStringLiteral(modulePath),
-        undefined
-      ));
+      );
     }
 
     // --- CASE 3: Named Imports (import { A, B as C } from '...') ---
@@ -165,20 +176,22 @@ export function generateImports(
           // propertyName (left side): Only needed if we are aliasing
           aliasName ? factory.createIdentifier(realName) : undefined,
           // name (right side): The local name we use in code
-          factory.createIdentifier(aliasName || realName)
+          factory.createIdentifier(aliasName || realName),
         );
       });
 
-      nodes.push(factory.createImportDeclaration(
-        undefined,
-        factory.createImportClause(
-          false,
-          undefined, // No default import here
-          factory.createNamedImports(specifiers)
+      nodes.push(
+        factory.createImportDeclaration(
+          undefined,
+          factory.createImportClause(
+            false,
+            undefined, // No default import here
+            factory.createNamedImports(specifiers),
+          ),
+          factory.createStringLiteral(modulePath),
+          undefined,
         ),
-        factory.createStringLiteral(modulePath),
-        undefined
-      ));
+      );
     }
   }
 
@@ -189,13 +202,13 @@ export function generateImports(
     "",
     ts.ScriptTarget.Latest,
     false,
-    ts.ScriptKind.TS
+    ts.ScriptKind.TS,
   );
 
   const result = printer.printList(
     ts.ListFormat.MultiLine,
     factory.createNodeArray(nodes),
-    resultFile
+    resultFile,
   );
 
   return result;

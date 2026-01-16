@@ -1,14 +1,14 @@
-import { RefTo } from "@n/adira.core.ts";
+import { RefTo, Serialize } from "@n/adira.core.ts";
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IUser } from "./User";
 
 export interface IProduct {
-  _id: mongoose.Types.ObjectId;
+  _id: Serialize<mongoose.Types.ObjectId, string>;
   name: string;
   description: string;
   price: number;
-  category: mongoose.Types.ObjectId;
-  owner: mongoose.Types.ObjectId & RefTo<IUser>; // Reference to User
+  category: Serialize<mongoose.Types.ObjectId, string>;
+  owner: Serialize<mongoose.Types.ObjectId, string> & RefTo<IUser>; // Reference to User
   stock: number;
   isActive: boolean;
   createdAt: Date;
