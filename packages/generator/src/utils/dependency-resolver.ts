@@ -41,8 +41,9 @@ export class DependencyResolver {
       return undefined;
     }
 
+    
     const isExternal = this.program.isSourceFileFromExternalLibrary(sourceFile);
-
+    
     if (isExternal) {
       const packageName = this.resolvePackageName(sourceFile.fileName);
       if (packageName && this.whitelist.includes(packageName)) {

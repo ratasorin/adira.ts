@@ -25,6 +25,7 @@ export const loadConfig = (): AdiraConfig => {
       file: "index.api.ts",
       typename: "ApiTypes",
     },
+   
     registry: {
       name: packageName,
       version: packageVersion,

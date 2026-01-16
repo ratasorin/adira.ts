@@ -8,9 +8,9 @@ declare const getCategories: Backend.ExecuteGET<ICategory, {
     parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
     createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const createCategory: Backend.ExecutePOST<ICategory, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -20,9 +20,9 @@ declare const createCategory: Backend.ExecutePOST<ICategory, {
     parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
     createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const updateCategory: Backend.ExecutePATCH<ICategory, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -32,9 +32,9 @@ declare const updateCategory: Backend.ExecutePATCH<ICategory, {
     parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
     createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const deleteCategory: Backend.ExecuteDELETE<ICategory, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -44,9 +44,9 @@ declare const deleteCategory: Backend.ExecuteDELETE<ICategory, {
     parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
     createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 export type GetCategoriesFn = typeof getCategories;
 export type CreateCategoryFn = typeof createCategory;

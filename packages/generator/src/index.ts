@@ -10,10 +10,8 @@ import {
 } from "./utils";
 import { DependencyResolver } from "./utils/dependency-resolver";
 import { generateApiDefinitonForHandlers } from "./handler/generate";
-import ts from "typescript";
 import path from "path";
 import { SymbolCollector } from "./imports/collector";
-import { getSymbolsName } from "./utils/tests";
 import { SymbolPruner } from "./pruner";
 
 export interface GeneratorResult {
@@ -27,6 +25,7 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
   // find source tsconfig:
   const tsconfigPath = findProjectConfig();
   const tsconfig = getParsedCommandLine(tsconfigPath);
+
 
   const { files: initialFiles, program: initialProgram } =
     createProject(tsconfig);
@@ -82,6 +81,7 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
   const pruner = new SymbolPruner(
     compiledProject.getTypeChecker(),
     symbolCollector.collectedSymbols(),
+    compiledProject
   );
 
   projectFiles.forEach((file) => {

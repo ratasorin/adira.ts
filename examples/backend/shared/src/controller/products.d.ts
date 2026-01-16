@@ -9,9 +9,9 @@ declare const getProducts: Backend.ExecuteGET<IProduct, {
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const createProduct: Backend.ExecutePOST<IProduct, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -22,9 +22,9 @@ declare const createProduct: Backend.ExecutePOST<IProduct, {
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const updateProduct: Backend.ExecutePATCH<IProduct, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -35,9 +35,9 @@ declare const updateProduct: Backend.ExecutePATCH<IProduct, {
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const deleteProduct: Backend.ExecuteDELETE<IProduct, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -48,9 +48,9 @@ declare const deleteProduct: Backend.ExecuteDELETE<IProduct, {
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 export type GetProductsFn = typeof getProducts;
 export type CreateProductFn = typeof createProduct;

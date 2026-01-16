@@ -1,10 +1,12 @@
 import ts from "typescript";
 import fs from "fs";
+import { printSymbols } from "../utils/tests";
 
 export class SymbolPruner {
   constructor(
     private checker: ts.TypeChecker,
     private keepSet: Set<ts.Symbol>,
+    private program: ts.Program,
   ) {}
 
   /**
@@ -50,6 +52,34 @@ export class SymbolPruner {
   }
 
   /**
+   * Helper to determine if a symbol belongs to the TS default library (e.g. Date, Promise, etc.)
+   */
+  private isDefaultLibrarySymbol(symbol: ts.Symbol): boolean {
+    if (!symbol.declarations || symbol.declarations.length === 0) return false;
+    
+    // Check if any declaration of this symbol is in a default library file
+    return symbol.declarations.every(decl => 
+      this.program.isSourceFileDefaultLibrary(decl.getSourceFile())
+    );
+  }
+
+  private shouldKeepSymbol(symbol: ts.Symbol | undefined): boolean {
+    if (!symbol) return false;
+    
+    // 1. Is it in our keepSet (explicitly crawled)?
+    if (this.keepSet.has(symbol)) return true;
+
+    console.log("SYMBOL NOT IN KEEP_SET CHECK:", symbol.getName());
+
+    // 2. Is it a built-in global like Date, Promise, etc?
+    if (this.isDefaultLibrarySymbol(symbol)) return true;
+
+    // 3. Is it a Type Parameter (like T in Map<T>)?
+    if (symbol.flags & ts.SymbolFlags.TypeParameter) return true;
+
+    return false;
+  }
+  /**
    * Creates a TransformerFactory to be used with program.emit().
    * Handles pruning of Declarations, Imports, Exports, and Variables.
    */
@@ -70,7 +100,7 @@ export class SymbolPruner {
           if (!node.name) return undefined; // Anonymous default exports handled in ExportAssignment
 
           const symbol = this.checker.getSymbolAtLocation(node.name);
-          if (symbol && !this.keepSet.has(symbol)) {
+          if (symbol && !this.shouldKeepSymbol(symbol)) {
             return undefined;
           }
         }
@@ -83,7 +113,7 @@ export class SymbolPruner {
           if (!node.name) return undefined;
 
           const symbol = this.checker.getSymbolAtLocation(node.name);
-          if (symbol && !this.keepSet.has(symbol)) {
+          if (symbol && !this.shouldKeepSymbol(symbol)) {
             return undefined;
           }
         }
@@ -96,7 +126,7 @@ export class SymbolPruner {
             // Strict check: .d.ts files must use simple Identifiers for variable names
             if (ts.isIdentifier(decl.name)) {
               const s = this.checker.getSymbolAtLocation(decl.name);
-              return s && this.keepSet.has(s);
+              return s && this.shouldKeepSymbol(s);
             }
             // It's impossible to encounter a BindingPattern (destructuring) in a .d.ts!
             return false;
@@ -126,7 +156,7 @@ export class SymbolPruner {
           if (ts.isNamedExports(node.exportClause)) {
             const keptElements = node.exportClause.elements.filter((el) => {
               const s = this.checker.getSymbolAtLocation(el.name);
-              return s && this.keepSet.has(s);
+              return s && this.shouldKeepSymbol(s);
             });
 
             if (keptElements.length === 0) return undefined;
@@ -156,7 +186,7 @@ export class SymbolPruner {
           // 5a. Check Default Import
           if (keptName) {
             const s = this.checker.getSymbolAtLocation(keptName);
-            if (!s || !this.keepSet.has(s)) {
+            if (!s || !this.shouldKeepSymbol(s)) {
               keptName = undefined;
             }
           }
@@ -166,7 +196,7 @@ export class SymbolPruner {
             if (ts.isNamedImports(keptNamedBindings)) {
               const keptElements = keptNamedBindings.elements.filter((el) => {
                 const s = this.checker.getSymbolAtLocation(el.name);
-                return s && this.keepSet.has(s);
+                return s && this.shouldKeepSymbol(s);
               });
 
               if (keptElements.length === 0) {
@@ -184,7 +214,7 @@ export class SymbolPruner {
               const s = this.checker.getSymbolAtLocation(
                 keptNamedBindings.name,
               );
-              if (!s || !this.keepSet.has(s)) {
+              if (!s || !this.shouldKeepSymbol(s)) {
                 keptNamedBindings = undefined;
               }
             }
@@ -216,7 +246,7 @@ export class SymbolPruner {
         // --- 6. Export Assignments (export default X) ---
         else if (ts.isExportAssignment(node)) {
           const s = this.checker.getSymbolAtLocation(node.expression);
-          if (s && !this.keepSet.has(s)) {
+          if (s && !this.shouldKeepSymbol(s)) {
             return undefined;
           }
         }
@@ -224,7 +254,7 @@ export class SymbolPruner {
         // --- 7. Import Equals (import A = require('./b')) ---
         else if (ts.isImportEqualsDeclaration(node)) {
           const s = this.checker.getSymbolAtLocation(node.name);
-          if (s && !this.keepSet.has(s)) {
+          if (s && !this.shouldKeepSymbol(s)) {
             return undefined;
           }
         }
@@ -256,7 +286,7 @@ export class SymbolPruner {
             symbol && symbol.flags & ts.SymbolFlags.TypeParameter;
 
           // 3. If symbol exists, is not a generic type param, and NOT in keepSet -> Sanitized
-          if (symbol && !isTypeParameter && !this.keepSet.has(symbol)) {
+          if (symbol && !isTypeParameter && !this.shouldKeepSymbol(symbol)) {
             // Replace with 'unknown'
             return factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
           }
@@ -269,7 +299,7 @@ export class SymbolPruner {
           const validTypes = node.types.filter((t) => {
             // Check the expression (e.g., "Bad" in "extends Bad")
             const symbol = this.checker.getSymbolAtLocation(t.expression);
-            return !symbol || this.keepSet.has(symbol);
+            return !symbol || this.shouldKeepSymbol(symbol);
           });
 
           if (validTypes.length === 0) return undefined; // Remove "extends ..." block entirely

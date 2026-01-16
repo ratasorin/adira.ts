@@ -17,7 +17,7 @@ export interface IOrder {
     };
     paymentMethod: string;
     paymentStatus: "pending" | "completed" | "failed";
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date;
 }

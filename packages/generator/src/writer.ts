@@ -15,7 +15,7 @@ export function generatePackageJson(props: {
   workingDir: string;
 }) {
   // 1. Read Root package.json
-  const rootPkgPath = path.resolve(props.outputDir, "package.json");
+  const rootPkgPath = path.resolve(process.cwd(), "package.json");
   let rootPkg: any = {};
 
   if (fs.existsSync(rootPkgPath)) {
@@ -35,7 +35,6 @@ export function generatePackageJson(props: {
     ...rootPkg.peerDependencies,
   };
 
-  console.log({ w: props.whitelistedPackages });
   const resolvedDeps: Record<string, string> = {};
 
   props.whitelistedPackages.forEach((pkg) => {

@@ -7,7 +7,7 @@ export interface IProduct {
     owner: unknown & unknown;
     stock: number;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date;
 }

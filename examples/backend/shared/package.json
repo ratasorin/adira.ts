@@ -4,6 +4,10 @@
   "description": "<API Description>",
   "main": "index.api.ts",
   "types": "index.api.ts",
-  "peerDependencies": {},
-  "devDependencies": {}
+  "peerDependencies": {
+    "@n/adira.core.ts": "file://../../packages/core"
+  },
+  "devDependencies": {
+    "@n/adira.core.ts": "file://../../packages/core"
+  }
 }

@@ -18,9 +18,9 @@ declare const getOrders: Backend.ExecuteGET<unknown, {
     };
     paymentMethod: string;
     paymentStatus: "pending" | "completed" | "failed";
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const createOrder: Backend.ExecutePOST<unknown, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -41,9 +41,9 @@ declare const createOrder: Backend.ExecutePOST<unknown, {
     };
     paymentMethod: string;
     paymentStatus: "pending" | "completed" | "failed";
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const updateOrder: Backend.ExecutePATCH<unknown, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -64,9 +64,9 @@ declare const updateOrder: Backend.ExecutePATCH<unknown, {
     };
     paymentMethod: string;
     paymentStatus: "pending" | "completed" | "failed";
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 declare const deleteOrder: Backend.ExecuteDELETE<unknown, {
     _id: import("@n/adira.core.ts").ObjectIdLike;
@@ -87,9 +87,9 @@ declare const deleteOrder: Backend.ExecuteDELETE<unknown, {
     };
     paymentMethod: string;
     paymentStatus: "pending" | "completed" | "failed";
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | undefined;
 }>;
 export type GetOrdersFn = typeof getOrders;
 export type CreateOrderFn = typeof createOrder;

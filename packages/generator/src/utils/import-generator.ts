@@ -76,11 +76,6 @@ export function generateImports(
     }
     const bucket = importsMap.get(moduleSpecifier)!;
 
-    console.log({ filename: localDecl.getSourceFile().fileName, declName: localDecl.getText(), 
-      isNamespaceImport: ts.isNamespaceImport(localDecl),
-      isImportClause: ts.isImportClause(localDecl),
-     })
-
     // 2. CLASSIFY THE IMPORT TYPE
     // CASE A: Namespace Import (import * as Lib)
     if (localDecl && ts.isNamespaceImport(localDecl)) {

@@ -4,7 +4,7 @@ export interface IUser {
     _id: string;
     name: string;
     email: string;
-    createdAt: unknown;
-    deletedAt?: unknown;
+    createdAt: Date;
+    deletedAt?: Date;
     orders?: (string & RefTo<IOrder>)[];
 }

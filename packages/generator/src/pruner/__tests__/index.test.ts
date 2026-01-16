@@ -23,7 +23,7 @@ function emitPruned(
   const allowedSymbols = collector.collectFromSymbols(symbols);
 
   // 2. Create Transformer
-  const pruner = new SymbolPruner(checker, allowedSymbols);
+  const pruner = new SymbolPruner(checker, allowedSymbols, program);
 
   // 3. Emit with Transformer
   const outputs: Record<string, string> = {};

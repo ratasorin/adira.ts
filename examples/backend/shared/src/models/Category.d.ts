@@ -6,7 +6,7 @@ export interface ICategory {
     parentCategory: string & unknown;
     createdBy: string & unknown;
     isActive: boolean;
-    createdAt: unknown;
-    updatedAt: unknown;
-    deletedAt?: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date;
 }
