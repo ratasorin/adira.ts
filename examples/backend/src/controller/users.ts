@@ -30,7 +30,12 @@ export const getUsersHandler = async (
 };
 
 export const createUserHandler = async (
-  req: Request<any, any, any, Backend.InferHandlerParams<CreateUserFn>>,
+  req: Request<
+    any,
+    any,
+    Backend.InferRequestBody<CreateUserFn>,
+    Backend.InferHandlerParams<CreateUserFn>
+  >,
   res: Response<Backend.InferHandlerResponse<CreateUserFn, {}> | ErrorResponse>,
 ) => {
   try {
@@ -48,7 +53,7 @@ export const updateUserHandler = async (
   req: Request<
     { id: string },
     any,
-    any,
+    Backend.InferRequestBody<UpdateUserFn>,
     Backend.InferHandlerParams<UpdateUserFn>
   >,
   res: Response<Backend.InferHandlerResponse<UpdateUserFn, {}> | ErrorResponse>,

@@ -30,6 +30,7 @@ export type Scalar =
   | Error;
 
 export type IsScalar<T> = T extends Scalar ? true : false;
+export type IsRefTo<T> = T extends { __refTo?: any } ? true : false;
 
 export type Join<
   Prefix extends string = "",
@@ -262,7 +263,7 @@ export type NestedSelection<T = {}, Q extends any[] = []> = T extends any[]
         : T[K];
     };
 
-export type IncludeUnionOf<T extends any[]> = T[number];
+export type UnionFromTuple<Tuple extends any[]> = Tuple[number];
 
 // extract subpaths for a key K: for includes like "friends.friend" and K="friends" -> "friend"
 export type SubPathsForKey<
@@ -281,7 +282,7 @@ export type HasDirectInclude<Inc = "", K = ""> =
 export type SelectableFieldsAfterJoin<
   Base = {},
   Include extends any[] = [],
-> = _SelectableFieldsAfterJoin<Base, IncludeUnionOf<Include>>;
+> = Leafs<SchemaAfterJoin<Base, UnionFromTuple<Include>>>[];
 
 /**
  * Core recursive type:
@@ -292,22 +293,22 @@ export type SelectableFieldsAfterJoin<
  *    - else if subpaths exist -> recurse with only those subpaths
  *    - else keep Base[K]
  */
-export type _SelectableFieldsAfterJoin<Base = {}, IncludeUnion = ""> =
+export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
   // If this field was an ObjectId in the original, after populate it becomes Full
   Base extends RefTo<infer R>
     ? R | null
     : // Arrays: preserve array, recurse element type
       Base extends readonly (infer U)[]
-      ? _SelectableFieldsAfterJoin<U, IncludeUnion>[]
+      ? SchemaAfterJoin<U, IncludeUnion>[]
       : // Plain object: map keys
         Base extends object
         ? {
             [K in keyof Base]: HasDirectInclude<IncludeUnion, K> extends true
-              ? _SelectableFieldsAfterJoin<Base[K], "">
+              ? SchemaAfterJoin<Base[K]>
               : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
                 SubPathsForKey<IncludeUnion, K> extends never
                 ? Base[K] // not included at all — keep base
-                : _SelectableFieldsAfterJoin<
+                : SchemaAfterJoin<
                     Base[K],
                     SubPathsForKey<IncludeUnion, Extract<K, string>>
                   >;
@@ -386,9 +387,10 @@ export type TopLevelKeysUnion<Q extends string = ""> =
   Q extends `${infer F}.${string}` ? F : Q;
 export type TopLevelKeys<Q extends any[] = []> = TopLevelKeysUnion<Q[number]>[];
 
-export type ExtractSelect<Base = {}, Include extends any[] = []> = Leafs<
-  SelectableFieldsAfterJoin<Base, Include>
->[];
+export type ExtractSelect<
+  Base = {},
+  Include extends any[] = [],
+> = SelectableFieldsAfterJoin<Base, Include>;
 
 export type EnhacedExtractSelect<
   Base = {},
@@ -655,54 +657,6 @@ export type RowsPrunerDefiniton<T = {}> = {
 
 export * as Backend from "./helpers/backend";
 export * as Frontend from "./helpers/frontend";
-
-import {
-  HTTPMethod,
-  PublicAPIPaths,
-  APIMethods,
-  ExtractMetadata,
-  ExtractFull,
-  ExtractReqInclude,
-  ExtractReqSelect,
-  ExtractResBody,
-  ExtractReqBody,
-  ExtractQueryParams,
-  ExtractReqPath,
-} from "./helpers/frontend";
-
-export type CreateApiClient<
-  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
-> = (baseUrl: string) => <
-  Metadata extends ExtractMetadata<Endpoint, Method>,
-  Full extends ExtractFull<Metadata>,
-  PublicPaths extends PublicAPIPaths<API>,
-  Path extends keyof PublicPaths & string,
-  Method extends APIMethods<API, PublicPaths[Path] & keyof API>,
-  Include extends ExtractReqInclude<Endpoint, Method>,
-  Select extends ExtractReqSelect<Endpoint, Method, Include>,
-  GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
-  Data extends ExtractReqBody<Endpoint, Method>,
-  QueryParams extends ExtractQueryParams<Endpoint, Method, Include>,
-  PathParam extends ExtractReqPath<Endpoint, Method>,
-  Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
->(
-  url: Path,
-  method: Method,
-  {
-    data,
-    path,
-    query,
-  }: {
-    query?: { include: Include; select: Select } & (Method extends "GET"
-      ? { groupBy?: GroupByDefinition<Leafs<Full>[], GroupOperations> }
-      : {}) &
-      QueryParams;
-    data?: Method extends "GET" ? never : Data;
-    path?: PathParam;
-  },
-) => Promise<
-  ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
->;
 
 export interface AdiraConfig {
   output: {

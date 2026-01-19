@@ -35,7 +35,12 @@ export const getCategoriesHandler = async (
 };
 
 export const createCategoryHandler = async (
-  req: Request<any, any, any, Backend.InferHandlerParams<CreateCategoryFn>>,
+  req: Request<
+    any,
+    any,
+    Backend.InferRequestBody<CreateCategoryFn>,
+    Backend.InferHandlerParams<CreateCategoryFn>
+  >,
   res: Response<
     Backend.InferHandlerResponse<CreateCategoryFn, {}> | ErrorResponse
   >,
@@ -55,7 +60,7 @@ export const updateCategoryHandler = async (
   req: Request<
     { id: string },
     any,
-    any,
+    Backend.InferRequestBody<UpdateCategoryFn>,
     Backend.InferHandlerParams<UpdateCategoryFn>
   >,
   res: Response<

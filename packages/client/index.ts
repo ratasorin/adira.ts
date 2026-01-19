@@ -14,20 +14,50 @@ const replacePathParams = (path: string, pathParams?: any): string => {
 
 export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
   baseUrl,
+  __,
 ) => {
-  return async (url, method, { data, path, query }) => {
-    const fullPath = replacePathParams(url as string, path);
-    const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
+  type API = NonNullable<typeof __>;
+  return (path, method) => {
+    if (method === "GET") {
+      const fetchData: Frontend.AxiosApiClientQuery<
+        API,
+        typeof path & string
+      > = async (query, path) => {
+        const fullPath = replacePathParams(path as string, path);
+        const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
 
-    const config: AxiosRequestConfig = {
-      method: method.toLowerCase() as any,
-      url: fullUrl,
-      params: query,
-      data,
-    };
+        const config: AxiosRequestConfig = {
+          method: "get",
+          url: fullUrl,
+          params: query,
+        };
 
-    const response = await axios(config);
-    return response.data;
+        const response = await axios(config);
+        return response.data;
+      };
+
+      return fetchData as any;
+    } else {
+      let updatedMethod: "POST" | "PATCH" | "DELETE" = method;
+      const mutateData: Frontend.AxiosApiClientMutate<
+        API,
+        typeof path & string,
+        typeof updatedMethod
+      > = async (data, path) => {
+        const fullPath = replacePathParams(path as string, path);
+        const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
+
+        const config: AxiosRequestConfig = {
+          method: method.toLowerCase(),
+          url: fullUrl,
+          data,
+        };
+
+        const response = await axios(config);
+        return response.data;
+      };
+      return mutateData as any;
+    }
   };
 };
 

@@ -16,9 +16,7 @@ export type DeleteOrderFn = typeof deleteOrder;
 
 export const getOrdersHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetOrdersFn>>,
-  res: Response<
-    Backend.InferHandlerResponse<GetOrdersFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<GetOrdersFn, {}> | ErrorResponse>,
 ) => {
   try {
     const orders = await getOrders(req.query);
@@ -32,7 +30,12 @@ export const getOrdersHandler = async (
 };
 
 export const createOrderHandler = async (
-  req: Request<any, any, any, Backend.InferHandlerParams<CreateOrderFn>>,
+  req: Request<
+    any,
+    any,
+    Backend.InferRequestBody<CreateOrderFn>,
+    Backend.InferHandlerParams<CreateOrderFn>
+  >,
   res: Response<
     Backend.InferHandlerResponse<CreateOrderFn, {}> | ErrorResponse
   >,
@@ -52,7 +55,7 @@ export const updateOrderHandler = async (
   req: Request<
     { id: string },
     any,
-    any,
+    Backend.InferRequestBody<UpdateOrderFn>,
     Backend.InferHandlerParams<UpdateOrderFn>
   >,
   res: Response<

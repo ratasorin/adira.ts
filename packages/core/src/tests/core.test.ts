@@ -5,6 +5,7 @@ import {
   ExtractSelect,
   FilterDefinition,
   Leafs,
+  SchemaAfterJoin,
   NestedSelection,
   PopulatableKeys,
   PopulateSchema,
@@ -84,24 +85,19 @@ const userSelection: NestedUserSelection = {
 };
 
 type SelectableFields = SelectableFieldsAfterJoin<User, ["friends.friend"]>;
+type UserWithCompany = SchemaAfterJoin<User, "company">;
 
 type SelectableLeafs = Leafs<SelectableFields>;
 
 type Select = ExtractSelect<User, ["friends.friend"]>;
 
-type FilterUser = FilterDefinition<PopulatedUser>;
+type FilterUser = FilterDefinition<UserWithCompany>;
 const filter: FilterUser = {
   $or: [
     {
       $and: [
         {
-          friends: {
-            $elemMatch: {
-              "friend.profile.avatar": {
-                $eq: "",
-              },
-            },
-          },
+          friends: {},
           "company.name": { $regex: /netex/i },
         },
       ],

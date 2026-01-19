@@ -1,10 +1,4 @@
-import {
-  Backend,
-  Frontend,
-  GroupByDefinition,
-  GroupOperationsDefinition,
-  Leafs,
-} from "..";
+import { Backend } from "..";
 import { ExecuteGET, ExecutePATCH, ExecutePOST } from "../helpers/backend";
 import { CreateAxiosApiClient } from "../helpers/frontend";
 import { ICategory } from "./models/Category";
@@ -148,15 +142,19 @@ export const createApiClient: CreateAxiosApiClient = (baseUrl) => {
 const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
 apiClient("/categories", "GET", {
   query: {
-    include: ["parentCategory"] as const,
-    select: ["name", "createdBy", "parentCategory.createdBy"] as const,
-    where: {},
+    include: ["createdBy"] as const,
+    select: ["name", "createdBy", ""] as const,
+    where: {
+      "createdBy.email": {
+        $regex: /@example\.com$/,
+      },
+    },
     groupBy: {
-      fields: ["parentCategory.slug"],
+      fields: ["createdBy.email"],
       operations: [
         {
-          target: "parentCategory._id",
-          as: "categoryCount",
+          target: "createdBy._id",
+          as: "uniqueCreatorEmails",
           operation: "$count",
         },
       ],

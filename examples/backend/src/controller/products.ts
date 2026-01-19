@@ -32,7 +32,12 @@ export const getProductsHandler = async (
 };
 
 export const createProductHandler = async (
-  req: Request<any, any, any, Backend.InferHandlerParams<CreateProductFn>>,
+  req: Request<
+    any,
+    any,
+    Backend.InferRequestBody<CreateProductFn>,
+    Backend.InferHandlerParams<CreateProductFn>
+  >,
   res: Response<
     Backend.InferHandlerResponse<CreateProductFn, {}> | ErrorResponse
   >,
@@ -52,7 +57,7 @@ export const updateProductHandler = async (
   req: Request<
     { id: string },
     any,
-    any,
+    Backend.InferRequestBody<UpdateProductFn>,
     Backend.InferHandlerParams<UpdateProductFn>
   >,
   res: Response<

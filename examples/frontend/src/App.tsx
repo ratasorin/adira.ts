@@ -2,11 +2,45 @@ import { useEffect, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
+import { api } from "./api";
+import type { ErrorResponse } from "@examples/backend.types/src/types";
 
+const isErrorResponse = <T,>(
+  response: T | ErrorResponse,
+): response is ErrorResponse => {
+  return response && typeof (response as ErrorResponse).error === "string";
+};
+
+type CategoryResponse = {
+  _id: string;
+  name: string;
+  description: string;
+  slug: string;
+  createdAt: Date;
+};
+
+const queryCategories = api("/categories", "GET");
 function App() {
-  const [count, setCount] = useState(0);
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    const fetch = async () => {
+      const response = await queryCategories({
+        include: [] as const,
+        select: ["_id", "name", "description", "slug", "createdAt"] as const,
+        where: {},
+      });
+      if (isErrorResponse(response)) {
+        // Handle error response
+        return;
+      }
+      const docs = response.executor?.documents;
+      if (docs) {
+        setCategories(docs);
+      }
+    };
+    fetch();
+  }, []);
 
   return (
     <>
@@ -19,17 +53,14 @@ function App() {
         </a>
       </div>
       <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {categories.map((category) => (
+        <div key={category._id}>
+          <h2>{category.name}</h2>
+          <p>{category.description}</p>
+          <p>Slug: {category.slug}</p>
+          <p>Created At: {category.createdAt.toString()}</p>
+        </div>
+      ))}
     </>
   );
 }
