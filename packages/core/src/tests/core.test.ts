@@ -14,6 +14,7 @@ import {
 } from "..";
 import { ExtractResBody } from "../helpers/frontend";
 import { ExecuteGET } from "../helpers/backend";
+import { ICategory } from "./models/Category";
 
 interface Company {
   _id: string;
@@ -82,10 +83,7 @@ const userSelection: NestedUserSelection = {
   ],
 };
 
-type SelectableFields = SelectableFieldsAfterJoin<
-  User,
-  ["friends.friend", "company"]
->;
+type SelectableFields = SelectableFieldsAfterJoin<User, ["friends.friend"]>;
 
 type SelectableLeafs = Leafs<SelectableFields>;
 

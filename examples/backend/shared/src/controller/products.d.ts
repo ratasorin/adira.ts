@@ -2,11 +2,11 @@ import { IProduct } from "../models/Product";
 import { Backend } from "@n/adira.core.ts";
 import { ErrorResponse } from "../types";
 declare const getProducts: Backend.ExecuteGET<IProduct, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     price: number;
-    category: import("@n/adira.core.ts").ObjectIdLike;
+    category: string;
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
@@ -15,11 +15,11 @@ declare const getProducts: Backend.ExecuteGET<IProduct, {
     deletedAt?: Date | undefined;
 }>;
 declare const createProduct: Backend.ExecutePOST<IProduct, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     price: number;
-    category: import("@n/adira.core.ts").ObjectIdLike;
+    category: string;
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
@@ -28,11 +28,11 @@ declare const createProduct: Backend.ExecutePOST<IProduct, {
     deletedAt?: Date | undefined;
 }>;
 declare const updateProduct: Backend.ExecutePATCH<IProduct, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     price: number;
-    category: import("@n/adira.core.ts").ObjectIdLike;
+    category: string;
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;
@@ -41,11 +41,11 @@ declare const updateProduct: Backend.ExecutePATCH<IProduct, {
     deletedAt?: Date | undefined;
 }>;
 declare const deleteProduct: Backend.ExecuteDELETE<IProduct, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     price: number;
-    category: import("@n/adira.core.ts").ObjectIdLike;
+    category: string;
     owner: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     stock: number;
     isActive: boolean;

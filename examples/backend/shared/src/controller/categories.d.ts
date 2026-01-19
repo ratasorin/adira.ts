@@ -2,7 +2,7 @@ import { ICategory } from "../models/Category";
 import { Backend } from "@n/adira.core.ts";
 import { ErrorResponse } from "../types";
 declare const getCategories: Backend.ExecuteGET<ICategory, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     slug: string;
@@ -14,7 +14,7 @@ declare const getCategories: Backend.ExecuteGET<ICategory, {
     deletedAt?: Date | undefined;
 }>;
 declare const createCategory: Backend.ExecutePOST<ICategory, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     slug: string;
@@ -26,7 +26,7 @@ declare const createCategory: Backend.ExecutePOST<ICategory, {
     deletedAt?: Date | undefined;
 }>;
 declare const updateCategory: Backend.ExecutePATCH<ICategory, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     slug: string;
@@ -38,7 +38,7 @@ declare const updateCategory: Backend.ExecutePATCH<ICategory, {
     deletedAt?: Date | undefined;
 }>;
 declare const deleteCategory: Backend.ExecuteDELETE<ICategory, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     name: string;
     description: string;
     slug: string;

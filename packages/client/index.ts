@@ -1,10 +1,4 @@
-import {
-  CreateApiClient,
-  Frontend,
-  GroupByDefinition,
-  GroupOperationsDefinition,
-  Leafs,
-} from "@n/adira.core.ts";
+import { Frontend } from "@n/adira.core.ts";
 import axios, { type AxiosRequestConfig } from "axios";
 
 const replacePathParams = (path: string, pathParams?: any): string => {
@@ -18,42 +12,10 @@ const replacePathParams = (path: string, pathParams?: any): string => {
   });
 };
 
-export const createAxiosApiClient = <
-  API extends Record<string, Partial<Record<Frontend.HTTPMethod, any>>>,
->(
-  baseUrl: string,
-): ReturnType<CreateApiClient<API>> => {
-  return async function apiCall<
-    Metadata extends Frontend.ExtractMetadata<Endpoint, Method>,
-    Full extends Frontend.ExtractFull<Metadata>,
-    PublicPaths extends Frontend.PublicAPIPaths<API>,
-    Path extends keyof PublicPaths,
-    Method extends Frontend.APIMethods<API, PublicPaths[Path] & keyof API>,
-    Include extends Frontend.ExtractReqInclude<Endpoint, Method>,
-    Select extends Frontend.ExtractReqSelect<Endpoint, Method, Include>,
-    GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
-    Data extends Frontend.ExtractReqBody<Endpoint, Method>,
-    QueryParams extends Frontend.ExtractQueryParams<Endpoint, Method>,
-    PathParam extends Frontend.ExtractReqPath<Endpoint, Method>,
-    Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
-  >(
-    url: Path,
-    method: Method,
-    {
-      data,
-      path,
-      query,
-    }: {
-      query?: { include: Include; select: Select } & (Method extends "GET"
-        ? { groupBy?: GroupByDefinition<Leafs<Full>[], GroupOperations> }
-        : {}) &
-        QueryParams;
-      data?: Method extends "GET" ? never : Data;
-      path?: PathParam;
-    },
-  ): Promise<
-    Frontend.ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
-  > {
+export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
+  baseUrl,
+) => {
+  return async (url, method, { data, path, query }) => {
     const fullPath = replacePathParams(url as string, path);
     const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
 
@@ -63,8 +25,9 @@ export const createAxiosApiClient = <
       params: query,
       data,
     };
+
     const response = await axios(config);
-    return response.data as any;
+    return response.data;
   };
 };
 

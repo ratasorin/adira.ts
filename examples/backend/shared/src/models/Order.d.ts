@@ -1,11 +1,11 @@
-import { RefTo } from "@n/adira.core.ts";
+import { RefTo, Serialize } from "@n/adira.core.ts";
 import { IUser } from "./User";
 import { IProduct } from "./Product";
 export interface IOrder {
-    _id: unknown;
-    user: unknown & RefTo<IUser>;
+    _id: string;
+    user: string & RefTo<IUser>;
     products: {
-        product: unknown & RefTo<IProduct>;
+        product: string & RefTo<IProduct>;
         quantity: number;
         priceAtPurchase: number;
     }[];

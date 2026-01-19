@@ -87,7 +87,6 @@ export class SymbolPruner {
     return (context: ts.TransformationContext) => {
       const visit: ts.Visitor = (node: ts.Node): ts.Node | undefined => {
         // --- 1. Standard Named Declarations ---
-        // Handles: Class, Interface, TypeAlias, Enum, Module (Namespace)
         if (
           ts.isClassDeclaration(node) ||
           ts.isInterfaceDeclaration(node) ||
@@ -95,8 +94,7 @@ export class SymbolPruner {
           ts.isEnumDeclaration(node) ||
           ts.isModuleDeclaration(node)
         ) {
-          if (!node.name) return undefined; // Anonymous default exports handled in ExportAssignment
-
+          if (!node.name) return undefined;
           const symbol = this.checker.getSymbolAtLocation(node.name);
           if (symbol && !this.shouldKeepSymbol(symbol)) {
             return undefined;
@@ -104,12 +102,8 @@ export class SymbolPruner {
         }
 
         // --- 2. Function Declarations ---
-        // In .d.ts, these are ambient signatures (no body).
-        // Note: Multiple function overloads share the same Symbol.
-        // If the symbol is kept, ALL overload signatures are preserved.
         else if (ts.isFunctionDeclaration(node)) {
           if (!node.name) return undefined;
-
           const symbol = this.checker.getSymbolAtLocation(node.name);
           if (symbol && !this.shouldKeepSymbol(symbol)) {
             return undefined;
@@ -117,27 +111,20 @@ export class SymbolPruner {
         }
 
         // --- 3. Variable Statements ---
-        // Pattern: export declare const A: Type;
-        // In .d.ts, there are no initializers, so no complex destructuring.
         else if (ts.isVariableStatement(node)) {
           const keptDecls = node.declarationList.declarations.filter((decl) => {
-            // Strict check: .d.ts files must use simple Identifiers for variable names
             if (ts.isIdentifier(decl.name)) {
               const s = this.checker.getSymbolAtLocation(decl.name);
               return s && this.shouldKeepSymbol(s);
             }
-            // It's impossible to encounter a BindingPattern (destructuring) in a .d.ts!
             return false;
           });
 
-          // If no declarations remain, drop the entire statement
           if (keptDecls.length === 0) return undefined;
-
-          // If some declarations were pruned, update the statement
           if (keptDecls.length !== node.declarationList.declarations.length) {
             return factory.updateVariableStatement(
               node,
-              node.modifiers, // Preserves 'export', 'declare' flags
+              node.modifiers,
               factory.updateVariableDeclarationList(
                 node.declarationList,
                 keptDecls,
@@ -146,11 +133,9 @@ export class SymbolPruner {
           }
         }
 
-        // --- 4. Export Declarations (Re-exports) ---
-        // Pattern: export { A, B } from './c';
+        // --- 4. Export Declarations ---
         else if (ts.isExportDeclaration(node)) {
-          if (!node.exportClause) return node; // Keep 'export * from "mod"'
-
+          if (!node.exportClause) return node;
           if (ts.isNamedExports(node.exportClause)) {
             const keptElements = node.exportClause.elements.filter((el) => {
               const s = this.checker.getSymbolAtLocation(el.name);
@@ -158,7 +143,6 @@ export class SymbolPruner {
             });
 
             if (keptElements.length === 0) return undefined;
-
             if (keptElements.length !== node.exportClause.elements.length) {
               return factory.updateExportDeclaration(
                 node,
@@ -173,15 +157,13 @@ export class SymbolPruner {
         }
 
         // --- 5. Import Declarations ---
-        // Pattern: import { A } from './b';
         else if (ts.isImportDeclaration(node)) {
-          if (!node.importClause) return node; // Keep side-effect imports?
+          if (!node.importClause) return node;
 
           const clause = node.importClause;
-          let keptName = clause.name; // Default import (import A from ...)
+          let keptName = clause.name;
           let keptNamedBindings = clause.namedBindings;
 
-          // 5a. Check Default Import
           if (keptName) {
             const s = this.checker.getSymbolAtLocation(keptName);
             if (!s || !this.shouldKeepSymbol(s)) {
@@ -189,7 +171,6 @@ export class SymbolPruner {
             }
           }
 
-          // 5b. Check Named Bindings (NamedImports or NamespaceImport)
           if (keptNamedBindings) {
             if (ts.isNamedImports(keptNamedBindings)) {
               const keptElements = keptNamedBindings.elements.filter((el) => {
@@ -208,7 +189,6 @@ export class SymbolPruner {
                 );
               }
             } else if (ts.isNamespaceImport(keptNamedBindings)) {
-              // import * as NS from ...
               const s = this.checker.getSymbolAtLocation(
                 keptNamedBindings.name,
               );
@@ -218,10 +198,8 @@ export class SymbolPruner {
             }
           }
 
-          // If nothing is left, drop the import
           if (!keptName && !keptNamedBindings) return undefined;
 
-          // Update if changed
           if (
             keptName !== clause.name ||
             keptNamedBindings !== clause.namedBindings
@@ -241,7 +219,7 @@ export class SymbolPruner {
           }
         }
 
-        // --- 6. Export Assignments (export default X) ---
+        // --- 6. Export Assignments ---
         else if (ts.isExportAssignment(node)) {
           const s = this.checker.getSymbolAtLocation(node.expression);
           if (s && !this.shouldKeepSymbol(s)) {
@@ -249,7 +227,7 @@ export class SymbolPruner {
           }
         }
 
-        // --- 7. Import Equals (import A = require('./b')) ---
+        // --- 7. Import Equals ---
         else if (ts.isImportEqualsDeclaration(node)) {
           const s = this.checker.getSymbolAtLocation(node.name);
           if (s && !this.shouldKeepSymbol(s)) {
@@ -258,50 +236,63 @@ export class SymbolPruner {
         }
 
         // --- 8. DEEP SANITIZATION: Type References ---
-        // This handles: interface A { prop: Bad }, type B = Good & Bad, etc.
         else if (ts.isTypeReferenceNode(node)) {
           const typeNameText = node.typeName.getText();
           if (
             typeNameText === "Serialize" ||
             typeNameText.endsWith(".Serialize")
           ) {
-            // Check if we have exactly 2 type arguments: <Original, Serialized>
             if (node.typeArguments && node.typeArguments.length === 2) {
-              // Replace the entire 'Serialize<A, B>' node with 'B'
-              // We must recursively visit 'B' to ensure it doesn't contain other disallowed types!
               return ts.visitNode(node.typeArguments[1], visit) as ts.TypeNode;
             }
           }
 
-          // 1. Resolve the symbol for the type name (e.g., "Bad")
           const symbol = this.checker.getSymbolAtLocation(node.typeName);
-
-          // 2. If it's a generic parameter (e.g., T in <T>), it won't be in keepSet
-          // but should be kept. Generally, local type parameters don't have 'declarations'
-          // reachable via normal crawl unless checked specifically.
-          // However, for SymbolPruner context, checking if it is a TypeParameter is a safe guard.
           const isTypeParameter =
             symbol && symbol.flags & ts.SymbolFlags.TypeParameter;
 
-          // 3. If symbol exists, is not a generic type param, and NOT in keepSet -> Sanitized
           if (symbol && !isTypeParameter && !this.shouldKeepSymbol(symbol)) {
-            // Replace with 'unknown'
             return factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
           }
         }
 
-        // --- 9. Heritage Clauses (extends Bad) ---
-        // If we extend a blacklisted class/interface, we must remove that clause entirely,
-        // otherwise `extends unknown` is a syntax error.
+        // --- 9. NEW: DEEP SANITIZATION: Inline Import Types ---
+        // Handles: import("@n/adira").Serialize<T, R>
+        else if (ts.isImportTypeNode(node)) {
+          // A. Handle Serialize Unwrapping
+          // Check the 'qualifier' (the right hand side: .Serialize)
+          const qualifierText = node.qualifier ? node.qualifier.getText() : "";
+          if (
+            qualifierText === "Serialize" ||
+            qualifierText.endsWith(".Serialize")
+          ) {
+            if (node.typeArguments && node.typeArguments.length === 2) {
+              // Unwrap: recursively visit the return type (R)
+              return ts.visitNode(node.typeArguments[1], visit) as ts.TypeNode;
+            }
+          }
+
+          // B. Handle Pruning (Sanitize bad inline imports to 'unknown')
+          if (node.qualifier) {
+            const symbol = this.checker.getSymbolAtLocation(node.qualifier);
+            // Treat strictly: if symbol exists and not kept -> unknown.
+            // (Ignoring TypeParameter check as ImportTypes aren't usually generics themselves)
+            if (symbol && !this.shouldKeepSymbol(symbol)) {
+              return factory.createKeywordTypeNode(
+                ts.SyntaxKind.UnknownKeyword,
+              );
+            }
+          }
+        }
+
+        // --- 10. Heritage Clauses ---
         else if (ts.isHeritageClause(node)) {
           const validTypes = node.types.filter((t) => {
-            // Check the expression (e.g., "Bad" in "extends Bad")
             const symbol = this.checker.getSymbolAtLocation(t.expression);
             return !symbol || this.shouldKeepSymbol(symbol);
           });
 
-          if (validTypes.length === 0) return undefined; // Remove "extends ..." block entirely
-
+          if (validTypes.length === 0) return undefined;
           if (validTypes.length !== node.types.length) {
             return factory.updateHeritageClause(
               node,

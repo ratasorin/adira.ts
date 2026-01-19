@@ -1,8 +1,13 @@
 import {
+  _SelectableFieldsAfterJoin,
   EXECUTOR_KEY,
   EXTRA_KEY,
   ExtractResponseBodyMUTATE,
   ExtractResponseBodyQUERY,
+  FilterDefinition,
+  GroupByDefinition,
+  Leafs,
+  SelectableFieldsAfterJoin,
 } from "..";
 import { ExtractSelect } from "..";
 import { PopulatableKeys } from "..";
@@ -48,7 +53,11 @@ export type ExtractReqBody<Def, M extends HTTPMethod> = M extends keyof Def
       : undefined
   : never;
 
-export type ExtractQueryParams<Def, M extends HTTPMethod> = M extends keyof Def
+export type ExtractQueryParams<
+  Def,
+  M extends HTTPMethod,
+  Include extends any[],
+> = M extends keyof Def
   ? Def[M] extends {
       RequestQuery?: infer Q;
     }
@@ -120,11 +129,27 @@ export type ExtractReqSelect<
   ? Def[M] extends { RequestQuery?: infer Q }
     ? Q extends { select?: infer S }
       ? S extends { __base?: infer Base }
-        ? ExtractSelect<Base, Include>
+        ? SelectableFieldsAfterJoin<Base, Include>
         : never
       : never
     : never
   : never;
+
+export type ExtractReqFilter<
+  Def,
+  M extends HTTPMethod,
+  Include extends any[],
+> = M extends keyof Def
+  ? Def[M] extends {
+      RequestQuery?: infer Q;
+    }
+    ? Q extends { filters?: infer F }
+      ? F extends { __base?: infer Base }
+        ? FilterDefinition<SelectableFieldsAfterJoin<Base, Include>>
+        : { error: "Base type missing in filters" }
+      : { error: "filters field missing" }
+    : { error: "RequestQuery field missing" }
+  : { error: "HTTP method not defined on endpoint" };
 
 export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {
@@ -137,3 +162,47 @@ export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
       ? P
       : undefined
   : undefined;
+
+export type AxiosApiClient<
+  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
+> = <
+  Metadata extends ExtractMetadata<Endpoint, Method>,
+  Full extends ExtractFull<Metadata>,
+  PublicPaths extends PublicAPIPaths<API>,
+  Path extends keyof PublicPaths,
+  Method extends APIMethods<API, PublicPaths[Path] & keyof API>,
+  Include extends ExtractReqInclude<Endpoint, Method>,
+  Select extends ExtractReqSelect<Endpoint, Method, Include>,
+  Where extends ExtractReqFilter<Endpoint, Method, Include>,
+  GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
+  Data extends ExtractReqBody<Endpoint, Method>,
+  QueryParams extends ExtractQueryParams<Endpoint, Method, Include>,
+  PathParam extends ExtractReqPath<Endpoint, Method>,
+  Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
+>(
+  url: Path,
+  method: Method,
+  args: {
+    query?: Method extends "GET"
+      ? {
+          include: Include;
+          select: Select;
+          groupBy: GroupByDefinition<
+            ExtractReqSelect<Endpoint, Method, Include>,
+            GroupOperations
+          >;
+          where: Where;
+        }
+      : never;
+    data?: Method extends "GET" ? never : Data;
+    path?: PathParam;
+  },
+) => Promise<
+  ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
+>;
+
+export type CreateAxiosApiClient = <
+  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
+>(
+  baseUrl: string,
+) => AxiosApiClient<API>;

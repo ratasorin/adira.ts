@@ -2,7 +2,7 @@ import { IOrder } from "../models/Order";
 import { Backend } from "@n/adira.core.ts";
 import { ErrorResponse } from "../types";
 declare const getOrders: Backend.ExecuteGET<IOrder, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     user: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     products: {
         product: import("@n/adira.core.ts").CleanRef<import("../models/Product").IProduct> | null;
@@ -25,7 +25,7 @@ declare const getOrders: Backend.ExecuteGET<IOrder, {
     deletedAt?: Date | undefined;
 }>;
 declare const createOrder: Backend.ExecutePOST<IOrder, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     user: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     products: {
         product: import("@n/adira.core.ts").CleanRef<import("../models/Product").IProduct> | null;
@@ -48,7 +48,7 @@ declare const createOrder: Backend.ExecutePOST<IOrder, {
     deletedAt?: Date | undefined;
 }>;
 declare const updateOrder: Backend.ExecutePATCH<IOrder, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     user: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     products: {
         product: import("@n/adira.core.ts").CleanRef<import("../models/Product").IProduct> | null;
@@ -71,7 +71,7 @@ declare const updateOrder: Backend.ExecutePATCH<IOrder, {
     deletedAt?: Date | undefined;
 }>;
 declare const deleteOrder: Backend.ExecuteDELETE<IOrder, {
-    _id: import("@n/adira.core.ts").ObjectIdLike;
+    _id: string;
     user: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
     products: {
         product: import("@n/adira.core.ts").CleanRef<import("../models/Product").IProduct> | null;

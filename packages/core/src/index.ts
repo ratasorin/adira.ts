@@ -7,6 +7,7 @@ export type CleanRef<T> = {
 export type Keys<T> = keyof T;
 
 export type Scalar =
+  | Serialize<unknown, unknown>
   | RefTo<unknown>
   | Function
   | Date
@@ -261,7 +262,7 @@ export type NestedSelection<T = {}, Q extends any[] = []> = T extends any[]
         : T[K];
     };
 
-export type IncludeUnionOf<T extends readonly any[]> = T[number];
+export type IncludeUnionOf<T extends any[]> = T[number];
 
 // extract subpaths for a key K: for includes like "friends.friend" and K="friends" -> "friend"
 export type SubPathsForKey<
@@ -279,7 +280,7 @@ export type HasDirectInclude<Inc = "", K = ""> =
  */
 export type SelectableFieldsAfterJoin<
   Base = {},
-  Include extends readonly any[] = [],
+  Include extends any[] = [],
 > = _SelectableFieldsAfterJoin<Base, IncludeUnionOf<Include>>;
 
 /**
@@ -291,10 +292,7 @@ export type SelectableFieldsAfterJoin<
  *    - else if subpaths exist -> recurse with only those subpaths
  *    - else keep Base[K]
  */
-export type _SelectableFieldsAfterJoin<
-  Base = {},
-  IncludeUnion extends string = "",
-> =
+export type _SelectableFieldsAfterJoin<Base = {}, IncludeUnion = ""> =
   // If this field was an ObjectId in the original, after populate it becomes Full
   Base extends RefTo<infer R>
     ? R | null
@@ -684,7 +682,7 @@ export type CreateApiClient<
   Select extends ExtractReqSelect<Endpoint, Method, Include>,
   GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
   Data extends ExtractReqBody<Endpoint, Method>,
-  QueryParams extends ExtractQueryParams<Endpoint, Method>,
+  QueryParams extends ExtractQueryParams<Endpoint, Method, Include>,
   PathParam extends ExtractReqPath<Endpoint, Method>,
   Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
 >(

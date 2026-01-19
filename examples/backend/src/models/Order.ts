@@ -1,13 +1,13 @@
-import { RefTo } from "@n/adira.core.ts";
+import { RefTo, Serialize } from "@n/adira.core.ts";
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { IUser } from "./User";
 import { IProduct } from "./Product";
 
 export interface IOrder {
-  _id: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId & RefTo<IUser>; // Reference to User
+  _id: Serialize<mongoose.Types.ObjectId, string>;
+  user: Serialize<mongoose.Types.ObjectId, string> & RefTo<IUser>; // Reference to User
   products: {
-    product: mongoose.Types.ObjectId & RefTo<IProduct>; // Reference to Product
+    product: Serialize<mongoose.Types.ObjectId, string> & RefTo<IProduct>; // Reference to Product
     quantity: number;
     priceAtPurchase: number;
   }[];

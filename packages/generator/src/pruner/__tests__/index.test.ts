@@ -594,7 +594,7 @@ describe("SymbolPruner - Tree Shaking Scenarios", () => {
     expect(content).not.toContain("badRef: Bad");
   });
 
-  test.only("22. Handle Inline Imports", () => {
+  test("22. Handle Inline Imports", () => {
     const outputs = emitPruned(
       {
         "/node_modules/good-import/index.d.ts": `
@@ -610,5 +610,51 @@ describe("SymbolPruner - Tree Shaking Scenarios", () => {
       ["IGoodImportWrapper"],
     );
     console.log(outputs);
+  });
+
+  test.only("23. Inline Imports with Serialize", () => {
+    const outputs = emitPruned(
+      {
+        "/node_modules/@n/adira.core.ts/package.json": `{"name": "@n/adira.core.ts"}`,
+        "/node_modules/@n/adira.core.ts/index.d.ts": `
+          export type Serialize<T, R> = R;
+          export type CleanRef<T> = T | string;
+
+          export namespace Backend {
+            export interface ExecuteGET<TDoc, TRes> {}
+          }
+        `,
+        "/index.d.ts": `
+          import { Backend } from "@n/adira.core.ts";
+          import { ICategory } from './controller/categories';
+          
+          declare const getCategories: Backend.ExecuteGET<
+            ICategory,
+            {
+              _id: import("@n/adira.core.ts").Serialize<
+                import("mongoose").Types.ObjectId,
+                string
+              >;
+              name: string;
+              description: string;
+              slug: string;
+              parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
+              createdBy:
+                | import("@n/adira.core.ts").CleanRef<import("../models/User").IUser>
+                | null;
+              isActive: boolean;
+              createdAt: Date;
+              updatedAt: Date;
+              deletedAt?: Date | undefined;
+            }
+          >;
+        `,
+      },
+      ["getCategories"],
+      ["@n/adira.core.ts"],
+    );
+
+    const content = normalize(outputs["/index.d.ts"]);
+    expect(content).toContain("_id: string");
   });
 });
