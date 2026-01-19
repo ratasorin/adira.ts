@@ -38,7 +38,6 @@ export async function generateApiDefinitonForHandlers(
   symbolCollecor: SymbolCollector,
 ): Promise<ApiDefinition> {
   const definitions: ApiDefinition = {};
-  const checker = program.getTypeChecker();
 
   for (const {
     endpoint,

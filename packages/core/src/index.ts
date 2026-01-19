@@ -1,21 +1,13 @@
-/**
- * Marker type for ObjectId-like values.
- * By default it's just `{ _brand: "ObjectId" }`, but consumers can
- * override it via module augmentation or generics.
- */
-export interface ObjectIdLike {
-  readonly __objectIdBrand: unique symbol;
-}
-
 export type RefTo<T> = { __refTo?: T };
+
 export type CleanRef<T> = {
-  [K in keyof T]: T[K] extends RefTo<any> & ObjectIdLike ? string : T[K];
+  [K in keyof T]: T[K] extends RefTo<any> ? string : T[K];
 };
 
 export type Keys<T> = keyof T;
 
 export type Scalar =
-  | ObjectIdLike
+  | RefTo<unknown>
   | Function
   | Date
   | RegExp
@@ -57,7 +49,7 @@ export type Element<T> = T extends readonly (infer U)[] ? U : never;
  * type B = IsObjectId<string>; // false
  * ```
  */
-export type IsObjectId<T> = T extends ObjectIdLike ? true : false;
+export type IsReference<T> = T extends RefTo<unknown> ? true : false;
 
 export type PopulatableKeys<
   T = {},
@@ -65,7 +57,7 @@ export type PopulatableKeys<
   Depth extends number = 10,
 > = [Depth] extends [0]
   ? never
-  : IsObjectId<T> extends true
+  : IsReference<T> extends true
     ? Prefix
     : T extends Scalar
       ? never
@@ -112,16 +104,12 @@ export type ApplyReplacements<Schema = {}, Depth extends number = 10> = [
   Depth,
 ] extends [0]
   ? Schema
-  : Schema extends ObjectIdLike
-    ? Schema extends RefTo<infer R>
-      ? R | null
-      : ObjectIdLike
+  : Schema extends RefTo<infer R>
+    ? R | null
     : {
         [K in keyof Schema]: Schema[K] extends Scalar
-          ? Schema[K] extends ObjectIdLike
-            ? Schema[K] extends RefTo<infer R>
-              ? CleanRef<R> | null
-              : ObjectIdLike
+          ? Schema[K] extends RefTo<infer R>
+            ? CleanRef<R> | null
             : Schema[K]
           : Schema[K] extends Array<infer Element>
             ? ApplyReplacements<Element, Prev[Depth]>[]
@@ -192,10 +180,10 @@ export type Leafs<
       ? IsLeaf<E> extends true
         ? Prefix // array of leaves → include prefix only
         : // array of objects → include prefix (intermediate) and recurse on elements
-          Prefix | Leafs<NonNullable<E>, Prefix, Prev[Depth]>
+            Prefix | Leafs<NonNullable<E>, Prefix, Prev[Depth]>
       : T extends object
         ? // Include prefix (intermediate object path) AND recurse on keys
-          Prefix | RecurseLeafPaths<T, Prefix, Depth>
+            Prefix | RecurseLeafPaths<T, Prefix, Depth>
         : Prefix;
 
 /**
@@ -278,11 +266,11 @@ export type IncludeUnionOf<T extends readonly any[]> = T[number];
 // extract subpaths for a key K: for includes like "friends.friend" and K="friends" -> "friend"
 export type SubPathsForKey<
   Inc = "",
-  K extends string = "",
-> = Inc extends `${K}.${infer Rest}` ? Rest : never;
+  K = "",
+> = Inc extends `${K & string}.${infer Rest}` ? Rest : never;
 
 // check if K is directly included (i.e. "company" is present in IncludeUnion)
-export type HasDirectInclude<Inc = "", K extends string = ""> =
+export type HasDirectInclude<Inc = "", K = ""> =
   Extract<Inc, K> extends never ? false : true;
 
 /**
@@ -290,10 +278,9 @@ export type HasDirectInclude<Inc = "", K extends string = ""> =
  * Internally we operate on the union of include strings.
  */
 export type SelectableFieldsAfterJoin<
-  Full = {},
   Base = {},
   Include extends readonly any[] = [],
-> = _SelectableFieldsAfterJoin<Base, Full, IncludeUnionOf<Include>>;
+> = _SelectableFieldsAfterJoin<Base, IncludeUnionOf<Include>>;
 
 /**
  * Core recursive type:
@@ -306,34 +293,26 @@ export type SelectableFieldsAfterJoin<
  */
 export type _SelectableFieldsAfterJoin<
   Base = {},
-  Full = {},
   IncludeUnion extends string = "",
 > =
   // If this field was an ObjectId in the original, after populate it becomes Full
-  Base extends ObjectIdLike
-    ? Full | null
+  Base extends RefTo<infer R>
+    ? R | null
     : // Arrays: preserve array, recurse element type
       Base extends readonly (infer U)[]
-      ? Full extends readonly (infer UU)[]
-        ? _SelectableFieldsAfterJoin<U, UU, IncludeUnion>[]
-        : Base // mismatch, keep original (you might want to signal an error type here)
+      ? _SelectableFieldsAfterJoin<U, IncludeUnion>[]
       : // Plain object: map keys
         Base extends object
         ? {
-            [K in keyof Base]: K extends keyof Full
-              ? // if the key is directly included (e.g. "company"), return the full populated type
-                HasDirectInclude<IncludeUnion, Extract<K, string>> extends true
-                ? Full[K] | null
-                : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
-                  SubPathsForKey<IncludeUnion, Extract<K, string>> extends never
-                  ? Base[K] // not included at all — keep base
-                  : _SelectableFieldsAfterJoin<
-                      Base[K],
-                      Full[K],
-                      SubPathsForKey<IncludeUnion, Extract<K, string>>
-                    >
-              : // key not present in Full (no population target) — keep base
-                Base[K];
+            [K in keyof Base]: HasDirectInclude<IncludeUnion, K> extends true
+              ? _SelectableFieldsAfterJoin<Base[K], "">
+              : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
+                SubPathsForKey<IncludeUnion, K> extends never
+                ? Base[K] // not included at all — keep base
+                : _SelectableFieldsAfterJoin<
+                    Base[K],
+                    SubPathsForKey<IncludeUnion, Extract<K, string>>
+                  >;
           }
         : // primitives: just keep Base
           Base;
@@ -381,9 +360,8 @@ export type BuildResponseBody<
   BaseSchema = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  GroupOperations extends
-    | GroupOperationsDefinition<any>
-    | undefined = undefined,
+  GroupOperations extends GroupOperationsDefinition<any> | undefined =
+    undefined,
   Extra = {},
   IsQuery extends boolean = false,
 > = (IsQuery extends true
@@ -410,18 +388,14 @@ export type TopLevelKeysUnion<Q extends string = ""> =
   Q extends `${infer F}.${string}` ? F : Q;
 export type TopLevelKeys<Q extends any[] = []> = TopLevelKeysUnion<Q[number]>[];
 
-export type ExtractSelect<
-  Full = {},
-  Base = {},
-  Include extends any[] = [],
-> = Leafs<SelectableFieldsAfterJoin<Full, Base, Include>>[];
+export type ExtractSelect<Base = {}, Include extends any[] = []> = Leafs<
+  SelectableFieldsAfterJoin<Base, Include>
+>[];
 
 export type EnhacedExtractSelect<
-  Full = {},
   Base = {},
   Include extends any[] = [],
-> = ExtractSelect<Full, Base, Include> & {
-  __full?: Full;
+> = ExtractSelect<Base, Include> & {
   __base?: Base;
 };
 
@@ -530,9 +504,8 @@ export type ExtractResponseBodyQUERY<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  GroupOperations extends
-    | GroupOperationsDefinition<any>
-    | undefined = undefined,
+  GroupOperations extends GroupOperationsDefinition<any> | undefined =
+    undefined,
   Extra = {},
 > = {
   [K in ExecutorKey]?: ExtractResponseQUERY<
@@ -627,7 +600,7 @@ export type FilterOperators<T> = T extends number
     ? (ScalarOperators<T> & StringOperators) | T
     : T extends Date
       ? ScalarOperators<T> & DateOperators
-      : T extends ObjectIdLike
+      : T extends RefTo<unknown>
         ? ScalarOperators<T>
         : T;
 
@@ -736,14 +709,15 @@ export type CreateApiClient<
 export interface AdiraConfig {
   output: {
     dir: string;
-    file?: string;
-    typename?: string;
+    file: string;
+    typename: string;
   };
   registry: {
     port: number;
     url: string;
     version: string;
     name: string;
+    description: string;
   };
   allowedDependencies: string[];
 }

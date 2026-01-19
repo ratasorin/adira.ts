@@ -27,7 +27,7 @@ export const createAxiosApiClient = <
     Metadata extends Frontend.ExtractMetadata<Endpoint, Method>,
     Full extends Frontend.ExtractFull<Metadata>,
     PublicPaths extends Frontend.PublicAPIPaths<API>,
-    Path extends keyof PublicPaths & string,
+    Path extends keyof PublicPaths,
     Method extends Frontend.APIMethods<API, PublicPaths[Path] & keyof API>,
     Include extends Frontend.ExtractReqInclude<Endpoint, Method>,
     Select extends Frontend.ExtractReqSelect<Endpoint, Method, Include>,

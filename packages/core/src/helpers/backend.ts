@@ -105,9 +105,9 @@ export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
   Include extends PopulatableKeys<T>[],
-  Select extends ExtractSelect<PSchema, T, Include>,
+  Select extends ExtractSelect<T, Include>,
   GroupOperations extends GroupOperationsDefinition<Leafs<PSchema>>,
-  ObjectAfterJoin extends SelectableFieldsAfterJoin<PSchema, T, Include>,
+  ObjectAfterJoin extends SelectableFieldsAfterJoin<T, Include>,
 >(
   params: InferExecutorParams<
     Include,
@@ -125,7 +125,7 @@ export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
 export type ExecutePOST<T, PSchema = PopulateSchema<T>> = (<
   NewItem extends Omit<T, "_id">,
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
+  Select extends ExtractSelect<T, Include>,
 >(
   params: {
     include?: Include;
@@ -140,7 +140,7 @@ export type ExecutePOST<T, PSchema = PopulateSchema<T>> = (<
 export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
   NewItem extends Partial<Omit<T, "_id">>,
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
+  Select extends ExtractSelect<T, Include>,
 >(
   id: string,
   params: {
@@ -158,7 +158,7 @@ export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
 
 export type ExecuteDELETE<T, PSchema = PopulateSchema<T>> = (<
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
-  Select extends ExtractSelect<PSchema, T, Include>,
+  Select extends ExtractSelect<T, Include>,
 >(
   id: string,
   params: {

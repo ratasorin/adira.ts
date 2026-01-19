@@ -1,10 +1,8 @@
-import { ObjectIdLike } from "../..";
-
 export interface IOrder {
-  _id: ObjectIdLike;
-  user: ObjectIdLike; // Reference to User
+  _id: string;
+  user: string; // Reference to User
   products: {
-    product: ObjectIdLike; // Reference to Product
+    product: string; // Reference to Product
     quantity: number;
     priceAtPurchase: number;
   }[];

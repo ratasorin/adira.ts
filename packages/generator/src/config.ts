@@ -34,6 +34,7 @@ export const loadConfig = (): AdiraConfig => {
       port: 8888,
       url: "http://localhost",
       version: "1.0.0",
+      description: "",
       name: "@app/api",
       ...userConfig.registry,
     },

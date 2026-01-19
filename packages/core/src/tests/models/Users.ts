@@ -1,7 +1,5 @@
-import { ObjectIdLike } from "../../";
-
 export interface IUser {
-  _id: ObjectIdLike;
+  _id: string;
   name: string;
   email: string;
   createdAt: Date;

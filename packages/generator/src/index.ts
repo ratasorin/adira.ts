@@ -26,7 +26,6 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
   const tsconfigPath = findProjectConfig();
   const tsconfig = getParsedCommandLine(tsconfigPath);
 
-
   const { files: initialFiles, program: initialProgram } =
     createProject(tsconfig);
 
@@ -81,7 +80,7 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
   const pruner = new SymbolPruner(
     compiledProject.getTypeChecker(),
     symbolCollector.collectedSymbols(),
-    compiledProject
+    compiledProject,
   );
 
   projectFiles.forEach((file) => {
@@ -91,15 +90,7 @@ export const generateApiDefinitions = async (config: AdiraConfig) => {
   writeAPI({
     api: apiDefiniton,
     collector: symbolCollector,
-    config: {
-      // Todo: Add a description parameter to AdiraConfig
-      description: "<API Description>",
-      outputDir: config.output.dir,
-      outputFile: config.output.file || "api.d.ts",
-      whitelistedPackages: config.allowedDependencies,
-      packageName: config.registry.name,
-      version: config.registry.version,
-    },
+    config,
     dependencyResolver,
     program: compiledProject,
   });

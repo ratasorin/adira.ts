@@ -1,12 +1,12 @@
-import { RefTo } from "@n/adira.core.ts";
+import { RefTo, Serialize } from "@n/adira.core.ts";
 import { IUser } from "./User";
 export interface IProduct {
-    _id: unknown;
+    _id: string;
     name: string;
     description: string;
     price: number;
-    category: unknown;
-    owner: unknown & RefTo<IUser>;
+    category: string;
+    owner: string & RefTo<IUser>;
     stock: number;
     isActive: boolean;
     createdAt: Date;

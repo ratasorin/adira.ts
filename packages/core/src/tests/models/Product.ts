@@ -1,12 +1,10 @@
-import { ObjectIdLike } from "../../";
-
 export interface IProduct {
-  _id: ObjectIdLike;
+  _id: string;
   name: string;
   description: string;
   price: number;
-  category: ObjectIdLike;
-  owner: ObjectIdLike;
+  category: string;
+  owner: string;
   stock: number;
   isActive: boolean;
   createdAt: Date;

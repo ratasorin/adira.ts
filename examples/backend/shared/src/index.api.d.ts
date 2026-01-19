@@ -6,8 +6,8 @@ import { ErrorResponse } from "./types/index";
 import { Backend } from "@n/adira.core.ts";
 
 
-export type API = {
-    "/users": {
+export type ExampleApiTypes = {
+    "/api/users": {
         "GET": {
             RequestParams: any;
             RequestBody: any;
@@ -21,7 +21,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<CreateUserFn, {}> | ErrorResponse;
         };
     };
-    "/users/:id": {
+    "/api/users/:id": {
         "PATCH": {
             RequestParams: {
     id: string;
@@ -39,7 +39,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<DeleteUserFn, {}> | ErrorResponse;
         };
     };
-    "/categories": {
+    "/api/categories": {
         "GET": {
             RequestParams: any;
             RequestBody: any;
@@ -53,7 +53,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<CreateCategoryFn, {}> | ErrorResponse;
         };
     };
-    "/categories/:id": {
+    "/api/categories/:id": {
         "PATCH": {
             RequestParams: {
     id: string;
@@ -71,7 +71,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<DeleteCategoryFn, {}> | ErrorResponse;
         };
     };
-    "/products": {
+    "/api/products": {
         "GET": {
             RequestParams: any;
             RequestBody: any;
@@ -85,7 +85,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<CreateProductFn, {}> | ErrorResponse;
         };
     };
-    "/products/:id": {
+    "/api/products/:id": {
         "PATCH": {
             RequestParams: {
     id: string;
@@ -103,7 +103,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<DeleteProductFn, {}> | ErrorResponse;
         };
     };
-    "/orders": {
+    "/api/orders": {
         "GET": {
             RequestParams: any;
             RequestBody: any;
@@ -117,7 +117,7 @@ export type API = {
             ResponseBody: Backend.InferHandlerResponse<CreateOrderFn, {}> | ErrorResponse;
         };
     };
-    "/orders/:id": {
+    "/api/orders/:id": {
         "PATCH": {
             RequestParams: {
     id: string;

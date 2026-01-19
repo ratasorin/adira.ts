@@ -5,12 +5,13 @@
   "output": {
     "dir": "shared",
     "file": "index.api.d.ts",
-    "typename": "ApiTypes"
+    "typename": "ExampleApiTypes"
   },
   "registry": {
-    "name": "@demo/api",
+    "name": "@examples/backend.types",
     "port": 8888,
     "url": "http://localhost",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "description": "The official '@examples' API types"
   }
 }

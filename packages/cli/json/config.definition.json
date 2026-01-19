@@ -40,6 +40,10 @@
           "type": "string",
           "description": "Name of the package registry"
         },
+        "description": {
+          "type": "string",
+          "description": "A brief description for the package"
+        },
         "version": {
           "type": "string",
           "description": "Version of the package registry"

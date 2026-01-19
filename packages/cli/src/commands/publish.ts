@@ -22,7 +22,7 @@ export const publishAction = async (options: { port?: string }) => {
 
     // Publish the types
     console.log("📤 Publishing types...");
-    await publishTypes("./packages/types", `${config.registry.url}:${port}`);
+    await publishTypes(config.output.dir, `${config.registry.url}:${port}`);
 
     console.log("✅ Types published successfully!");
 

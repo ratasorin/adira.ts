@@ -1,9 +1,9 @@
 {
-  "name": "@demo/api",
+  "name": "@examples/backend.types",
   "version": "1.0.0",
-  "description": "<API Description>",
-  "main": "index.api.ts",
-  "types": "index.api.ts",
+  "description": "The official '@examples' API types",
+  "main": "src/index.api.d.ts",
+  "types": "src/index.api.d.ts",
   "peerDependencies": {
     "@n/adira.core.ts": "file://../../packages/core"
   },

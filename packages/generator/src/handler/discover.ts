@@ -12,31 +12,25 @@ export async function discoverRouterDefinitions(
   checker: ts.TypeChecker,
 ): Promise<DiscoveredHandler[]> {
   const DiscoveredHandler: DiscoveredHandler[] = [];
-  const importMap: Record<string, ImportInfo> = {};
 
-  const routerMountMap: Record<string, string> = {};
+  let globalPrefix = "";
 
   for (const source of sourceFiles) {
     // Detect app.use("/prefix", router)
     ts.forEachChild(source, (node) => {
       const mainRouterDef = detectMainAppRouter(node, checker);
-      if (mainRouterDef) {
-        const { prefix, router } = mainRouterDef;
-        if (!router) {
-          throw new Error("Router not found");
-        }
+      if (!mainRouterDef) return;
 
-        const routerImportAbsolutePath = router
-          ?.getDeclarations()?.[0]
-          .getSourceFile().fileName;
-
-        if (routerImportAbsolutePath) {
-          // Store the prefix using the absolute path of the router file
-          routerMountMap[routerImportAbsolutePath] = prefix;
-        }
+      const { prefix, router } = mainRouterDef;
+      if (!router) {
+        throw new Error("Router not found");
       }
-    });
 
+      globalPrefix = prefix;
+    });
+  }
+
+  for (const source of sourceFiles) {
     // Now walk router.METHOD calls
     ts.forEachChild(source, (node) => {
       if (
@@ -51,7 +45,6 @@ export async function discoverRouterDefinitions(
           )
         ) {
           const method = call.expression.name.getText() as METHOD;
-          const sourceFilename = source.fileName; // where the router is used
 
           const args = call.arguments;
 
@@ -68,10 +61,6 @@ export async function discoverRouterDefinitions(
           const handlerPath =
             originalHandlerSymbol.declarations?.[0].getSourceFile().fileName;
 
-          const endpointPrefix = sourceFilename
-            ? routerMountMap[sourceFilename]
-            : "";
-
           if (endpoint && handlerPath) {
             DiscoveredHandler.push({
               method,
@@ -80,7 +69,7 @@ export async function discoverRouterDefinitions(
                 name: handlerName,
                 sourcePath: handlerPath,
               },
-              endpointPrefix,
+              endpointPrefix: globalPrefix,
             });
           }
         }

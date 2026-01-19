@@ -15,6 +15,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@examples/backend.types": "^1.0.0",
+    "@n/adira.client.ts": "file://../../packages/client",
+    "@n/adira.core.ts": "file://../../packages/core",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

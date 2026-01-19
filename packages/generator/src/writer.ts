@@ -6,14 +6,9 @@ import { ApiDefinition } from "src/handler/generate";
  * Generates a package.json for the output artifact.
  * Scans the root package.json to resolve versions for whitelisted dependencies.
  */
-export function generatePackageJson(props: {
-  outputDir: string;
-  whitelistedPackages: string[];
-  packageName: string;
-  version: string; // The version of the generated package
-  description: string;
-  workingDir: string;
-}) {
+export function generatePackageJson(
+  props: AdiraConfig & { workingDir: string },
+) {
   // 1. Read Root package.json
   const rootPkgPath = path.resolve(process.cwd(), "package.json");
   let rootPkg: any = {};
@@ -37,7 +32,7 @@ export function generatePackageJson(props: {
 
   const resolvedDeps: Record<string, string> = {};
 
-  props.whitelistedPackages.forEach((pkg) => {
+  props.allowedDependencies.forEach((pkg) => {
     const version = allDeps[pkg];
     if (version) {
       resolvedDeps[pkg] = version;
@@ -51,11 +46,11 @@ export function generatePackageJson(props: {
 
   // 3. Construct the Output Object
   const outPkg = {
-    name: props.packageName,
-    version: props.version,
-    description: props.description,
-    main: "index.api.ts", // or .js if you compile it
-    types: "index.api.ts",
+    name: props.registry.name,
+    version: props.registry.version,
+    description: props.registry.description,
+    main: "src/" + props.output.file,
+    types: "src/" + props.output.file,
     // 4. Strategy: Peers + Devs
     // - Peers: Tells the consumer "You must provide this package" (e.g. React)
     // - Devs: Allows this folder to be compiled/linted in isolation if needed
@@ -65,7 +60,7 @@ export function generatePackageJson(props: {
 
   // 5. Write to Disk
   fs.writeFileSync(
-    path.join(props.outputDir, "package.json"),
+    path.join(props.output.dir, "package.json"),
     JSON.stringify(outPkg, null, 2),
   );
 }
@@ -89,7 +84,7 @@ import ts from "typescript";
 import { DependencyResolver } from "./utils/dependency-resolver";
 import { SymbolCollector } from "./imports/collector";
 import { generateImports } from "./utils/import-generator";
-
+import { AdiraConfig } from "@n/adira.core.ts";
 
 // --- Main Writer ---
 export function writeAPI({
@@ -99,20 +94,13 @@ export function writeAPI({
   api,
   collector,
 }: {
-  config: {
-    outputDir: string;
-    whitelistedPackages: string[];
-    outputFile: string;
-    packageName: string;
-    version: string;
-    description: string;
-  };
+  config: AdiraConfig;
   collector: SymbolCollector;
   program: ts.Program;
   dependencyResolver: DependencyResolver;
   api: ApiDefinition;
 }) {
-  const outputFile = path.join(config.outputDir, "src", config.outputFile);
+  const outputFile = path.join(config.output.dir, "src", config.output.file);
   const imports = generateImports(
     collector,
     program,
@@ -176,7 +164,7 @@ export function writeAPI({
   // Create the main export: export type API = { ... }
   const apiTypeAlias = factory.createTypeAliasDeclaration(
     [factory.createModifier(ts.SyntaxKind.ExportKeyword)],
-    factory.createIdentifier("API"), // You can make this configurable via config.apiTypeName if needed
+    factory.createIdentifier(config.output.typename),
     undefined,
     factory.createTypeLiteralNode(routeProperties),
   );
@@ -197,8 +185,8 @@ export function writeAPI({
   );
 
   // --- 4. Write to File ---
-  if (!fs.existsSync(config.outputDir)) {
-    fs.mkdirSync(config.outputDir, { recursive: true });
+  if (!fs.existsSync(config.output.dir)) {
+    fs.mkdirSync(config.output.dir, { recursive: true });
   }
 
   const fileContent = imports + "\n\n" + apiDefinitionCode;

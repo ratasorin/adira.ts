@@ -56,20 +56,18 @@ export class SymbolPruner {
    */
   private isDefaultLibrarySymbol(symbol: ts.Symbol): boolean {
     if (!symbol.declarations || symbol.declarations.length === 0) return false;
-    
+
     // Check if any declaration of this symbol is in a default library file
-    return symbol.declarations.every(decl => 
-      this.program.isSourceFileDefaultLibrary(decl.getSourceFile())
+    return symbol.declarations.every((decl) =>
+      this.program.isSourceFileDefaultLibrary(decl.getSourceFile()),
     );
   }
 
   private shouldKeepSymbol(symbol: ts.Symbol | undefined): boolean {
     if (!symbol) return false;
-    
+
     // 1. Is it in our keepSet (explicitly crawled)?
     if (this.keepSet.has(symbol)) return true;
-
-    console.log("SYMBOL NOT IN KEEP_SET CHECK:", symbol.getName());
 
     // 2. Is it a built-in global like Date, Promise, etc?
     if (this.isDefaultLibrarySymbol(symbol)) return true;

@@ -6,7 +6,6 @@ import {
   FilterDefinition,
   Leafs,
   NestedSelection,
-  ObjectIdLike,
   PopulatableKeys,
   PopulateSchema,
   RefTo,
@@ -16,14 +15,8 @@ import {
 import { ExtractResBody } from "../helpers/frontend";
 import { ExecuteGET } from "../helpers/backend";
 
-declare module "mongoose" {
-  namespace Types {
-    interface ObjectId extends ObjectIdLike {}
-  }
-}
-
 interface Company {
-  _id: ObjectIdLike;
+  _id: string;
   name: string;
   industry: string;
   founded: number;
@@ -34,27 +27,27 @@ interface Company {
 }
 
 interface Referal {
-  _id: ObjectIdLike;
+  _id: string;
   code: string;
   discount: number;
 }
 
 interface User {
-  _id: ObjectIdLike;
+  _id: string;
   name: string;
   email: string;
   age: number;
-  company: ObjectIdLike & RefTo<Company>;
-  friends: { friend: ObjectIdLike & RefTo<Friend>; since: number }[];
+  company: string & RefTo<Company>;
+  friends: { friend: string & RefTo<Friend>; since: number }[];
   phoneNumbers: number[];
-  referals: ObjectIdLike & RefTo<Referal>[];
+  referals: string & RefTo<Referal>[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface Friend {
-  _id: ObjectIdLike;
-  baseUser: ObjectIdLike & RefTo<User>;
+  _id: string;
+  baseUser: string & RefTo<User>;
   profile: {
     avatar: string;
     size: string;
@@ -90,14 +83,13 @@ const userSelection: NestedUserSelection = {
 };
 
 type SelectableFields = SelectableFieldsAfterJoin<
-  PopulatedUser,
   User,
   ["friends.friend", "company"]
 >;
 
 type SelectableLeafs = Leafs<SelectableFields>;
 
-type Select = ExtractSelect<PopulatedUser, User, ["friends.friend"]>;
+type Select = ExtractSelect<User, ["friends.friend"]>;
 
 type FilterUser = FilterDefinition<PopulatedUser>;
 const filter: FilterUser = {

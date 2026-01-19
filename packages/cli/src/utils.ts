@@ -34,7 +34,9 @@ export const isPortInUse = async (port: number): Promise<boolean> => {
   });
 };
 
-export const startVerdaccio = async (port: number = 8888): Promise<ChildProcess | null> => {
+export const startVerdaccio = async (
+  port: number = 8888,
+): Promise<ChildProcess | null> => {
   const PORT = port;
 
   // Check if port is already in use

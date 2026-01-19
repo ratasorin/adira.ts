@@ -68,9 +68,8 @@ export type ExtractResBody<
   M extends HTTPMethod,
   Include extends any[],
   Select extends any[],
-  GroupOperations extends
-    | GroupOperationsDefinition<any>
-    | undefined = undefined,
+  GroupOperations extends GroupOperationsDefinition<any> | undefined =
+    undefined,
 > = M extends keyof Def
   ? Def[M] extends { ResponseBody?: infer RB }
     ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
@@ -120,8 +119,8 @@ export type ExtractReqSelect<
 > = M extends keyof Def
   ? Def[M] extends { RequestQuery?: infer Q }
     ? Q extends { select?: infer S }
-      ? S extends { __full?: infer Full; __base?: infer Base }
-        ? ExtractSelect<Full, Base, Include>
+      ? S extends { __base?: infer Base }
+        ? ExtractSelect<Base, Include>
         : never
       : never
     : never
