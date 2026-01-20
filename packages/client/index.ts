@@ -1,7 +1,11 @@
 import { Frontend } from "@n/adira.core.ts";
 import axios, { type AxiosRequestConfig } from "axios";
 
-const replacePathParams = (path: string, pathParams?: any): string => {
+const replacePathParams = (
+  path: string | number | symbol,
+  pathParams?: any,
+): string => {
+  path = String(path);
   if (!pathParams) return path;
   return path.replace(/:([^/]+)/g, (_, key) => {
     const val = pathParams[key];
@@ -22,9 +26,9 @@ export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
       const fetchData: Frontend.AxiosApiClientQuery<
         API,
         typeof path & string
-      > = async (query, path) => {
-        const fullPath = replacePathParams(path as string, path);
-        const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
+      > = async (query, pathParam) => {
+        const fullPath = replacePathParams(path, pathParam);
+        const fullUrl = `${baseUrl}/api${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
 
         const config: AxiosRequestConfig = {
           method: "get",
@@ -43,9 +47,9 @@ export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
         API,
         typeof path & string,
         typeof updatedMethod
-      > = async (data, path) => {
-        const fullPath = replacePathParams(path as string, path);
-        const fullUrl = `${baseUrl}${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
+      > = async (data, pathParam) => {
+        const fullPath = replacePathParams(path, pathParam);
+        const fullUrl = `${baseUrl}/api${fullPath.startsWith("/") ? fullPath : `/${fullPath}`}`;
 
         const config: AxiosRequestConfig = {
           method: method.toLowerCase(),

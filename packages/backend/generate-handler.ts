@@ -105,7 +105,7 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
   if (method === "GET") {
     const fn: Backend.ExecuteGET<T> = async (params) => {
       const {
-        filters,
+        where,
         groupBy,
         include,
         limit,
@@ -117,7 +117,7 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
       const projectStage = generateProjectionQuery(select);
       const lookupStages = generateLookupQuery(model, include);
       const partitionStage = generatePartitionQuery(partition);
-      const filterStage = generateFilterQuery(filters);
+      const filterStage = generateFilterQuery(where);
       const sortStage = generateSortQuery(sort);
 
       const documentPipeline = [
@@ -132,20 +132,27 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
 
       const pipeline: PipelineStage[] = [];
 
-      pipeline.push({
-        $facet: {
-          documents: documentPipeline,
-          grouped: [
-            ...lookupStages,
-            ...filterStage,
-            ...generateGroupQuery(groupBy),
-          ],
-        },
-      } as PipelineStage);
+      const facets: Record<string, PipelineStage[]> = {
+        documents: documentPipeline,
+      };
 
-      const results = (await model.aggregate(pipeline))[0] as any;
+      // 2. Only add the 'grouped' pipeline if there is actual work to do
+      const groupByStage = generateGroupQuery(groupBy);
+      if (groupByStage.length > 0) {
+        facets.grouped = [...lookupStages, ...filterStage, ...groupByStage];
+      }
 
-      return results;
+      pipeline.push({ $facet: facets } as PipelineStage);
+
+      // 3. Execute
+      const [aggregationResult] = await model.aggregate(pipeline);
+
+      // 4. Return Normalized Data
+      // If 'grouped' wasn't requested default it to [].
+      return {
+        documents: aggregationResult.documents,
+        grouped: aggregationResult.grouped || [],
+      };
     };
     return fn as any;
   }

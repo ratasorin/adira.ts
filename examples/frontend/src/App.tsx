@@ -28,7 +28,22 @@ function App() {
       const response = await queryCategories({
         include: [] as const,
         select: ["_id", "name", "description", "slug", "createdAt"] as const,
-        where: {},
+        where: {
+          createdAt: {
+            $gte: new Date("2020-01-01T00:00:00Z"),
+            $lt: new Date("2027-01-01T00:00:00Z"),
+          },
+        },
+        groupBy: {
+          fields: ["createdAt"],
+          operations: [
+            {
+              as: "itemsCreatedIn2025",
+              operation: "$count",
+              target: "_id",
+            },
+          ],
+        },
       });
       if (isErrorResponse(response)) {
         // Handle error response
