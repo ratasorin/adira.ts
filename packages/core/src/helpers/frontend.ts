@@ -1,7 +1,7 @@
 import {
   SchemaAfterJoin,
-  EXECUTOR_KEY,
-  EXTRA_KEY,
+  RESULT_KEY,
+  RELATED_KEY,
   ExtractResponseBodyMUTATE,
   ExtractResponseBodyQUERY,
   FilterDefinition,
@@ -81,8 +81,8 @@ export type ExtractQueryParams<
     : never
   : never;
 export type ResponseBodyMetadata = {
-  [EXECUTOR_KEY]: any;
-  [EXTRA_KEY]?: any;
+  [RESULT_KEY]: any;
+  [RELATED_KEY]?: any;
   __full?: any;
   __base?: any;
 };
@@ -99,8 +99,8 @@ export type ExtractResBody<
     }
     ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
       ? Extract<RB, ResponseBodyMetadata> extends {
-          [EXECUTOR_KEY]: any;
-          [EXTRA_KEY]?: infer Extra;
+          [RESULT_KEY]: any;
+          [RELATED_KEY]?: infer Extra;
           __populated?: infer Full;
           __base?: infer Base;
         }

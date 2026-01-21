@@ -459,13 +459,8 @@ export type ExtractResponseQUERY<
   Select extends any[] = [],
   GroupOperations extends { as: string }[] | undefined = undefined,
 > = {
-  documents: ExtractBase<
-    CleanRef<FullObject>,
-    CleanRef<Base>,
-    Include,
-    Select
-  >[];
-  grouped: GroupOperations extends Array<{ as: string }>
+  items: ExtractBase<CleanRef<FullObject>, CleanRef<Base>, Include, Select>[];
+  agg: GroupOperations extends Array<{ as: string }>
     ? ({
         [K in GroupOperations[number]["as"]]: number;
       } & { _id: string })[]
@@ -487,16 +482,16 @@ export type ExtractResponseBodyMUTATE<
   Select extends any[] = [],
   Extra = {},
 > = {
-  [K in ExecutorKey]?: ExtractResponseMUTATE<FullObject, Base, Include, Select>;
+  [K in ResultKey]?: ExtractResponseMUTATE<FullObject, Base, Include, Select>;
 } & {
-  [K in ExtraKey]?: Extra;
+  [K in RelatedKey]?: Extra;
 };
 
-export const EXECUTOR_KEY = "executor" as const;
-export const EXTRA_KEY = "extra" as const;
+export const RESULT_KEY = "result" as const;
+export const RELATED_KEY = "related" as const;
 
-export type ExecutorKey = typeof EXECUTOR_KEY; // "executor"
-export type ExtraKey = typeof EXTRA_KEY; // "extra"
+export type ResultKey = typeof RESULT_KEY; // "executor"
+export type RelatedKey = typeof RELATED_KEY; // "extra"
 
 // Array of objects
 export type ExtractResponseBodyQUERY<
@@ -508,7 +503,7 @@ export type ExtractResponseBodyQUERY<
     undefined,
   Extra = {},
 > = {
-  [K in ExecutorKey]?: ExtractResponseQUERY<
+  [K in ResultKey]?: ExtractResponseQUERY<
     FullObject,
     Base,
     Include,
@@ -516,7 +511,7 @@ export type ExtractResponseBodyQUERY<
     GroupOperations
   >;
 } & {
-  [K in ExtraKey]?: Extra;
+  [K in RelatedKey]?: Extra;
 };
 
 // Scalar operators
