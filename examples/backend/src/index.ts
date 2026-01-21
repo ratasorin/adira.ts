@@ -2,6 +2,7 @@ import userRouter from "./routes";
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 
 // Load environment variables from .dev.env file
 dotenv.config({ path: ".dev.env" });
@@ -15,6 +16,13 @@ mongoose
 
 const app = express();
 app.use(express.json());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true,
+  }),
+);
 
 app.use("/api", userRouter);
 

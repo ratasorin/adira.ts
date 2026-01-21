@@ -77,12 +77,55 @@ export function assertGroupBySpec(
     );
 }
 
+/**
+ * Detects strings formatted as /pattern/ or /pattern/flags
+ * and converts them to actual RegExp objects.
+ */
+function parseRegex(val: any): any {
+  if (
+    typeof val === "string" &&
+    val.startsWith("/") &&
+    val.lastIndexOf("/") > 0
+  ) {
+    const lastSlash = val.lastIndexOf("/");
+    const pattern = val.slice(1, lastSlash);
+    const flags = val.slice(lastSlash + 1);
+    try {
+      return new RegExp(pattern, flags);
+    } catch (e) {
+      return val; // Fallback if it's an invalid regex
+    }
+  }
+  return val;
+}
+
+/**
+ * Recursively walks the filter object to find $regex keys
+ */
+function sanitizeFilters(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeFilters);
+  }
+
+  const newObj: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === "$regex") {
+      newObj[key] = parseRegex(value);
+    } else {
+      newObj[key] = sanitizeFilters(value);
+    }
+  }
+  return newObj;
+}
+
 export function normalizeParams(params: {
   include?: any;
   select?: any;
   limit?: any;
   offset?: any;
-  filters?: any;
+  where?: any;
   groupBy?: any;
   sort?: any;
   partition?: any;
@@ -90,12 +133,12 @@ export function normalizeParams(params: {
   if (!params || typeof params !== "object")
     throw new Error("Invalid params: expected an object");
 
-  const {
+  let {
     include = [],
     select = [],
     limit = 20,
     offset = 0,
-    filters,
+    where,
     groupBy,
     sort,
     partition,
@@ -112,7 +155,8 @@ export function normalizeParams(params: {
     throw new Error("Invalid 'offset': must be a non-negative number");
 
   // Optional objects
-  assertRecord(filters, "filters");
+  assertRecord(where, "where");
+  where = sanitizeFilters(where);
   assertGroupBySpec(groupBy);
   assertSortBy(sort);
   assertPartitionSpec(partition);
@@ -122,7 +166,7 @@ export function normalizeParams(params: {
     select,
     limit,
     offset,
-    filters,
+    where,
     groupBy,
     sort,
     partition,

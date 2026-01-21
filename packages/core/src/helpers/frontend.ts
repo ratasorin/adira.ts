@@ -143,7 +143,7 @@ export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
   : undefined;
 export type AxiosApiClientQuery<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
-  Path extends keyof PublicAPIPaths<API>,
+  Path extends keyof PublicAPIPaths<API> & string,
 > = <
   Method extends "GET",
   Metadata extends ExtractMetadata<Endpoint, Method>,
@@ -172,7 +172,7 @@ export type AxiosApiClientQuery<
 >;
 export type AxiosApiClientMutate<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
-  Path extends keyof PublicAPIPaths<API>,
+  Path extends keyof PublicAPIPaths<API> & string,
   Method extends "POST" | "PATCH" | "DELETE",
 > = <
   Data extends ExtractReqBody<Endpoint, Method>,
@@ -190,12 +190,12 @@ export type CreateAxiosApiClient = <
   __?: API,
 ) => <
   PublicPaths extends PublicAPIPaths<API>,
-  Path extends keyof PublicPaths,
+  Path extends keyof PublicPaths & string,
   Method extends HTTPMethod,
 >(
   path: Path,
   method: Method,
 ) => Method extends "GET"
-  ? AxiosApiClientQuery<API, Path & string>
-  : AxiosApiClientMutate<API, Path & string, Exclude<Method, "GET">>;
+  ? AxiosApiClientQuery<API, Path>
+  : AxiosApiClientMutate<API, Path, Exclude<Method, "GET">>;
 export {};
