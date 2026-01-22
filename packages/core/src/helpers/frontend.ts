@@ -1,59 +1,57 @@
 import {
   SchemaAfterJoin,
-  RESULT_KEY,
+  EXECUTOR_KEY,
   RELATED_KEY,
-  ExtractResponseBodyMUTATE,
-  ExtractResponseBodyQUERY,
-  FilterDefinition,
-  GroupByDefinition,
+  MutationResponse,
+  QueryResponse,
+  WhereDefinition,
   Leafs,
-  SelectableFieldsAfterJoin,
   UnionFromTuple,
+  ExecutorQueryParams,
+  SortByDefinition,
+  PickDistinctDefinition,
 } from "..";
 import { PopulatableKeys } from "..";
-import { GroupOperationsDefinition } from "..";
+import { AggregateOperation } from "..";
 export type HTTPMethod = "GET" | "POST" | "PATCH" | "DELETE";
 export type AllKeys<T> = T extends unknown ? keyof T : never;
 export type APIMethods<API, R extends keyof API> = keyof API[R] & HTTPMethod;
 type StripAPI<Path extends string> = Path extends `/api${infer Rest}`
   ? Rest & string
   : string;
+
 export type PublicAPIPaths<API> = {
   [K in keyof API as StripAPI<K & string>]: K;
 };
-export type ExtractMetadata<Def, M extends HTTPMethod> = M extends keyof Def
+
+export type ExtractQuery<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {
       RequestQuery?: infer Q;
     }
-    ? Q extends {
-        select?: infer S;
+    ? Q
+    : never
+  : never;
+
+export type ExtractExecutorMetadata<Query> = Query extends {
+  select?: infer S;
+}
+  ? S extends {
+      __base?: infer B;
+      __full?: infer P;
+    }
+    ? {
+        base: B;
+        full: P;
       }
-      ? S extends {
-          __base?: infer B;
-          __full?: infer P;
-        }
-        ? {
-            base: B;
-            full: P;
-          }
-        : {
-            error: "Missing __base or __full metadata in select";
-          }
-      : {
-          error: "Missing or malformed select field";
-        }
-    : {
-        error: "Missing or malformed RequestQuery field";
-      }
-  : {
-      error: "HTTP method not defined on endpoint";
-    };
+    : null
+  : null;
+
 export type ExtractFull<Metadata> = Metadata extends {
   full: infer F;
 }
   ? F
   : never;
-export type ExtractBase<Metadata> = Metadata extends {
+export type ProjectedShape<Metadata> = Metadata extends {
   base: infer B;
 }
   ? B
@@ -69,19 +67,9 @@ export type ExtractReqBody<Def, M extends HTTPMethod> = M extends keyof Def
       ? R
       : undefined
   : never;
-export type ExtractQueryParams<
-  Def,
-  M extends HTTPMethod,
-  Include extends any[],
-> = M extends keyof Def
-  ? Def[M] extends {
-      RequestQuery?: infer Q;
-    }
-    ? Omit<Q, "include" | "select" | "groupBy">
-    : never
-  : never;
+
 export type ResponseBodyMetadata = {
-  [RESULT_KEY]: any;
+  [EXECUTOR_KEY]: any;
   [RELATED_KEY]?: any;
   __full?: any;
   __base?: any;
@@ -91,32 +79,24 @@ export type ExtractResBody<
   M extends HTTPMethod,
   Include extends any[],
   Select extends any[],
-  GroupOperations extends GroupOperationsDefinition<any> | undefined =
-    undefined,
+  GroupBy extends any[],
+  Aggregates extends AggregateOperation<any, any>[] | undefined = undefined,
 > = M extends keyof Def
   ? Def[M] extends {
       ResponseBody?: infer RB;
     }
     ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
       ? Extract<RB, ResponseBodyMetadata> extends {
-          [RESULT_KEY]: any;
+          [EXECUTOR_KEY]: any;
           [RELATED_KEY]?: infer Extra;
-          __populated?: infer Full;
           __base?: infer Base;
         }
         ? M extends "GET"
           ?
-              | ExtractResponseBodyQUERY<
-                  Full,
-                  Base,
-                  Include,
-                  Select,
-                  GroupOperations,
-                  Extra
-                >
+              | QueryResponse<Base, Include, Select, GroupBy, Aggregates, Extra>
               | Exclude<RB, ResponseBodyMetadata>
           :
-              | ExtractResponseBodyMUTATE<Full, Base, Include, Select, Extra>
+              | MutationResponse<Base, Include, Select, Extra>
               | Exclude<RB, ResponseBodyMetadata>
         : {
             error: "Response body metadata missing (__full/__base)";
@@ -146,29 +126,33 @@ export type AxiosApiClientQuery<
   Path extends keyof PublicAPIPaths<API> & string,
 > = <
   Method extends "GET",
-  Metadata extends ExtractMetadata<Endpoint, Method>,
-  Base extends ExtractBase<Metadata>,
+  Query extends ExtractQuery<Endpoint, Method>,
+  ExecutorMetadata extends ExtractExecutorMetadata<Query>,
+  Base extends ProjectedShape<ExecutorMetadata>,
   Include extends PopulatableKeys<Base>[],
   Full extends SchemaAfterJoin<Base, UnionFromTuple<Include>>,
   Select extends Leafs<Full>[],
-  GroupOperations extends GroupOperationsDefinition<Leafs<Full>>,
+  Aggregates extends AggregateOperation<Leafs<Full>, string>[],
   PathParam extends ExtractReqPath<Endpoint, Method>,
-  Where extends FilterDefinition<Full>,
+  Where extends WhereDefinition<Full>,
   PublicPaths extends PublicAPIPaths<API>,
+  PickDistinct extends PickDistinctDefinition<Full>,
+  SortBy extends SortByDefinition<Full>,
+  GroupBy extends Leafs<Full>[],
   Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
 >(
-  query: {
-    include: Include;
-    select: Select;
-    groupBy?: GroupByDefinition<
-      SelectableFieldsAfterJoin<Base, Include>,
-      GroupOperations
-    >;
-    where?: Where;
-  },
+  query: ExecutorQueryParams<
+    Include,
+    Select,
+    GroupBy,
+    Aggregates,
+    Where,
+    SortBy,
+    PickDistinct
+  >,
   path?: PathParam,
 ) => Promise<
-  ExtractResBody<Endpoint, Method, Include, Select, GroupOperations>
+  ExtractResBody<Endpoint, Method, Include, Select, GroupBy, Aggregates>
 >;
 export type AxiosApiClientMutate<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
@@ -182,7 +166,7 @@ export type AxiosApiClientMutate<
 >(
   data: Data,
   path?: PathParam,
-) => Promise<ExtractResBody<Endpoint, Method, [], [], undefined>>;
+) => Promise<ExtractResBody<Endpoint, Method, [], [], [], undefined>>;
 export type CreateAxiosApiClient = <
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
 >(

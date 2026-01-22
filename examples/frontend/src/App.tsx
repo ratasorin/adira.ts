@@ -35,12 +35,12 @@ function App() {
           },
         },
         groupBy: {
-          fields: ["createdAt"],
-          operations: [
+          by: ["createdAt"],
+          aggregates: [
             {
               as: "itemsCreatedIn2025",
-              operation: "$count",
-              target: "_id",
+              fn: "$count",
+              on: "_id",
             },
           ],
         },

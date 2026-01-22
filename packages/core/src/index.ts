@@ -315,73 +315,32 @@ export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
           }
         : // primitives: just keep Base
           Base;
-
 /**
- * Picks properties from an object type based on a query
+ * Applies a selection filter (Mask) to a schema, returning only the requested fields.
+ * * This utility is the engine behind "Projected" types. It recursively traverses
+ * the object structure and preserves only the leaf paths specified in the selection array.
  *
- * @template T - The source object type
- * @template Q - A query object that specifies which properties to pick
- * @returns A new object type with only the properties specified by the query
+ * @template T - The source schema (e.g., IUser)
+ * @template Select - An array of dot-notation strings representing the allowed fields.
+ * @template AllowMetadata - If true, attaches phantom types (__source, __mask) to the
+ * result for downstream type inference and debugging.
  *
  * @example
  * ```ts
- * type User = { name: string; age: number; address: { street: string; city: string } };
- * type Picked = PickFromQuery<User, { name: true; "address.street": true }>;
- * // Result: { name: string; address: { street: string } }
- *
- * type All = PickFromQuery<User, undefined>;
- * // Result: User (no filtering)
+ * type User = { name: string; age: number; address: { street: string; zip: number } };
+ * * // Result: { name: string; address: { street: string } }
+ * type PartialUser = Mask<User, ["name", "address.street"]>;
+ * * // Result: User (Empty array acts as a pass-through)
+ * type FullUser = Mask<User, []>;
  * ```
  */
-export type PickFromQuery<
-  T = {},
-  Select extends any[] = [],
-  AllowMetadata extends boolean = true,
-  BaseT = {},
-> = Select extends []
+export type Mask<T = {}, Select extends any[] = []> = Select extends []
   ? T
-  : (AllowMetadata extends true
-      ? {
-          /** Phantom type tag for inference */
-          __source?: T;
-          __mask?: Select;
-          __base?: BaseT;
-        }
-      : {}) &
-      NestedSelection<T, Exclude<Select, undefined>>;
+  : CleanRef<NestedSelection<T, Exclude<Select, undefined>>>;
 
 export type OmitBranded<T = {}, K extends string = ""> = {
   __base?: T;
 } & Omit<T, K>;
-
-export type BuildResponseBody<
-  FullSchema = {},
-  BaseSchema = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-  GroupOperations extends GroupOperationsDefinition<any> | undefined =
-    undefined,
-  Extra = {},
-  IsQuery extends boolean = false,
-> = (IsQuery extends true
-  ? ExtractResponseBodyQUERY<
-      FullSchema,
-      BaseSchema,
-      Include,
-      Select,
-      GroupOperations,
-      Extra
-    >
-  : ExtractResponseBodyMUTATE<
-      FullSchema,
-      BaseSchema,
-      Include,
-      Select,
-      Extra
-    >) & {
-  __full?: FullSchema;
-  __base?: BaseSchema;
-};
 
 export type TopLevelKeysUnion<Q extends string = ""> =
   Q extends `${infer F}.${string}` ? F : Q;
@@ -399,116 +358,85 @@ export type EnhacedExtractSelect<
   __base?: Base;
 };
 
-// Core extraction (no array wrapping)
-// export type ExtractBase<
-//   FullObject = {},
-//   Base = {},
-//   Include extends any[] = [],
-//   Select extends any[] = [],
-//   GroupOperations = []
-// > = GroupOperations extends []
-//   ? PickFromQuery<FullObject, Include, false> &
-//       Omit<Base, TopLevelKeys<Include>[number]> extends infer R
-//     ? Select extends []
-//       ? R
-//       : PickFromQuery<R, Select, false, Base> &
-//           PickFromQuery<
-//             Omit<Base, keyof TopLevelKeys<Include>>,
-//             Exclude<Select[number], Leafs<R>>[],
-//             false
-//           >
-//     : {}
-//   : {
-//       documents: PickFromQuery<FullObject, Include, false> &
-//         Omit<Base, TopLevelKeys<Include>[number]> extends infer R
-//         ? Select extends []
-//           ? R
-//           : PickFromQuery<R, Select, false, Base> &
-//               PickFromQuery<
-//                 Omit<Base, keyof TopLevelKeys<Include>>,
-//                 Exclude<Select[number], Leafs<R>>[],
-//                 false
-//               >
-//         : {};
-//       grouped: GroupOperations extends Array<{ alias: string }>
-//         ? { [K in GroupOperations[number]["alias"]]: number }
-//         : {};
-//     };
-
-export type ExtractBase<
-  FullObject = {},
+export type ProjectedShape<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-> = PickFromQuery<FullObject, Include, false> &
-  Omit<Base, TopLevelKeys<Include>[number]> extends infer R
-  ? Select extends []
-    ? R
-    : PickFromQuery<R, Select, false, Base> &
-        PickFromQuery<
-          Omit<Base, keyof TopLevelKeys<Include>>,
-          Exclude<Select[number], Leafs<R>>[],
-          false
-        >
-  : {};
+> = Mask<SchemaAfterJoin<Base, Include>, Select>;
 
-export type ExtractResponseQUERY<
-  FullObject = {},
+export type ExecutorQueryResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  GroupOperations extends { as: string }[] | undefined = undefined,
+  GroupBy extends any[] = [],
+  Aggregates extends any[] | undefined = undefined,
 > = {
-  items: ExtractBase<CleanRef<FullObject>, CleanRef<Base>, Include, Select>[];
-  agg: GroupOperations extends Array<{ as: string }>
-    ? ({
-        [K in GroupOperations[number]["as"]]: number;
-      } & { _id: string })[]
-    : [];
+  items: GroupBy extends []
+    ? ProjectedShape<Base, Include, Select>[]
+    : Aggregates extends Array<{ as: string }>
+      ? ({
+          [K in Aggregates[number]["as"]]: number;
+        } & { group: { [K in NonNullable<GroupBy>[number]]: string } })[]
+      : [];
 };
 
-export type ExtractResponseMUTATE<
-  FullObject = {},
+export type ExecutorMutationResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-> = ExtractBase<FullObject, Base, Include, Select>;
+> = ProjectedShape<Base, Include, Select>;
 
-// Single object
-export type ExtractResponseBodyMUTATE<
-  FullObject = {},
+export type ExecutorQueryParams<
+  Include,
+  Select,
+  GroupBy,
+  Aggregates,
+  Where,
+  SortBy,
+  PickDistinct,
+> = {
+  include: Include;
+  select: Select;
+  groupBy?: GroupBy;
+  aggregates?: Aggregates;
+  limit?: number;
+  offset?: number;
+  where?: Where;
+  sortBy?: SortBy;
+  pickDistinct?: PickDistinct;
+};
+
+export type MutationResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
   Extra = {},
 > = {
-  [K in ResultKey]?: ExtractResponseMUTATE<FullObject, Base, Include, Select>;
+  [K in ExecutorKey]?: ExecutorMutationResponse<Base, Include, Select>;
 } & {
   [K in RelatedKey]?: Extra;
 };
 
-export const RESULT_KEY = "result" as const;
+export const EXECUTOR_KEY = "executor" as const;
 export const RELATED_KEY = "related" as const;
 
-export type ResultKey = typeof RESULT_KEY; // "executor"
-export type RelatedKey = typeof RELATED_KEY; // "extra"
+export type ExecutorKey = typeof EXECUTOR_KEY; // "executor"
+export type RelatedKey = typeof RELATED_KEY; // "related"
 
-// Array of objects
-export type ExtractResponseBodyQUERY<
-  FullObject = {},
+export type QueryResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-  GroupOperations extends GroupOperationsDefinition<any> | undefined =
-    undefined,
+  GroupBy extends any[] = [],
+  Aggregates extends AggregateOperation<any, any>[] | undefined = undefined,
   Extra = {},
 > = {
-  [K in ResultKey]?: ExtractResponseQUERY<
-    FullObject,
+  [K in ExecutorKey]?: ExecutorQueryResponse<
     Base,
     Include,
     Select,
-    GroupOperations
+    GroupBy,
+    Aggregates
   >;
 } & {
   [K in RelatedKey]?: Extra;
@@ -613,7 +541,7 @@ export type DefaultOperators<T = {}, Depth extends number = 9> = T & {
   $not?: FilterWithOperators<T, Prev[Depth]>;
 };
 
-export type FilterDefinition<FullObject = {}> = FilterWithOperators<
+export type WhereDefinition<FullObject = {}> = FilterWithOperators<
   FlattenForFilter<FullObject>
 >;
 
@@ -630,24 +558,16 @@ export type AvailableGroupOperation =
   | "$max"
   | "$count";
 
-export type GroupOperationsDefinition<TargetLeaf> = Array<{
-  target: TargetLeaf;
-  operation: AvailableGroupOperation;
-  as: string;
-}>;
-
-export type GroupByDefinition<
-  Fields extends any[] = [],
-  GroupOperations extends any[] = [],
-> = {
-  fields: Fields;
-  operations: GroupOperations;
+export type AggregateOperation<TargetLeaf, As> = {
+  on: TargetLeaf;
+  fn: AvailableGroupOperation;
+  as: As;
 };
 
-export type RowsPrunerDefiniton<T = {}> = {
-  partitionBy: Leafs<T>;
-  orderBy: Leafs<T>;
-  pick: "first" | "last";
+export type PickDistinctDefinition<T = {}> = {
+  by: Leafs<T>;
+  sortBy: Leafs<T>;
+  keep: "first" | "last";
 };
 
 export * as Backend from "./helpers/backend";

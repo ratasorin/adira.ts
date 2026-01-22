@@ -1,7 +1,6 @@
 import { runImportsTest } from "../tests";
 
 describe("Import Generator", () => {
-  
   test("Should preserve 'import { Backend }' when Backend is a module namespace", () => {
     const files = {
       // --- 1. MOCK EXTERNAL LIBRARY (node_modules) ---
@@ -19,7 +18,7 @@ describe("Import Generator", () => {
         export const GetUsersFn = () => {};
       `,
 
-      // --- 3. THE ENTRY FILE (Where we write our types) ---
+      // --- 3. THE ENTRY FILE (WhereDefinition we write our types) ---
       // note: We use { Backend } (Named Import) even though it's a Namespace in the lib
       "/src/index.ts": `
         import { Backend } from '@n/adira.core'; 
@@ -27,23 +26,25 @@ describe("Import Generator", () => {
 
         // We want to generate imports for THIS type node:
         type Target = Backend.InferHandlerParams<typeof GetUsersFn>;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target", "/src/generated/api.ts");
-    
+
     expect(output).toContain(`import { Backend } from "@n/adira.core";`);
-    expect(output).toContain(`import { GetUsersFn } from "../controller/users";`);
+    expect(output).toContain(
+      `import { GetUsersFn } from "../controller/users";`,
+    );
     expect(output).not.toMatch(/import.*node_modules/);
   });
 
   test("Should handle local Renames", () => {
     const files = {
-        "/src/types.ts": "export interface User { id: number; }",
-        "/src/index.ts": `
+      "/src/types.ts": "export interface User { id: number; }",
+      "/src/index.ts": `
             import { User as MyUser } from './types';
             type Target = MyUser;
-        `
+        `,
     };
 
     const { output } = runImportsTest(files, "Target", "/src/generated.ts");
@@ -61,7 +62,7 @@ describe("Import Generator", () => {
         // Target: Promise<Paginated<User[]>>
         // Should collect: Promise (global, ignore), Paginated, User
         type Target = Promise<Paginated<User[]>>;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
@@ -90,16 +91,16 @@ describe("Import Generator", () => {
         // The collector should see "Backend.Request", visit "Backend", keep "Backend".
         // It should see "Request" (right side) and IGNORE it.
         type Target = Backend.Request | Backend.Response;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
 
     // Should import Backend
     expect(output).toContain(`import { Backend } from "@lib/core";`);
-    
+
     // Should NOT try to import Request or Response directly
-    expect(output).not.toContain("Request"); 
+    expect(output).not.toContain("Request");
     expect(output).not.toContain("Response");
   });
 
@@ -111,13 +112,15 @@ describe("Import Generator", () => {
         import { Service as MyService } from './services';
 
         type Target = MyService; 
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
 
     // Must generate the alias syntax exactly
-    expect(output).toContain(`import { Service as MyService } from "./services";`);
+    expect(output).toContain(
+      `import { Service as MyService } from "./services";`,
+    );
   });
 
   // --- 4. DEFAULT IMPORTS ---
@@ -127,7 +130,7 @@ describe("Import Generator", () => {
       "/src/index.ts": `
         import Log from './logger';
         type Target = Log;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
@@ -151,7 +154,7 @@ describe("Import Generator", () => {
 
         // We use all of them in the type
         type Target = [React, typeof useState, typeof ReactNamespace];
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
@@ -174,7 +177,7 @@ describe("Import Generator", () => {
       "/src/index.ts": `
         // No top-level import here!
         type Target = import('./config').Config;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
@@ -193,7 +196,7 @@ describe("Import Generator", () => {
         export class LocalClass { id: string; }
         
         type Target = LocalClass;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");
@@ -210,7 +213,7 @@ describe("Import Generator", () => {
       "/src/index.ts": `
         import * as Utils from './utils';
         type Target = typeof Utils.add;
-      `
+      `,
     };
 
     const { output } = runImportsTest(files, "Target");

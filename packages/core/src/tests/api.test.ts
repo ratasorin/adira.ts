@@ -46,7 +46,7 @@ export type DemoAppAPI = {
   };
 
   "/api/categories/:id": {
-    PUT: {
+    PATCH: {
       RequestParams?: { id: string };
       RequestBody?: any;
       ResponseBody?:
@@ -134,36 +134,41 @@ const isError = (response: any): response is ErrorResponse => {
 };
 
 export const createApiClient: CreateAxiosApiClient = (baseUrl) => {
-  return async (url, method, { data, path, query }) => {
-    return {} as any;
+  const m: any = async (url, method) => {
+    return {};
   };
+
+  return m;
 };
 
 const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
-apiClient("/categories", "GET", {
-  query: {
-    include: ["createdBy"] as const,
-    select: ["name", "createdBy", ""] as const,
-    where: {
-      "createdBy.email": {
-        $regex: /@example\.com$/,
-      },
+const queryCategories = apiClient("/categories", "GET");
+
+queryCategories({
+  include: ["createdBy"] as const,
+  select: ["name", "createdBy"] as const,
+  groupBy: ["createdBy.email"] as const,
+  aggregates: [
+    {
+      as: "distinctCreators",
+      fn: "$count",
+      on: "createdBy._id",
     },
-    groupBy: {
-      fields: ["createdBy.email"],
-      operations: [
-        {
-          target: "createdBy._id",
-          as: "uniqueCreatorEmails",
-          operation: "$count",
-        },
-      ],
+    {
+      as: "oldestCreator",
+      fn: "$min",
+      on: "createdBy.createdAt",
+    },
+  ] as const,
+  where: {
+    "createdBy.email": {
+      $regex: /@example\.com$/,
     },
   },
 }).then((response) => {
   if (isError(response)) {
     console.error("API Error:", response.message);
   } else {
-    const r = response.executor?.documents[0];
+    const r = response.executor?.items;
   }
 });

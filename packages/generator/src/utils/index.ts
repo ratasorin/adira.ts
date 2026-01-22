@@ -168,7 +168,7 @@ export function extractTypeGeneric(
  * Compiles the source files into .d.ts files in the target directory.
  * @param fileNames - List of absolute paths to source files (from Phase A)
  * @param options - The user's original CompilerOptions
- * @param outputDir - Where to place the transpiled shared folder
+ * @param outputDir - WhereDefinition to place the transpiled shared folder
  */
 export async function compileProject(
   fileNames: string[],

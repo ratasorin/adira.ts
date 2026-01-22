@@ -1,3 +1,11 @@
+import {
+  AggregateOperation,
+  ExecutorQueryParams,
+  PickDistinctDefinition,
+  SortByDefinition,
+  WhereDefinition,
+} from "@n/adira.core.ts";
+
 export function assertRecord(
   v?: unknown,
   field?: string,
@@ -17,71 +25,51 @@ export function assertArray<T>(
 }
 
 export function assertSortBy(
-  v?: unknown,
-): asserts v is Record<string, -1 | 1> | undefined {
+  v?: SortByDefinition<unknown>,
+): asserts v is SortByDefinition<unknown> | undefined {
   if (v === undefined) return;
-  assertRecord(v, "sort");
+  assertRecord(v, "sortBy");
   for (const [k, val] of Object.entries(v)) {
     if (val !== 1 && val !== -1)
-      throw new Error(`Invalid 'sort': key '${k}' must be 1 or -1`);
+      throw new Error(`Invalid 'sortBy': key '${k}' must be 1 or -1`);
   }
 }
 
-export function assertPartitionSpec(v?: unknown): asserts v is
-  | {
-      groupBy: string;
-      orderBy: string;
-      take: "first" | "last";
-    }
-  | undefined {
+export function assertPickDistinctSpec(
+  v?: PickDistinctDefinition<unknown>,
+): asserts v is PickDistinctDefinition<unknown> {
   if (v === undefined) return;
 
-  assertRecord(v, "partition");
-  const { groupBy, orderBy, take } = v;
+  assertRecord(v, "pickDistinct");
+  const { by, keep, sortBy } = v;
   if (
-    typeof groupBy !== "string" ||
-    typeof orderBy !== "string" ||
-    (take !== "first" && take !== "last")
+    typeof by !== "string" ||
+    typeof sortBy !== "string" ||
+    (keep !== "first" && keep !== "last")
   )
     throw new Error(
-      "Invalid 'partition': must have { groupBy: string, orderBy: string, take: 'first' | 'last' }",
+      "Invalid 'pickDistinct': must have { by: string, keep: 'first' | 'last', sortBy: string }",
     );
 }
 
-export interface AggregateField {
-  alias: string;
-  op: string;
-  applyOnField: string;
-}
-export interface SimpleGroupBySpec {
-  fields: string[];
-  aggregations?: Array<AggregateField>;
-}
-
-export function assertGroupBySpec(
-  v?: SimpleGroupBySpec,
-): asserts v is SimpleGroupBySpec {
+export function assertAggregationSpec(
+  v?: AggregateOperation<unknown>[],
+): asserts v is AggregateOperation<unknown>[] {
   if (v === undefined) return;
 
-  assertRecord(v, "groupBy");
-  if (!Array.isArray(v.fields) || !v.fields.every((f) => typeof f === "string"))
-    throw new Error("Invalid 'groupBy.fields': expected string[]");
-  if (v.aggregations !== undefined)
-    assertArray<AggregateField>(
-      v.aggregations,
-      (item) =>
-        typeof item?.alias === "string" &&
-        typeof item?.applyOnField === "string" &&
-        typeof item?.op === "string",
-      "groupBy.aggregations",
+  assertArray<AggregateOperation<unknown>>(v, (item) => {
+    return (
+      typeof item?.on === "string" &&
+      typeof item?.fn === "string" &&
+      typeof item?.as === "string"
     );
+  });
 }
-
 /**
- * Detects strings formatted as /pattern/ or /pattern/flags
- * and converts them to actual RegExp objects.
+ * Detects ISO 8601 date strings and converts them to Date objects.
  */
-function parseRegex(val: any): any {
+function parseJsonValue(val: any): any {
+  // 1. Handle Regex strings (your existing logic)
   if (
     typeof val === "string" &&
     val.startsWith("/") &&
@@ -93,43 +81,59 @@ function parseRegex(val: any): any {
     try {
       return new RegExp(pattern, flags);
     } catch (e) {
-      return val; // Fallback if it's an invalid regex
+      return val;
     }
   }
+
+  // 2. Handle ISO Date strings
+  // This regex matches: YYYY-MM-DDTHH:mm:ss.sssZ
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
+  if (typeof val === "string" && isoDateRegex.test(val)) {
+    const date = new Date(val);
+    // Ensure it's a valid date object
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
   return val;
 }
 
 /**
- * Recursively walks the filter object to find $regex keys
+ * Recursively walks the filter object to sanitize regex and dates
  */
 function sanitizeFilters(obj: any): any {
-  if (!obj || typeof obj !== "object") return obj;
+  if (obj === null || obj === undefined) return obj;
 
+  // Handle arrays (e.g., inside $in, $and, $or)
   if (Array.isArray(obj)) {
     return obj.map(sanitizeFilters);
   }
 
+  // If it's not an object (primitive), try to parse it
+  if (typeof obj !== "object") {
+    return parseJsonValue(obj);
+  }
+
   const newObj: any = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (key === "$regex") {
-      newObj[key] = parseRegex(value);
-    } else {
-      newObj[key] = sanitizeFilters(value);
-    }
+    // Recurse into nested objects or arrays, then parse the leaves
+    newObj[key] = sanitizeFilters(value);
   }
   return newObj;
 }
 
-export function normalizeParams(params: {
-  include?: any;
-  select?: any;
-  limit?: any;
-  offset?: any;
-  where?: any;
-  groupBy?: any;
-  sort?: any;
-  partition?: any;
-}) {
+export function normalizeParams(
+  params: ExecutorQueryParams<
+    any[],
+    any[],
+    any[],
+    AggregateOperation<any>[],
+    WhereDefinition<any>,
+    SortByDefinition<any>,
+    PickDistinctDefinition<any>
+  >,
+) {
   if (!params || typeof params !== "object")
     throw new Error("Invalid params: expected an object");
 
@@ -140,13 +144,15 @@ export function normalizeParams(params: {
     offset = 0,
     where,
     groupBy,
-    sort,
-    partition,
+    aggregates,
+    sortBy,
+    pickDistinct,
   } = params;
 
   // Validate arrays
   assertArray<string>(include, (item) => typeof item === "string", "include");
   assertArray<string>(select, (item) => typeof item === "string", "select");
+  assertArray<string>(groupBy, (item) => typeof item === "string", "groupBy");
 
   // Validate numbers
   if (typeof limit !== "number" || limit <= 0)
@@ -157,9 +163,9 @@ export function normalizeParams(params: {
   // Optional objects
   assertRecord(where, "where");
   where = sanitizeFilters(where);
-  assertGroupBySpec(groupBy);
-  assertSortBy(sort);
-  assertPartitionSpec(partition);
+  assertAggregationSpec(aggregates);
+  assertSortBy(sortBy);
+  assertPickDistinctSpec(pickDistinct);
 
   return {
     include,
@@ -167,8 +173,9 @@ export function normalizeParams(params: {
     limit,
     offset,
     where,
+    aggregates,
     groupBy,
-    sort,
-    partition,
+    sortBy,
+    pickDistinct,
   };
 }

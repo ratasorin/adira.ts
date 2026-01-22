@@ -1,12 +1,14 @@
-import { Backend } from "@n/adira.core.ts";
+import {
+  AggregateOperation,
+  Backend,
+  PickDistinctDefinition,
+  SortByDefinition,
+} from "@n/adira.core.ts";
 
 import { Document, Model, PipelineStage } from "mongoose";
 import { buildPopulatePipeline } from "./db/$lookup";
 import { filterDefined } from "./db/$filter";
-import {
-  normalizeParams,
-  SimpleGroupBySpec,
-} from "./db/$assert-pipeline-params";
+import { normalizeParams } from "./db/$assert-pipeline-params";
 import mongoose from "mongoose";
 
 const generateProjectionQuery = (select: string[]): PipelineStage.Project => {
@@ -30,23 +32,17 @@ const generateLookupQuery = <T>(
   ) as PipelineStage[];
 };
 
-const generatePartitionQuery = (
-  partition:
-    | {
-        groupBy: string;
-        orderBy: string;
-        take: "first" | "last";
-      }
-    | undefined,
+const generatePickDistinctQuery = (
+  pickDistinct: PickDistinctDefinition<any> | undefined,
 ): PipelineStage[] => {
-  if (partition) {
-    const { groupBy, orderBy, take } = partition;
+  if (pickDistinct) {
+    const { by, keep, sortBy } = pickDistinct;
 
     return [
-      { $sort: { [orderBy]: take === "first" ? 1 : -1 } },
+      { $sort: { [sortBy]: keep === "first" ? 1 : -1 } },
       {
         $group: {
-          _id: `$${groupBy}`,
+          _id: `$${by}`,
           doc: { $first: "$$ROOT" },
         },
       },
@@ -63,35 +59,46 @@ const generateFilterQuery = (
   } else return [];
 };
 
+/**
+ * Transforms the user's Grouping intent into a MongoDB $group pipeline stage.
+ * Maps 'by' fields to the group identity and 'aggregates' to calculation operators.
+ */
 const generateGroupQuery = (
-  groupBy: SimpleGroupBySpec | undefined,
+  by: string[] | undefined,
+  aggregates: AggregateOperation<any>[] | undefined,
 ): PipelineStage[] => {
-  if (groupBy) {
-    let groupStage: Record<string, any> = {
-      _id:
-        groupBy.fields.length > 1
-          ? groupBy.fields.reduce(
-              (acc, field) => {
-                acc[field] = `$${field}`;
-                return acc;
-              },
-              {} as Record<string, string>,
-            )
-          : `$${groupBy.fields[0]}`,
-    };
+  // If no grouping is requested, return an empty pipeline
+  if (!by || by.length === 0) return [];
 
-    if ("aggregations" in groupBy && groupBy.aggregations) {
-      for (const { alias, applyOnField, op } of groupBy.aggregations) {
-        groupStage = { ...groupStage, [alias]: { [op]: `$${applyOnField}` } };
-      }
+  const groupStage: Record<string, any> = {
+    // 1. Define the Identity (The "group" key)
+    // If multiple fields, create a composite object. If one, use the direct field.
+    _id:
+      by.length > 1
+        ? by.reduce(
+            (acc, field) => {
+              acc[field] = `$${field}`;
+              return acc;
+            },
+            {} as Record<string, string>,
+          )
+        : `$${by[0]}`,
+  };
+
+  // 2. Define the Measures (The Aggregates)
+  // Maps { on, fn, as } -> { [as]: { [fn]: "$on" } }
+  if (aggregates && aggregates.length > 0) {
+    for (const { on, fn, as } of aggregates) {
+      // Handle $count specifically if needed, otherwise use standard ops
+      groupStage[as] = fn === "$count" ? { $sum: 1 } : { [fn]: `$${on}` };
     }
+  }
 
-    return [{ $group: groupStage }];
-  } else return [];
+  return [{ $group: groupStage }];
 };
 
 const generateSortQuery = (
-  sort: Record<string, 1 | -1> | undefined,
+  sort: SortByDefinition<unknown> | undefined,
 ): PipelineStage[] => {
   if (sort) {
     const $sort = filterDefined(sort);
@@ -110,19 +117,21 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
         include,
         limit,
         offset,
-        partition,
         select,
-        sort,
+        aggregates,
+        pickDistinct,
+        sortBy,
       } = normalizeParams(params);
+
       const projectStage = generateProjectionQuery(select);
       const lookupStages = generateLookupQuery(model, include);
-      const partitionStage = generatePartitionQuery(partition);
+      const pickDistinctStage = generatePickDistinctQuery(pickDistinct);
       const filterStage = generateFilterQuery(where);
-      const sortStage = generateSortQuery(sort);
+      const sortStage = generateSortQuery(sortBy);
 
-      const documentPipeline = [
+      const itemsPipeline = [
         ...lookupStages,
-        ...partitionStage,
+        ...pickDistinctStage,
         ...filterStage,
         ...sortStage,
         projectStage,
@@ -130,29 +139,25 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
         { $limit: limit },
       ];
 
-      const pipeline: PipelineStage[] = [];
+      const hasGrouping = groupBy && groupBy.length > 0;
 
-      const facets: Record<string, PipelineStage[]> = {
-        documents: documentPipeline,
-      };
-
-      // 2. Only add the 'grouped' pipeline if there is actual work to do
-      const groupByStage = generateGroupQuery(groupBy);
-      if (groupByStage.length > 0) {
-        facets.grouped = [...lookupStages, ...filterStage, ...groupByStage];
+      if (hasGrouping) {
+        const groupByStage = generateGroupQuery(groupBy, aggregates);
+        const groupPipeline = [
+          ...lookupStages,
+          ...filterStage,
+          ...groupByStage,
+        ];
+        const [groupedResult] = await model.aggregate(groupPipeline);
+        return {
+          items: groupedResult,
+        };
+      } else {
+        const [results] = await model.aggregate(itemsPipeline);
+        return {
+          items: results,
+        };
       }
-
-      pipeline.push({ $facet: facets } as PipelineStage);
-
-      // 3. Execute
-      const [aggregationResult] = await model.aggregate(pipeline);
-
-      // 4. Return Normalized Data
-      // If 'grouped' wasn't requested default it to [].
-      return {
-        documents: aggregationResult.documents,
-        grouped: aggregationResult.grouped || [],
-      };
     };
     return fn as any;
   }

@@ -1,9 +1,8 @@
 import mongoose from "mongoose";
 import {
-  BuildResponseBody,
-  ExtractResponseBodyQUERY,
+  QueryResponse,
   ExtractSelect,
-  FilterDefinition,
+  WhereDefinition,
   Leafs,
   SchemaAfterJoin,
   NestedSelection,
@@ -12,6 +11,7 @@ import {
   RefTo,
   SelectableFieldsAfterJoin,
   SortByDefinition,
+  ExecutorQueryResponse,
 } from "..";
 import { ExtractResBody } from "../helpers/frontend";
 import { ExecuteGET } from "../helpers/backend";
@@ -91,7 +91,7 @@ type SelectableLeafs = Leafs<SelectableFields>;
 
 type Select = ExtractSelect<User, ["friends.friend"]>;
 
-type FilterUser = FilterDefinition<UserWithCompany>;
+type FilterUser = WhereDefinition<UserWithCompany>;
 const filter: FilterUser = {
   $or: [
     {
@@ -110,30 +110,10 @@ const sort: SortBy = {
   "friends.friend.baseUser": 1,
 };
 
-type TestExtractResponse = ExtractResponseBodyQUERY<
-  PopulatedUser,
+type GroupByResult = ExecutorQueryResponse<
   User,
-  ["friends.friend"],
-  ["name", "email", "age", "friends.friend", "company"],
-  [{ target: "friends.friend"; operation: "$count"; as: "allFriends" }],
-  { hello: "world" }
+  [],
+  [],
+  ["createdBy.email"],
+  [{ as: "AA"; fn: "$count"; on: "createdBy._id" }]
 >;
-
-type SuccessReturn = BuildResponseBody<PopulatedUser, User, [], []>;
-type EndpointDefReturn = SuccessReturn | Error | { hello: "world" };
-
-type S = Extract<
-  EndpointDefReturn,
-  { __full?: any; __base?: any; __extra?: any; __array?: any }
->;
-const s: S = {};
-
-type EndpointDef = () => {
-  ResponseBody?: EndpointDefReturn;
-};
-
-type Endpoints = {
-  GET: EndpointDef;
-};
-
-type ExtractedResponseBody = ExtractResBody<Endpoints, "GET", [], []>;
