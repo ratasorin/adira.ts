@@ -19,7 +19,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "npx tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "debug:types": "npx tsc src/tests/debug.test.ts --declaration --emitDeclarationOnly --noErrorTruncation --esModuleInterop"
   },
   "dependencies": {}
 }

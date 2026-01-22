@@ -55,76 +55,6 @@ export type DemoAppAPI = {
       RequestQuery?: Backend.InferHandlerParams<UpdateCategoryFn>;
     };
   };
-
-  // "/api/products": {
-  //   GET: {
-  //     RequestParams?: any;
-  //     RequestBody?: any;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<GetProductsFn, {}>
-  //       | ErrorResponse;
-  //     RequestQuery?: Backend.InferHandlerParams<GetProductsFn>;
-  //   };
-  //   POST: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<CreateProductFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<CreateProductFn, {}>
-  //       | ErrorResponse;
-  //   };
-  // };
-
-  // "/api/products/:id": {
-  //   PUT: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<UpdateProductFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<UpdateProductFn, {}>
-  //       | ErrorResponse;
-  //   };
-  //   DELETE: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<DeleteProductFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<DeleteProductFn, {}>
-  //       | ErrorResponse;
-  //   };
-  // };
-
-  // "/api/orders": {
-  //   GET: {
-  //     RequestParams?: any;
-  //     RequestBody?: any;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<GetOrdersFn, {}>
-  //       | ErrorResponse;
-  //     RequestQuery?: Backend.InferHandlerParams<GetOrdersFn>;
-  //   };
-  //   POST: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<CreateOrderFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<CreateOrderFn, {}>
-  //       | ErrorResponse;
-  //   };
-  // };
-
-  // "/api/orders/:id": {
-  //   PUT: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<UpdateOrderFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<UpdateOrderFn, {}>
-  //       | ErrorResponse;
-  //   };
-  //   DELETE: {
-  //     RequestParams?: any;
-  //     RequestBody?: Backend.InferHandlerParams<DeleteOrderFn>;
-  //     ResponseBody?:
-  //       | Backend.InferHandlerResponse<DeleteOrderFn, {}>
-  //       | ErrorResponse;
-  //   };
-  // };
 };
 
 const isError = (response: any): response is ErrorResponse => {
@@ -141,34 +71,31 @@ export const createApiClient: CreateAxiosApiClient = (baseUrl) => {
   return m;
 };
 
-const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
-const queryCategories = apiClient("/categories", "GET");
+export const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
+export const queryCategories = apiClient("/categories", "GET");
 
 queryCategories({
   include: ["createdBy"] as const,
-  select: ["name", "createdBy"] as const,
-  groupBy: ["createdBy.email"] as const,
-  aggregates: [
-    {
-      as: "distinctCreators",
-      fn: "$count",
-      on: "createdBy._id",
+  rows: {
+    select: ["name", "createdBy"],
+    pickDistinct: { by: "_id", keep: "first", sortBy: "isActive" },
+    sortBy: {},
+  } as const,
+  groups: {
+    byCategory: {
+      by: ["parentCategory"],
+      aggregates: [
+        { on: "updatedAt", fn: "$sum", as: "total" },
+        { on: "createdAt", fn: "$sum", as: "totalCreated" },
+      ] as const,
+      sortBy: {
+        total: -1,
+      },
     },
-    {
-      as: "oldestCreator",
-      fn: "$min",
-      on: "createdBy.createdAt",
-    },
-  ] as const,
+  },
   where: {
     "createdBy.email": {
       $regex: /@example\.com$/,
     },
   },
-}).then((response) => {
-  if (isError(response)) {
-    console.error("API Error:", response.message);
-  } else {
-    const r = response.executor?.items;
-  }
 });

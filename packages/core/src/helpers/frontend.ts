@@ -10,6 +10,9 @@ import {
   ExecutorQueryParams,
   SortByDefinition,
   PickDistinctDefinition,
+  RowIntent,
+  GroupIntent,
+  ExtractNewFieldsFromAggregates,
 } from "..";
 import { PopulatableKeys } from "..";
 import { AggregateOperation } from "..";
@@ -33,15 +36,13 @@ export type ExtractQuery<Def, M extends HTTPMethod> = M extends keyof Def
   : never;
 
 export type ExtractExecutorMetadata<Query> = Query extends {
-  select?: infer S;
+  include?: infer I;
 }
-  ? S extends {
+  ? I extends {
       __base?: infer B;
-      __full?: infer P;
     }
     ? {
         base: B;
-        full: P;
       }
     : null
   : null;
@@ -132,7 +133,8 @@ export type AxiosApiClientQuery<
   Include extends PopulatableKeys<Base>[],
   Full extends SchemaAfterJoin<Base, UnionFromTuple<Include>>,
   Select extends Leafs<Full>[],
-  Aggregates extends AggregateOperation<Leafs<Full>, string>[],
+  As extends string,
+  Aggregates extends AggregateOperation<Leafs<Full>, As>[],
   PathParam extends ExtractReqPath<Endpoint, Method>,
   Where extends WhereDefinition<Full>,
   PublicPaths extends PublicAPIPaths<API>,
@@ -143,12 +145,22 @@ export type AxiosApiClientQuery<
 >(
   query: ExecutorQueryParams<
     Include,
-    Select,
-    GroupBy,
-    Aggregates,
     Where,
-    SortBy,
-    PickDistinct
+    {
+      select: Select;
+      sortBy?: SortByDefinition<Leafs<Full>>;
+      pickDistinct?: PickDistinct;
+      limit?: number;
+      offset?: number;
+    },
+    {
+      [K: string]: {
+        by: GroupBy;
+        aggregates: Aggregates;
+        sortBy: SortByDefinition<Leafs<Full>> &
+          SortByDefinition<ExtractNewFieldsFromAggregates<Aggregates>>;
+      };
+    }
   >,
   path?: PathParam,
 ) => Promise<

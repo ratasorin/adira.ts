@@ -334,50 +334,60 @@ export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
  * type FullUser = Mask<User, []>;
  * ```
  */
-export type Mask<T = {}, Select extends any[] = []> = Select extends []
+export type Mask<T, Select> = Select extends []
   ? T
-  : CleanRef<NestedSelection<T, Exclude<Select, undefined>>>;
-
-export type OmitBranded<T = {}, K extends string = ""> = {
-  __base?: T;
-} & Omit<T, K>;
-
-export type TopLevelKeysUnion<Q extends string = ""> =
-  Q extends `${infer F}.${string}` ? F : Q;
-export type TopLevelKeys<Q extends any[] = []> = TopLevelKeysUnion<Q[number]>[];
+  : CleanRef<NestedSelection<T, Exclude<Select, undefined> & any[]>>;
 
 export type ExtractSelect<
   Base = {},
   Include extends any[] = [],
 > = SelectableFieldsAfterJoin<Base, Include>;
 
-export type EnhacedExtractSelect<
-  Base = {},
-  Include extends any[] = [],
-> = ExtractSelect<Base, Include> & {
-  __base?: Base;
+export type ProjectedShape<Base, Include, Select> = Mask<
+  SchemaAfterJoin<Base, Include>,
+  Select
+>;
+
+export type RowIntent<Select, SortBy, PickDistinct> = {
+  select: Select;
+  limit?: number;
+  offset?: number;
+  sortBy?: SortBy;
+  pickDistinct?: PickDistinct;
 };
 
-export type ProjectedShape<
-  Base = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-> = Mask<SchemaAfterJoin<Base, Include>, Select>;
+export type ExtractNewFieldsFromAggregates<T> =
+  T extends Array<infer Agg>
+    ? Agg extends AggregateOperation<any, infer As>
+      ? As
+      : never
+    : never;
+
+export type GroupIntent<By, Aggregates, SortBy> = {
+  by: By;
+  aggregates: Aggregates;
+  sortBy: SortBy & SortByDefinition<ExtractNewFieldsFromAggregates<Aggregates>>;
+  limit?: number;
+};
+
+export type GroupResult<G extends GroupIntent<any, any, any>> = {
+  group: { [K in G["by"][number]]: any };
+} & (G["aggregates"] extends Array<infer A>
+  ? { [K in Extract<A, { as: string }>["as"]]: number }
+  : {});
 
 export type ExecutorQueryResponse<
-  Base = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-  GroupBy extends any[] = [],
-  Aggregates extends any[] | undefined = undefined,
+  Base,
+  Include extends any[],
+  Rows extends RowIntent<any, any, any>,
+  Groups extends Record<string, GroupIntent<any, any, any>>,
 > = {
-  items: GroupBy extends []
+  rows: Rows extends RowIntent<infer Select, infer SortBy, infer PickDistinct>
     ? ProjectedShape<Base, Include, Select>[]
-    : Aggregates extends Array<{ as: string }>
-      ? ({
-          [K in Aggregates[number]["as"]]: number;
-        } & { group: { [K in NonNullable<GroupBy>[number]]: string } })[]
-      : [];
+    : never;
+  groups?: Groups extends Record<string, GroupIntent<any, any, any>>
+    ? { [K in keyof Groups]: GroupResult<Groups[K]>[] }
+    : never;
 };
 
 export type ExecutorMutationResponse<
@@ -386,24 +396,18 @@ export type ExecutorMutationResponse<
   Select extends any[] = [],
 > = ProjectedShape<Base, Include, Select>;
 
+export type Prettify<T> = T extends object ? { [K in keyof T]: T[K] } & {} : T;
+
 export type ExecutorQueryParams<
   Include,
-  Select,
-  GroupBy,
-  Aggregates,
   Where,
-  SortBy,
-  PickDistinct,
+  Rows extends RowIntent<any, any, any>,
+  Groups extends Record<string, GroupIntent<any, any, any>>,
 > = {
-  include: Include;
-  select: Select;
-  groupBy?: GroupBy;
-  aggregates?: Aggregates;
-  limit?: number;
-  offset?: number;
+  include?: Include;
   where?: Where;
-  sortBy?: SortBy;
-  pickDistinct?: PickDistinct;
+  rows?: Rows;
+  groups?: Groups;
 };
 
 export type MutationResponse<
@@ -424,20 +428,13 @@ export type ExecutorKey = typeof EXECUTOR_KEY; // "executor"
 export type RelatedKey = typeof RELATED_KEY; // "related"
 
 export type QueryResponse<
-  Base = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-  GroupBy extends any[] = [],
-  Aggregates extends AggregateOperation<any, any>[] | undefined = undefined,
+  Base,
+  Include extends any[],
+  Rows extends RowIntent<any, any, any>,
+  Groups extends Record<string, GroupIntent<any, any, any>>,
   Extra = {},
 > = {
-  [K in ExecutorKey]?: ExecutorQueryResponse<
-    Base,
-    Include,
-    Select,
-    GroupBy,
-    Aggregates
-  >;
+  [K in ExecutorKey]?: ExecutorQueryResponse<Base, Include, Rows, Groups>;
 } & {
   [K in RelatedKey]?: Extra;
 };
@@ -547,8 +544,8 @@ export type WhereDefinition<FullObject = {}> = FilterWithOperators<
 
 export type SortDirection = 1 | -1;
 
-export type SortByDefinition<FullObject = {}> = Partial<
-  Record<Leafs<FullObject> & string, SortDirection>
+export type SortByDefinition<Keys> = Partial<
+  Record<Keys & string, SortDirection>
 >;
 
 export type AvailableGroupOperation =

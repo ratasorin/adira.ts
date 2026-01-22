@@ -8,6 +8,8 @@ import {
   type UnionFromTuple,
   SortByDefinition,
   ExecutorQueryParams,
+  RowIntent,
+  GroupIntent,
 } from "..";
 import { PickDistinctDefinition } from "..";
 import { AggregateOperation } from "..";
@@ -17,16 +19,24 @@ import { Leafs } from "..";
 export type InferInclude<Base> = PopulatableKeys<Base>[] & {
   __base?: Base;
 };
-export type InferSelect<Base, Full> = Leafs<Full>[] & {
-  __full?: Full;
-  __base?: Base;
-};
 
+export type InferSelect<Full> = Leafs<Full>[];
 export type InferWhere<Full> = WhereDefinition<Full>;
 export type InferGroupBy<Full> = Leafs<Full>[];
 export type InferAggregates<Full> = AggregateOperation<Leafs<Full>, string>[];
 export type InferSort<Full> = SortByDefinition<Full>;
 export type InferPickDistinct<Full> = PickDistinctDefinition<Full>;
+
+export type InferRows<Full> = RowIntent<
+  InferSelect<Full>,
+  InferSort<Full>,
+  InferPickDistinct<Full>
+>;
+
+export type InferGroups<Full> = Record<
+  string,
+  GroupIntent<InferGroupBy<Full>, InferAggregates<Full>, InferSort<Full>>
+>;
 
 export type InferRequestBody<Handler> = Handler extends {
   __base?: infer Base;
@@ -43,12 +53,9 @@ export type InferHandlerParams<Handler> = Handler extends {
 }
   ? ExecutorQueryParams<
       InferInclude<Base>,
-      InferSelect<Base, Populated>,
-      InferGroupBy<Populated>,
-      InferAggregates<Populated>,
       InferWhere<Populated>,
-      InferSort<Populated>,
-      InferPickDistinct<Populated>
+      InferRows<Populated>,
+      InferGroups<Populated>
     >
   : {
       error: "Handler is not an executor, check Request's fourth type argument is a InferHandlerParams<ExecutorFn>";
@@ -73,23 +80,22 @@ export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
   Include extends PopulatableKeys<T>[],
+  ObjectAfterJoin extends SchemaAfterJoin<T, UnionFromTuple<Include>>,
   Select extends ExtractSelect<T, Include>,
   GroupBy extends Leafs<ObjectAfterJoin>[],
   Aggregates extends AggregateOperation<Leafs<PSchema>, string>[],
-  ObjectAfterJoin extends SchemaAfterJoin<T, UnionFromTuple<Include>>,
+  SortBy extends SortByDefinition<ObjectAfterJoin>,
+  Groups extends Record<string, GroupIntent<GroupBy, Aggregates, SortBy>>,
+  PickDistinct extends PickDistinctDefinition<ObjectAfterJoin>,
+  Rows extends RowIntent<Select, SortBy, PickDistinct>,
 >(
   params: ExecutorQueryParams<
     Include,
-    Select,
-    GroupBy,
-    Aggregates,
     WhereDefinition<ObjectAfterJoin>,
-    SortByDefinition<ObjectAfterJoin>,
-    PickDistinctDefinition<ObjectAfterJoin>
+    Rows,
+    Groups
   >,
-) => Promise<
-  ExecutorQueryResponse<T, Include, Select, GroupBy, Aggregates>
->) & {
+) => Promise<ExecutorQueryResponse<T, Include, Rows, Groups>>) & {
   __base?: T;
   __populated?: PSchema;
 };

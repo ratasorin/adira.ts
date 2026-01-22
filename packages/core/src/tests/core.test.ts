@@ -12,6 +12,7 @@ import {
   SelectableFieldsAfterJoin,
   SortByDefinition,
   ExecutorQueryResponse,
+  ExtractNewFieldsFromAggregates,
 } from "..";
 import { ExtractResBody } from "../helpers/frontend";
 import { ExecuteGET } from "../helpers/backend";
@@ -105,15 +106,22 @@ const filter: FilterUser = {
   ],
 };
 
-type SortBy = SortByDefinition<PopulatedUser>;
+type SortBy = SortByDefinition<Leafs<PopulatedUser>>;
 const sort: SortBy = {
   "friends.friend.baseUser": 1,
 };
 
-type GroupByResult = ExecutorQueryResponse<
-  User,
-  [],
-  [],
-  ["createdBy.email"],
-  [{ as: "AA"; fn: "$count"; on: "createdBy._id" }]
+type NewFields = ExtractNewFieldsFromAggregates<
+  [
+    {
+      readonly on: "updatedAt";
+      readonly fn: "$sum";
+      readonly as: "totalUpdated";
+    },
+    {
+      readonly on: "createdAt";
+      readonly fn: "$sum";
+      readonly as: "totalCreated";
+    },
+  ]
 >;
