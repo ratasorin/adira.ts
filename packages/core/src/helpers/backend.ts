@@ -57,7 +57,8 @@ export type InferHandlerParams<Handler> = Handler extends {
       InferSelect<Populated>,
       InferSort<Populated>,
       InferPickDistinct<Populated>,
-      InferGroups<Populated>
+      InferAggregates<Populated>,
+      Populated
     >
   : {
       error: "Handler is not an executor, check Request's fourth type argument is a InferHandlerParams<ExecutorFn>";
@@ -84,12 +85,9 @@ export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
   Include extends PopulatableKeys<T>[],
   ObjectAfterJoin extends SchemaAfterJoin<T, UnionFromTuple<Include>>,
   Select extends ExtractSelect<T, Include>,
-  GroupBy extends Leafs<ObjectAfterJoin>[],
-  Aggregates extends AggregateOperation<Leafs<PSchema>, string>[],
   SortBy extends SortByDefinition<ObjectAfterJoin>,
-  GI extends GroupIntent<GroupBy, any[], any>,
-  Groups extends Record<string, GI>,
   PickDistinct extends PickDistinctDefinition<ObjectAfterJoin>,
+  Aggregates extends AggregateOperation<Leafs<ObjectAfterJoin>[], any, any>[],
 >(
   params: ExecutorQueryParams<
     Include,
@@ -97,9 +95,10 @@ export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
     Select,
     SortBy,
     PickDistinct,
-    Groups
+    Aggregates,
+    ObjectAfterJoin
   >,
-) => Promise<ExecutorQueryResponse<T, Include, Rows, Groups>>) & {
+) => Promise<ExecutorQueryResponse<T, Include, Select, Groups>>) & {
   __base?: T;
   __populated?: PSchema;
 };

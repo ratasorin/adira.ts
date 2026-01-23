@@ -6,7 +6,7 @@ export interface ICategory {
   name: string;
   description: string;
   slug: string;
-  parentCategory: string;
+  parentCategory: string & RefTo<ICategory>;
   createdBy: string & RefTo<IUser>;
   isActive: boolean;
   sortOrder: number;

@@ -363,10 +363,27 @@ export type ExtractNewFieldsFromAggregates<T> =
       : never
     : never;
 
-export type GroupIntent<By, Aggregates, SortBy> = {
+export type ValidateGroupsArray<T extends any[], FullLeafs> = T extends [
+  infer Head,
+  ...infer Tail,
+]
+  ? [
+      // Process the current element (Head)
+      GroupIntent<
+        FullLeafs[],
+        // Extract the literal aggregates from THIS specific element
+        Head extends { aggregates: infer A } ? A : never,
+        SortByDefinition<FullLeafs>
+      >,
+      // Recurse for the rest of the array
+      ...ValidateGroupsArray<Tail, FullLeafs>,
+    ]
+  : [];
+
+export type GroupIntent<By, Aggs, GlobalSortBy, K = ""> = {
   by: By;
-  aggregates: Aggregates;
-  sortBy: SortBy;
+  aggregates: Aggs;
+  sortBy?: Aggs;
   limit?: number;
 };
 
@@ -379,12 +396,10 @@ export type GroupResult<G extends GroupIntent<any, any, any>> = {
 export type ExecutorQueryResponse<
   Base,
   Include extends any[],
-  Rows extends RowIntent<any, any, any>,
+  Select extends any[],
   Groups extends Record<string, GroupIntent<any, any, any>>,
 > = {
-  rows: Rows extends RowIntent<infer Select, infer SortBy, infer PickDistinct>
-    ? ProjectedShape<Base, Include, Select>[]
-    : never;
+  rows: ProjectedShape<Base, Include, Select>[];
   groups?: Groups extends Record<string, GroupIntent<any, any, any>>
     ? { [K in keyof Groups]: GroupResult<Groups[K]>[] }
     : never;
@@ -396,26 +411,24 @@ export type ExecutorMutationResponse<
   Select extends any[] = [],
 > = ProjectedShape<Base, Include, Select>;
 
+export type DefineGroupFn<Full> = <GroupBy extends Leafs<Full>[]>(
+  by: GroupBy,
+) => {
+  by: GroupBy;
+};
+
 export type ExecutorQueryParams<
   Include,
   Where,
   Select,
   SortBy,
   PickDistinct,
+  Aggregates extends any[],
   Full,
 > = {
   include?: Include;
   where?: Where;
   rows?: RowIntent<Select, SortBy, PickDistinct>;
-  groups?: {
-    [K: string]: <
-      Agg extends AggregateOperation<Leafs<Full>, string>[],
-    >(params: {
-      by: Leafs<Full>[];
-      aggregates: Agg;
-      sortBy: SortBy;
-    }) => typeof params;
-  };
 };
 
 export type MutationResponse<
@@ -438,11 +451,11 @@ export type RelatedKey = typeof RELATED_KEY; // "related"
 export type QueryResponse<
   Base,
   Include extends any[],
-  Rows extends RowIntent<any, any, any>,
+  Select extends any[],
   Groups extends Record<string, GroupIntent<any, any, any>>,
   Extra = {},
 > = {
-  [K in ExecutorKey]?: ExecutorQueryResponse<Base, Include, Rows, Groups>;
+  [K in ExecutorKey]?: ExecutorQueryResponse<Base, Include, Select, Groups>;
 } & {
   [K in RelatedKey]?: Extra;
 };
@@ -566,9 +579,9 @@ export type AvailableGroupOperation =
 export const AGGREGATION_METADATA_KEY: unique symbol = Symbol("metadata");
 
 export type AggregateOperation<TargetLeaf, As> = {
+  as: As;
   on: TargetLeaf;
   fn: AvailableGroupOperation;
-  as: As;
 };
 
 export type PickDistinctDefinition<T = {}> = {

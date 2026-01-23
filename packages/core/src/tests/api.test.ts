@@ -1,4 +1,10 @@
-import { Backend } from "..";
+import {
+  AggregateOperation,
+  Backend,
+  GroupIntent,
+  Leafs,
+  SortByDefinition,
+} from "..";
 import { ExecuteGET, ExecutePATCH, ExecutePOST } from "../helpers/backend";
 import { CreateAxiosApiClient } from "../helpers/frontend";
 import { ICategory } from "./models/Category";
@@ -75,33 +81,13 @@ export const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
 export const queryCategories = apiClient("/categories", "GET");
 
 queryCategories({
-  include: ["createdBy"] as const,
-  rows: {
-    select: ["name", "createdBy"] as const,
-    pickDistinct: { by: "_id", keep: "first", sortBy: "isActive" },
-    sortBy: {},
-  },
-  groups: {
-    a: (params) => ({
-      by: ["parentCategory"],
-      aggregates: [
-        { on: "updatedAt", fn: "$sum", as: "A_TOTAL_UPDATED" },
-        { on: "createdAt", fn: "$sum", as: "A_TOTAL_CREATED" },
-      ],
-      sortBy: {},
+  include: ["parentCategory"] as const,
+  rows: { select: ["createdBy", "name"] as const },
+  groups: (g) => ({
+    A: g({
+      by: ["name"],
+      aggregates: [{ as: "total", fn: "$count", on: "_id" }],
+      sortBy: { total: -1 },
     }),
-    b: (params) => ({
-      by: ["createdAt"],
-      aggregates: [
-        { on: "updatedAt", fn: "$sum", as: "B_TOTAL_UPDATED" },
-        { on: "createdAt", fn: "$sum", as: "B_TOTAL_CREATED" },
-      ],
-      sortBy: {},
-    }),
-  },
-  where: {
-    "createdBy.email": {
-      $regex: /@example\.com$/,
-    },
-  },
+  }),
 });

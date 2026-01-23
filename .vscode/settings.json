@@ -4,5 +4,6 @@
       "fileMatch": ["**/*.adira.json"],
       "url": "https://api.npoint.io/f821676f30b6107397f0"
     }
-  ]
+  ],
+  "js/ts.hover.maximumLength": 500000
 }

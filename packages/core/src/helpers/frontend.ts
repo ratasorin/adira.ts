@@ -10,7 +10,9 @@ import {
   ExecutorQueryParams,
   SortByDefinition,
   PickDistinctDefinition,
+  DefineGroupFn,
   GroupIntent,
+  ExtractNewFieldsFromAggregates,
 } from "..";
 import { PopulatableKeys } from "..";
 import { AggregateOperation } from "..";
@@ -25,8 +27,11 @@ export type PublicAPIPaths<API> = {
   [K in keyof API as StripAPI<K & string>]: K;
 };
 
-export type ExtractQuery<Def, M extends HTTPMethod> = M extends keyof Def
-  ? Def[M] extends {
+export type ExtractQuery<
+  Endpoint,
+  M extends HTTPMethod,
+> = M extends keyof Endpoint
+  ? Endpoint[M] extends {
       RequestQuery?: infer Q;
     }
     ? Q
@@ -54,45 +59,45 @@ export type ExtractReqBody<Def, M extends HTTPMethod> = M extends keyof Def
 export type ResponseBodyMetadata = {
   [EXECUTOR_KEY]: any;
   [RELATED_KEY]?: any;
-  __full?: any;
   __base?: any;
 };
-export type ExtractResBody<
-  Def,
-  M extends HTTPMethod,
+
+type ResponseMetadata<T> = T extends ResponseBodyMetadata & {
+  __base: infer B;
+  [RELATED_KEY]?: infer E;
+}
+  ? { base: B; extra: E }
+  : never;
+
+export type ExtractDehydratedResBody<
+  RB,
+  Method,
   Include extends any[],
   Select extends any[],
-  GroupBy extends any[],
-  Aggregates extends AggregateOperation<any, any>[] | undefined = undefined,
-> = M extends keyof Def
-  ? Def[M] extends {
-      ResponseBody?: infer RB;
-    }
-    ? ResponseBodyMetadata extends Extract<RB, ResponseBodyMetadata>
-      ? Extract<RB, ResponseBodyMetadata> extends {
-          [EXECUTOR_KEY]: any;
-          [RELATED_KEY]?: infer Extra;
-          __base?: infer Base;
-        }
-        ? M extends "GET"
-          ?
-              | QueryResponse<Base, Include, Select, GroupBy, Aggregates, Extra>
-              | Exclude<RB, ResponseBodyMetadata>
-          :
-              | MutationResponse<Base, Include, Select, Extra>
-              | Exclude<RB, ResponseBodyMetadata>
-        : {
-            error: "Response body metadata missing (__full/__base)";
-          }
-      : {
-          error: "Malformed ResponseBody";
-        }
-    : {
-        error: "Endpoint method has no ResponseBody";
-      }
-  : {
-      error: "HTTP method not defined on endpoint";
-    };
+  Groups extends Record<string, any>, 
+> = ResponseMetadata<RB> extends { base: infer B; extra: infer E }
+    ? Method extends "GET"
+      ?
+          | QueryResponse<B, Include, Select, Groups, E>
+          | Exclude<RB, ResponseBodyMetadata>
+      :
+          | MutationResponse<B, Include, Select, E>
+          | Exclude<RB, ResponseBodyMetadata>
+    : { error: "Response body metadata missing __base" };
+
+
+    export type ExtractSimpleResBody<> = {};
+
+  
+
+type EndpointNeedsHydration<Endpoint extends Partial<Record<HTTPMethod, any>>> =
+  Endpoint["GET"] extends {
+    ResponseBody: infer RB;
+  }
+    ? ResponseMetadata<RB> extends never
+      ? false
+      : true
+    : never;
 
 export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {
@@ -102,22 +107,43 @@ export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
     : never
   : never;
 
+  export type ExtractResBody<
+  Endpoint,
+  Method extends HTTPMethod> = Method extends keyof Endpoint
+    ? Endpoint[Method] extends { ResponseBody?: infer RB }
+      ? RB : never
+    : never;
+
+// The helper function type that will be passed into the callback
+type GroupHelper<Full> = <
+  const Aggs extends AggregateOperation<Leafs<Full>, string>[],
+  const By extends Leafs<Full>[],
+>(group: {
+  by: By,
+  aggregates: Aggs,
+  sortBy?: SortByDefinition<Leafs<Full> | ExtractNewFieldsFromAggregates<Aggs>>,
+  limit?: number
+}) => typeof group;
+
 export type AxiosApiClientQuery<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
   Path extends keyof PublicAPIPaths<API> & string,
+  ResponseBody
 > = <
   Method extends "GET",
   Query extends ExtractQuery<Endpoint, Method>,
   Base extends ExtractBase<Query>,
   Include extends PopulatableKeys<Base>[],
-  Full extends SchemaAfterJoin<Base, UnionFromTuple<Include>>,
+  Full extends SchemaAfterJoin<
+    Base,
+    UnionFromTuple<Include>
+  >,
+  Select extends Leafs<Full>[],
   PathParam extends ExtractReqPath<Endpoint, Method>,
   Where extends WhereDefinition<Full>,
   PublicPaths extends PublicAPIPaths<API>,
-  Select extends Leafs<Full>[],
-  GroupBy extends Leafs<Full>[],
+  Groups,
   PickDistinct extends PickDistinctDefinition<Full>,
-  Groups extends Record<string, GroupIntent<any, any, any>>,
   Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
 >(
   query: ExecutorQueryParams<
@@ -126,16 +152,19 @@ export type AxiosApiClientQuery<
     Select,
     SortByDefinition<Leafs<Full>>,
     PickDistinct,
+    any[],
     Full
-  >,
+  > & {
+     groups?: (g: GroupHelper<Full>) => Groups;
+  },
   path?: PathParam,
-) => Promise<
-  ExtractResBody<Endpoint, Method, Include, Select, GroupBy, Aggregates>
->;
+) => Promise<ExtractDehydratedResBody<ResponseBody, Method, Include, Select, Groups>>;
+
 export type AxiosApiClientMutate<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
   Path extends keyof PublicAPIPaths<API> & string,
   Method extends "POST" | "PATCH" | "DELETE",
+  ResponseBody
 > = <
   Data extends ExtractReqBody<Endpoint, Method>,
   PathParam extends ExtractReqPath<Endpoint, Method>,
@@ -144,7 +173,8 @@ export type AxiosApiClientMutate<
 >(
   data: Data,
   path?: PathParam,
-) => Promise<ExtractResBody<Endpoint, Method, [], [], [], undefined>>;
+) => Promise<ExtractDehydratedResBody<ResponseBody, Method, [], [], {}>>;
+
 export type CreateAxiosApiClient = <
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
 >(
@@ -154,10 +184,14 @@ export type CreateAxiosApiClient = <
   PublicPaths extends PublicAPIPaths<API>,
   Path extends keyof PublicPaths & string,
   Method extends HTTPMethod,
+  ResponseBody extends ExtractResBody<
+    Endpoint,
+    Method>,
+  Endpoint extends API[PublicPaths[Path] & keyof API] = API[PublicPaths[Path] &
+    keyof API],
 >(
   path: Path,
   method: Method,
-) => Method extends "GET"
-  ? AxiosApiClientQuery<API, Path>
-  : AxiosApiClientMutate<API, Path, Exclude<Method, "GET">>;
+) => AxiosApiClientQuery<API, Path, ResponseBody>
+
 export {};
