@@ -54,7 +54,9 @@ export type InferHandlerParams<Handler> = Handler extends {
   ? ExecutorQueryParams<
       InferInclude<Base>,
       InferWhere<Populated>,
-      InferRows<Populated>,
+      InferSelect<Populated>,
+      InferSort<Populated>,
+      InferPickDistinct<Populated>,
       InferGroups<Populated>
     >
   : {
@@ -85,14 +87,16 @@ export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
   GroupBy extends Leafs<ObjectAfterJoin>[],
   Aggregates extends AggregateOperation<Leafs<PSchema>, string>[],
   SortBy extends SortByDefinition<ObjectAfterJoin>,
-  Groups extends Record<string, GroupIntent<GroupBy, Aggregates, SortBy>>,
+  GI extends GroupIntent<GroupBy, any[], any>,
+  Groups extends Record<string, GI>,
   PickDistinct extends PickDistinctDefinition<ObjectAfterJoin>,
-  Rows extends RowIntent<Select, SortBy, PickDistinct>,
 >(
   params: ExecutorQueryParams<
     Include,
     WhereDefinition<ObjectAfterJoin>,
-    Rows,
+    Select,
+    SortBy,
+    PickDistinct,
     Groups
   >,
 ) => Promise<ExecutorQueryResponse<T, Include, Rows, Groups>>) & {

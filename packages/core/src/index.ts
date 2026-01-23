@@ -366,7 +366,7 @@ export type ExtractNewFieldsFromAggregates<T> =
 export type GroupIntent<By, Aggregates, SortBy> = {
   by: By;
   aggregates: Aggregates;
-  sortBy: SortBy & SortByDefinition<ExtractNewFieldsFromAggregates<Aggregates>>;
+  sortBy: SortBy;
   limit?: number;
 };
 
@@ -396,18 +396,26 @@ export type ExecutorMutationResponse<
   Select extends any[] = [],
 > = ProjectedShape<Base, Include, Select>;
 
-export type Prettify<T> = T extends object ? { [K in keyof T]: T[K] } & {} : T;
-
 export type ExecutorQueryParams<
   Include,
   Where,
-  Rows extends RowIntent<any, any, any>,
-  Groups extends Record<string, GroupIntent<any, any, any>>,
+  Select,
+  SortBy,
+  PickDistinct,
+  Full,
 > = {
   include?: Include;
   where?: Where;
-  rows?: Rows;
-  groups?: Groups;
+  rows?: RowIntent<Select, SortBy, PickDistinct>;
+  groups?: {
+    [K: string]: <
+      Agg extends AggregateOperation<Leafs<Full>, string>[],
+    >(params: {
+      by: Leafs<Full>[];
+      aggregates: Agg;
+      sortBy: SortBy;
+    }) => typeof params;
+  };
 };
 
 export type MutationResponse<
@@ -554,6 +562,8 @@ export type AvailableGroupOperation =
   | "$min"
   | "$max"
   | "$count";
+
+export const AGGREGATION_METADATA_KEY: unique symbol = Symbol("metadata");
 
 export type AggregateOperation<TargetLeaf, As> = {
   on: TargetLeaf;

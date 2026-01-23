@@ -10,9 +10,7 @@ import {
   ExecutorQueryParams,
   SortByDefinition,
   PickDistinctDefinition,
-  RowIntent,
   GroupIntent,
-  ExtractNewFieldsFromAggregates,
 } from "..";
 import { PopulatableKeys } from "..";
 import { AggregateOperation } from "..";
@@ -35,38 +33,22 @@ export type ExtractQuery<Def, M extends HTTPMethod> = M extends keyof Def
     : never
   : never;
 
-export type ExtractExecutorMetadata<Query> = Query extends {
+export type ExtractBase<Query> = Query extends {
   include?: infer I;
 }
   ? I extends {
       __base?: infer B;
     }
-    ? {
-        base: B;
-      }
+    ? B
     : null
   : null;
 
-export type ExtractFull<Metadata> = Metadata extends {
-  full: infer F;
-}
-  ? F
-  : never;
-export type ProjectedShape<Metadata> = Metadata extends {
-  base: infer B;
-}
-  ? B
-  : never;
 export type ExtractReqBody<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {
-      RequestBody?: infer B;
+      RequestBody?: infer RB;
     }
-    ? B
-    : Def[M] extends {
-          RequestBody?: infer R;
-        }
-      ? R
-      : undefined
+    ? RB
+    : never
   : never;
 
 export type ResponseBodyMetadata = {
@@ -111,56 +93,40 @@ export type ExtractResBody<
   : {
       error: "HTTP method not defined on endpoint";
     };
+
 export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
   ? Def[M] extends {
       RequestPath?: infer PP;
     }
     ? PP
-    : Def[M] extends {
-          RequestParams?: infer P extends Record<string, string | number>;
-        }
-      ? P
-      : undefined
-  : undefined;
+    : never
+  : never;
+
 export type AxiosApiClientQuery<
   API extends Record<string, Partial<Record<HTTPMethod, any>>>,
   Path extends keyof PublicAPIPaths<API> & string,
 > = <
   Method extends "GET",
   Query extends ExtractQuery<Endpoint, Method>,
-  ExecutorMetadata extends ExtractExecutorMetadata<Query>,
-  Base extends ProjectedShape<ExecutorMetadata>,
+  Base extends ExtractBase<Query>,
   Include extends PopulatableKeys<Base>[],
   Full extends SchemaAfterJoin<Base, UnionFromTuple<Include>>,
-  Select extends Leafs<Full>[],
-  As extends string,
-  Aggregates extends AggregateOperation<Leafs<Full>, As>[],
   PathParam extends ExtractReqPath<Endpoint, Method>,
   Where extends WhereDefinition<Full>,
   PublicPaths extends PublicAPIPaths<API>,
-  PickDistinct extends PickDistinctDefinition<Full>,
-  SortBy extends SortByDefinition<Full>,
+  Select extends Leafs<Full>[],
   GroupBy extends Leafs<Full>[],
+  PickDistinct extends PickDistinctDefinition<Full>,
+  Groups extends Record<string, GroupIntent<any, any, any>>,
   Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
 >(
   query: ExecutorQueryParams<
     Include,
     Where,
-    {
-      select: Select;
-      sortBy?: SortByDefinition<Leafs<Full>>;
-      pickDistinct?: PickDistinct;
-      limit?: number;
-      offset?: number;
-    },
-    {
-      [K: string]: {
-        by: GroupBy;
-        aggregates: Aggregates;
-        sortBy: SortByDefinition<Leafs<Full>> &
-          SortByDefinition<ExtractNewFieldsFromAggregates<Aggregates>>;
-      };
-    }
+    Select,
+    SortByDefinition<Leafs<Full>>,
+    PickDistinct,
+    Full
   >,
   path?: PathParam,
 ) => Promise<

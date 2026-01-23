@@ -77,21 +77,27 @@ export const queryCategories = apiClient("/categories", "GET");
 queryCategories({
   include: ["createdBy"] as const,
   rows: {
-    select: ["name", "createdBy"],
+    select: ["name", "createdBy"] as const,
     pickDistinct: { by: "_id", keep: "first", sortBy: "isActive" },
     sortBy: {},
-  } as const,
+  },
   groups: {
-    byCategory: {
+    a: (params) => ({
       by: ["parentCategory"],
       aggregates: [
-        { on: "updatedAt", fn: "$sum", as: "total" },
-        { on: "createdAt", fn: "$sum", as: "totalCreated" },
-      ] as const,
-      sortBy: {
-        total: -1,
-      },
-    },
+        { on: "updatedAt", fn: "$sum", as: "A_TOTAL_UPDATED" },
+        { on: "createdAt", fn: "$sum", as: "A_TOTAL_CREATED" },
+      ],
+      sortBy: {},
+    }),
+    b: (params) => ({
+      by: ["createdAt"],
+      aggregates: [
+        { on: "updatedAt", fn: "$sum", as: "B_TOTAL_UPDATED" },
+        { on: "createdAt", fn: "$sum", as: "B_TOTAL_CREATED" },
+      ],
+      sortBy: {},
+    }),
   },
   where: {
     "createdBy.email": {
