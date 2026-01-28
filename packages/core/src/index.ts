@@ -102,22 +102,6 @@ export type Shift<R = {}, Prefix extends string = ""> =
       }
     : never;
 
-export type ApplyReplacements<Schema = {}, Depth extends number = 10> = [
-  Depth,
-] extends [0]
-  ? Schema
-  : Schema extends RefTo<infer R>
-    ? R | null
-    : {
-        [K in keyof Schema]: Schema[K] extends Scalar
-          ? Schema[K] extends RefTo<infer R>
-            ? CleanRef<R> | null
-            : Schema[K]
-          : Schema[K] extends Array<infer Element>
-            ? ApplyReplacements<Element, Prev[Depth]>[]
-            : ApplyReplacements<Schema[K], Prev[Depth]>;
-      };
-
 /**
  * Recursively transforms an object type by replacing fields that can be populated with their populated types
  *
@@ -133,7 +117,21 @@ export type ApplyReplacements<Schema = {}, Depth extends number = 10> = [
  * // Result: { _id: mongoose.Types.ObjectId; name: string; companyId: { _id: mongoose.Types.ObjectId; name: string } }
  * ```
  */
-export type PopulateSchema<Schema> = ApplyReplacements<Schema>;
+export type PopulateSchema<Schema = {}, Depth extends number = 10> = [
+  Depth,
+] extends [0]
+  ? Schema
+  : Schema extends RefTo<infer R>
+    ? R | null
+    : {
+        [K in keyof Schema]: Schema[K] extends Scalar
+          ? Schema[K] extends RefTo<infer R>
+            ? CleanRef<R> | null
+            : Schema[K]
+          : Schema[K] extends Array<infer Element>
+            ? PopulateSchema<Element, Prev[Depth]>[]
+            : PopulateSchema<Schema[K], Prev[Depth]>;
+      };
 
 export type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -263,7 +261,7 @@ export type NestedSelection<T = {}, Q extends any[] = []> = T extends any[]
         : T[K];
     };
 
-export type UnionFromTuple<Tuple extends any[]> = Tuple[number];
+export type TupleToUnion<Tuple extends any[]> = Tuple[number];
 
 // extract subpaths for a key K: for includes like "friends.friend" and K="friends" -> "friend"
 export type SubPathsForKey<
@@ -282,7 +280,7 @@ export type HasDirectInclude<Inc = "", K = ""> =
 export type SelectableFieldsAfterJoin<
   Base = {},
   Include extends any[] = [],
-> = Leafs<SchemaAfterJoin<Base, UnionFromTuple<Include>>>[];
+> = Leafs<SchemaAfterJoin<Base, TupleToUnion<Include>>>[];
 
 /**
  * Core recursive type:
@@ -334,19 +332,20 @@ export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
  * type FullUser = Mask<User, []>;
  * ```
  */
-export type Mask<T, Select> = Select extends []
+export type Mask<T, Select extends any[]> = Select extends []
   ? T
-  : CleanRef<NestedSelection<T, Exclude<Select, undefined> & any[]>>;
+  : NestedSelection<T, Select>;
 
 export type ExtractSelect<
   Base = {},
   Include extends any[] = [],
 > = SelectableFieldsAfterJoin<Base, Include>;
 
-export type ProjectedShape<Base, Include, Select> = Mask<
-  SchemaAfterJoin<Base, Include>,
-  Select
->;
+export type ProjectedShape<
+  Base,
+  Include extends string,
+  Select extends any[],
+> = Mask<SchemaAfterJoin<Base, Include>, Select>;
 
 export type RowIntent<Select, SortBy, PickDistinct> = {
   select: Select;
@@ -356,60 +355,49 @@ export type RowIntent<Select, SortBy, PickDistinct> = {
   pickDistinct?: PickDistinct;
 };
 
-export type ExtractNewFieldsFromAggregates<T> =
+export type NewFieldsFromAgg<T> =
   T extends Array<infer Agg>
     ? Agg extends AggregateOperation<any, infer As>
       ? As
       : never
     : never;
 
-export type ValidateGroupsArray<T extends any[], FullLeafs> = T extends [
-  infer Head,
-  ...infer Tail,
-]
-  ? [
-      // Process the current element (Head)
-      GroupIntent<
-        FullLeafs[],
-        // Extract the literal aggregates from THIS specific element
-        Head extends { aggregates: infer A } ? A : never,
-        SortByDefinition<FullLeafs>
-      >,
-      // Recurse for the rest of the array
-      ...ValidateGroupsArray<Tail, FullLeafs>,
-    ]
-  : [];
-
-export type GroupIntent<By, Aggs, GlobalSortBy, K = ""> = {
+export type GroupIntent<By, Aggs, SortBy> = {
   by: By;
   aggregates: Aggs;
-  sortBy?: Aggs;
+  sortBy?: SortBy;
   limit?: number;
 };
 
 export type GroupResult<G extends GroupIntent<any, any, any>> = {
-  group: { [K in G["by"][number]]: any };
+  category: { [K in G["by"][number]]: any };
 } & (G["aggregates"] extends Array<infer A>
   ? { [K in Extract<A, { as: string }>["as"]]: number }
   : {});
 
 export type ExecutorQueryResponse<
   Base,
-  Include extends any[],
-  Select extends any[],
-  Groups extends Record<string, GroupIntent<any, any, any>>,
+  Include extends string[],
+  Select extends string[],
+  Groups extends Record<string, GroupIntent<string[], any[], any>> | undefined,
 > = {
-  rows: ProjectedShape<Base, Include, Select>[];
-  groups?: Groups extends Record<string, GroupIntent<any, any, any>>
-    ? { [K in keyof Groups]: GroupResult<Groups[K]>[] }
-    : never;
-};
+  rows: ProjectedShape<Base, TupleToUnion<Include>, Select>[];
+} & (Groups extends Record<string, any>
+  ? {
+      groups?: {
+        [K in keyof Groups]: GroupResult<
+          // Use 'Extract' to prove to TS that this value satisfies GroupIntent
+          Extract<Groups[K], GroupIntent<any, any, any>>
+        >[];
+      };
+    }
+  : {});
 
 export type ExecutorMutationResponse<
   Base = {},
   Include extends any[] = [],
   Select extends any[] = [],
-> = ProjectedShape<Base, Include, Select>;
+> = ProjectedShape<Base, TupleToUnion<Include>, Select>;
 
 export type DefineGroupFn<Full> = <GroupBy extends Leafs<Full>[]>(
   by: GroupBy,
@@ -417,18 +405,32 @@ export type DefineGroupFn<Full> = <GroupBy extends Leafs<Full>[]>(
   by: GroupBy;
 };
 
-export type ExecutorQueryParams<
-  Include,
-  Where,
-  Select,
-  SortBy,
-  PickDistinct,
-  Aggregates extends any[],
-  Full,
-> = {
+export type GroupHelper<Full> = <
+  const Aggs extends AggregateOperation<Leafs<Full>, string>[],
+  const By extends Leafs<Full>[],
+>(
+  group: GroupIntent<
+    By,
+    Aggs,
+    SortByDefinition<Leafs<Full> | NewFieldsFromAgg<Aggs>>
+  >,
+) => typeof group;
+
+export type RowHelper<Full> = <
+  const Select extends Leafs<Full>[],
+  const SortBy extends SortByDefinition<Leafs<Full>>,
+  const PickDistinct extends PickDistinctDefinition<Full>,
+>(row: {
+  select: Select;
+  sortBy?: SortBy;
+  pickDistinct?: PickDistinct;
+}) => typeof row;
+
+export type ExecutorQueryParams<Full, Include, Rows, Groups> = {
   include?: Include;
-  where?: Where;
-  rows?: RowIntent<Select, SortBy, PickDistinct>;
+  where?: WhereDefinition<Full>;
+  groups?: (g: GroupHelper<Full>) => Groups;
+  rows?: (r: RowHelper<Full>) => Rows;
 };
 
 export type MutationResponse<
@@ -450,15 +452,17 @@ export type RelatedKey = typeof RELATED_KEY; // "related"
 
 export type QueryResponse<
   Base,
-  Include extends any[],
-  Select extends any[],
-  Groups extends Record<string, GroupIntent<any, any, any>>,
-  Extra = {},
+  Include extends string[],
+  Select extends string[],
+  Groups extends Record<string, GroupIntent<any, any, any>> | undefined,
+  Extra = undefined,
 > = {
   [K in ExecutorKey]?: ExecutorQueryResponse<Base, Include, Select, Groups>;
-} & {
-  [K in RelatedKey]?: Extra;
-};
+} & (Extra extends undefined
+  ? {}
+  : {
+      [K in RelatedKey]?: Extra;
+    });
 
 // Scalar operators
 export type ScalarOperators<T> = {

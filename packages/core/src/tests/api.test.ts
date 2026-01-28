@@ -3,6 +3,7 @@ import {
   Backend,
   GroupIntent,
   Leafs,
+  RELATED_KEY,
   SortByDefinition,
 } from "..";
 import { ExecuteGET, ExecutePATCH, ExecutePOST } from "../helpers/backend";
@@ -15,7 +16,7 @@ export interface ErrorResponse {
   message: string;
 }
 
-type GetUsersFn = ExecuteGET<IUser, {}>;
+type GetUsersFn = ExecuteGET<IUser>;
 type GetCategoriesFn = ExecuteGET<ICategory>;
 type CreateCategoryFn = ExecutePOST<ICategory>;
 type UpdateCategoryFn = ExecutePATCH<ICategory>;
@@ -25,9 +26,7 @@ export type DemoAppAPI = {
     GET: {
       RequestParams?: any;
       RequestBody?: any;
-      ResponseBody?:
-        | Backend.InferHandlerResponse<GetUsersFn, {}>
-        | ErrorResponse;
+      ResponseBody?: Backend.InferHandlerResponse<GetUsersFn> | ErrorResponse;
       RequestQuery?: Backend.InferHandlerParams<GetUsersFn>;
     };
   };
@@ -37,7 +36,7 @@ export type DemoAppAPI = {
       RequestParams?: any;
       RequestBody?: any;
       ResponseBody?:
-        | Backend.InferHandlerResponse<GetCategoriesFn, {}>
+        | Backend.InferHandlerResponse<GetCategoriesFn>
         | ErrorResponse;
       RequestQuery?: Backend.InferHandlerParams<GetCategoriesFn>;
     };
@@ -45,7 +44,7 @@ export type DemoAppAPI = {
       RequestParams?: any;
       RequestBody?: any;
       ResponseBody?:
-        | Backend.InferHandlerResponse<CreateCategoryFn, {}>
+        | Backend.InferHandlerResponse<CreateCategoryFn>
         | ErrorResponse;
       RequestQuery?: Backend.InferHandlerParams<CreateCategoryFn>;
     };
@@ -56,7 +55,7 @@ export type DemoAppAPI = {
       RequestParams?: { id: string };
       RequestBody?: any;
       ResponseBody?:
-        | Backend.InferHandlerResponse<UpdateCategoryFn, {}>
+        | Backend.InferHandlerResponse<UpdateCategoryFn>
         | ErrorResponse;
       RequestQuery?: Backend.InferHandlerParams<UpdateCategoryFn>;
     };
@@ -81,13 +80,27 @@ export const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
 export const queryCategories = apiClient("/categories", "GET");
 
 queryCategories({
-  include: ["parentCategory"] as const,
-  rows: { select: ["createdBy", "name"] as const },
-  groups: (g) => ({
-    A: g({
-      by: ["name"],
-      aggregates: [{ as: "total", fn: "$count", on: "_id" }],
-      sortBy: { total: -1 },
+  query: {
+    include: ["createdBy", "parentCategory"],
+    rows: (r) =>
+      r({
+        select: ["createdBy.email", "createdBy.createdAt"],
+      }),
+    groups: (g) => ({
+      A: g({
+        by: ["createdBy.name"],
+        aggregates: [{ as: "distinctNames", fn: "$count", on: "_id" }],
+        limit: 10,
+        sortBy: {
+          distinctNames: -1,
+        },
+      }),
     }),
-  }),
+  },
+}).then((r) => {
+  if (isError(r)) return;
+  r.executor?.groups?.A.map(({ distinctNames, category }) => {
+    const name = category["createdBy.name"];
+    console.log({ distinctNames, name });
+  });
 });

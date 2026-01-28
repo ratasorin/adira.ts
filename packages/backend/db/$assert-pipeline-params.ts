@@ -2,6 +2,7 @@ import {
   AggregateOperation,
   ExecutorQueryParams,
   PickDistinctDefinition,
+  RowIntent,
   SortByDefinition,
   WhereDefinition,
 } from "@n/adira.core.ts";
@@ -53,11 +54,11 @@ export function assertPickDistinctSpec(
 }
 
 export function assertAggregationSpec(
-  v?: AggregateOperation<unknown>[],
-): asserts v is AggregateOperation<unknown>[] {
+  v?: AggregateOperation<unknown, unknown>[],
+): asserts v is AggregateOperation<unknown, unknown>[] {
   if (v === undefined) return;
 
-  assertArray<AggregateOperation<unknown>>(v, (item) => {
+  assertArray<AggregateOperation<unknown, unknown>>(v, (item) => {
     return (
       typeof item?.on === "string" &&
       typeof item?.fn === "string" &&
@@ -123,59 +124,53 @@ function sanitizeFilters(obj: any): any {
   return newObj;
 }
 
+const identity = <T>(t: T) => t;
+
 export function normalizeParams(
   params: ExecutorQueryParams<
+    any,
     any[],
-    any[],
-    any[],
-    AggregateOperation<any>[],
-    WhereDefinition<any>,
-    SortByDefinition<any>,
-    PickDistinctDefinition<any>
+    RowIntent<any[], any, any>,
+    Record<string, any>
   >,
 ) {
-  if (!params || typeof params !== "object")
-    throw new Error("Invalid params: expected an object");
+  assertRecord(params, "params");
 
-  let {
-    include = [],
-    select = [],
-    limit = 20,
-    offset = 0,
-    where,
-    groupBy,
-    aggregates,
-    sortBy,
-    pickDistinct,
-  } = params;
+  // 1. Extract values from the new nested structure
+  const include = params.include || [];
+  const where = sanitizeFilters(params.where || {});
 
-  // Validate arrays
-  assertArray<string>(include, (item) => typeof item === "string", "include");
-  assertArray<string>(select, (item) => typeof item === "string", "select");
-  assertArray<string>(groupBy, (item) => typeof item === "string", "groupBy");
+  // Handle the 'rows' identity function/object
+  const rowData =
+    typeof params.rows === "function"
+      ? params.rows(identity)
+      : ((params.rows || {}) as RowIntent<any[], any, any>);
 
-  // Validate numbers
-  if (typeof limit !== "number" || limit <= 0)
-    throw new Error("Invalid 'limit': must be a positive number");
-  if (typeof offset !== "number" || offset < 0)
-    throw new Error("Invalid 'offset': must be a non-negative number");
+  const select = rowData.select || [];
+  const sortBy = rowData.sortBy || {};
+  const pickDistinct = rowData.pickDistinct;
+  const limit = rowData.limit ?? 50;
+  const offset = rowData.offset ?? 0;
 
-  // Optional objects
-  assertRecord(where, "where");
-  where = sanitizeFilters(where);
-  assertAggregationSpec(aggregates);
+  // Handle the 'groups' identity function/object
+  const groupsRaw =
+    typeof params.groups === "function"
+      ? params.groups(identity)
+      : params.groups || {};
+
+  // Validation
+  assertArray<string>(include, (i) => typeof i === "string", "include");
+  assertArray<string>(select, (i) => typeof i === "string", "select");
   assertSortBy(sortBy);
-  assertPickDistinctSpec(pickDistinct);
 
   return {
     include,
-    select,
-    limit,
-    offset,
     where,
-    aggregates,
-    groupBy,
+    select,
     sortBy,
     pickDistinct,
+    limit,
+    offset,
+    groups: groupsRaw,
   };
 }

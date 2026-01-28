@@ -12,7 +12,7 @@ import {
   SelectableFieldsAfterJoin,
   SortByDefinition,
   ExecutorQueryResponse,
-  ExtractNewFieldsFromAggregates,
+  NewFieldsFromAgg,
 } from "..";
 import { ExtractResBody } from "../helpers/frontend";
 import { ExecuteGET } from "../helpers/backend";
@@ -111,7 +111,7 @@ const sort: SortBy = {
   "friends.friend.baseUser": 1,
 };
 
-type NewFields = ExtractNewFieldsFromAggregates<
+type NewFields = NewFieldsFromAgg<
   [
     {
       readonly on: "updatedAt";

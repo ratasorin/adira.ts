@@ -65,36 +65,43 @@ const generateFilterQuery = (
  */
 const generateGroupQuery = (
   by: string[] | undefined,
-  aggregates: AggregateOperation<any>[] | undefined,
+  aggregates: AggregateOperation<any, any>[] | undefined,
 ): PipelineStage[] => {
-  // If no grouping is requested, return an empty pipeline
   if (!by || by.length === 0) return [];
 
+  // 1. Group Identity (Stay flat in _id for simplicity during aggregation)
+  const groupIdentity: Record<string, string> = {};
+  for (const field of by) {
+    groupIdentity[field] = `$${field}`;
+  }
+
   const groupStage: Record<string, any> = {
-    // 1. Define the Identity (The "group" key)
-    // If multiple fields, create a composite object. If one, use the direct field.
-    _id:
-      by.length > 1
-        ? by.reduce(
-            (acc, field) => {
-              acc[field] = `$${field}`;
-              return acc;
-            },
-            {} as Record<string, string>,
-          )
-        : `$${by[0]}`,
+    _id: groupIdentity,
   };
 
-  // 2. Define the Measures (The Aggregates)
-  // Maps { on, fn, as } -> { [as]: { [fn]: "$on" } }
-  if (aggregates && aggregates.length > 0) {
+  if (aggregates) {
     for (const { on, fn, as } of aggregates) {
-      // Handle $count specifically if needed, otherwise use standard ops
       groupStage[as] = fn === "$count" ? { $sum: 1 } : { [fn]: `$${on}` };
     }
   }
 
-  return [{ $group: groupStage }];
+  // 3. The "Re-inflation" Projection
+  const projection: Record<string, any> = {
+    _id: 0,
+    category: {},
+  };
+
+  for (const field of by) {
+    projection.category[field] = `$_id.${field}`;
+  }
+
+  if (aggregates) {
+    for (const { as } of aggregates) {
+      projection[as] = 1;
+    }
+  }
+
+  return [{ $group: groupStage }, { $project: projection }];
 };
 
 const generateSortQuery = (
@@ -113,12 +120,11 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
     const fn: Backend.ExecuteGET<T> = async (params) => {
       const {
         where,
-        groupBy,
+        groups,
         include,
         limit,
         offset,
         select,
-        aggregates,
         pickDistinct,
         sortBy,
       } = normalizeParams(params);
@@ -139,24 +145,36 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
         { $limit: limit },
       ];
 
-      const hasGrouping = groupBy && groupBy.length > 0;
+      // If groups are provided, we use $facet to run them alongside the main items
+      if (groups && Object.keys(groups).length > 0) {
+        const facetStages: Record<string, any[]> = {
+          items: [
+            ...generateSortQuery(sortBy),
+            generateProjectionQuery(select),
+            { $skip: offset },
+            { $limit: limit },
+          ],
+        };
 
-      if (hasGrouping) {
-        const groupByStage = generateGroupQuery(groupBy, aggregates);
-        const groupPipeline = [
-          ...lookupStages,
-          ...filterStage,
-          ...groupByStage,
-        ];
-        const [groupedResult] = await model.aggregate(groupPipeline);
+        for (const [key, groupIntent] of Object.entries(groups)) {
+          facetStages[key] = [
+            ...generateGroupQuery(groupIntent.by, groupIntent.aggregates),
+            ...generateSortQuery(groupIntent.sortBy),
+            ...(groupIntent.limit ? [{ $limit: groupIntent.limit }] : []),
+          ];
+        }
+
+        const [facetResult] = await model.aggregate([{ $facet: facetStages }]);
+
         return {
-          items: groupedResult,
+          rows: facetResult.items,
+          groups: facetResult,
         };
       } else {
         const [results] = await model.aggregate(itemsPipeline);
         return {
-          items: results,
-        };
+          rows: results,
+        } as any;
       }
     };
     return fn as any;

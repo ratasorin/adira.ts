@@ -5,11 +5,13 @@ import {
   PopulatableKeys,
   PopulateSchema,
   type SchemaAfterJoin,
-  type UnionFromTuple,
+  type TupleToUnion,
   SortByDefinition,
-  ExecutorQueryParams,
   RowIntent,
   GroupIntent,
+  EXECUTOR_KEY,
+  RELATED_KEY,
+  ExecutorQueryParams,
 } from "..";
 import { PickDistinctDefinition } from "..";
 import { AggregateOperation } from "..";
@@ -49,61 +51,55 @@ export type InferRequestBody<Handler> = Handler extends {
 
 export type InferHandlerParams<Handler> = Handler extends {
   __base?: infer Base;
-  __populated?: infer Populated;
 }
   ? ExecutorQueryParams<
+      PopulateSchema<Base>,
       InferInclude<Base>,
-      InferWhere<Populated>,
-      InferSelect<Populated>,
-      InferSort<Populated>,
-      InferPickDistinct<Populated>,
-      InferAggregates<Populated>,
-      Populated
+      InferRows<PopulateSchema<Base>>,
+      InferGroups<PopulateSchema<Base>>
     >
   : {
       error: "Handler is not an executor, check Request's fourth type argument is a InferHandlerParams<ExecutorFn>";
     };
 
-export type InferHandlerResponse<Handler, HandlerExtraWorkReturn> =
-  Handler extends {
-    __populated?: infer P;
-    __base?: infer T;
-  }
-    ? {
-        executor: any;
-        extra?: HandlerExtraWorkReturn;
-      } & {
-        __populated?: P;
-        __base?: T;
-      }
-    : never;
+export type InferHandlerResponse<
+  Handler,
+  HandlerExtraWork = undefined,
+> = Handler extends {
+  __base?: infer T;
+}
+  ? {
+      [EXECUTOR_KEY]: any;
+      [RELATED_KEY]?: HandlerExtraWork;
+      __base?: T;
+    }
+  : never;
 
 export type NormalizeArray<A, T> = A extends never[] ? T : A;
 export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-export type ExecuteGET<T, PSchema = PopulateSchema<T>> = (<
+export type ExecuteGET<T> = (<
   Include extends PopulatableKeys<T>[],
-  ObjectAfterJoin extends SchemaAfterJoin<T, UnionFromTuple<Include>>,
+  ObjectAfterJoin extends SchemaAfterJoin<T, TupleToUnion<Include>>,
   Select extends ExtractSelect<T, Include>,
   SortBy extends SortByDefinition<ObjectAfterJoin>,
   PickDistinct extends PickDistinctDefinition<ObjectAfterJoin>,
-  Aggregates extends AggregateOperation<Leafs<ObjectAfterJoin>[], any, any>[],
->(
-  params: ExecutorQueryParams<
-    Include,
-    WhereDefinition<ObjectAfterJoin>,
-    Select,
-    SortBy,
-    PickDistinct,
-    Aggregates,
-    ObjectAfterJoin
+  Rows extends RowIntent<Select, SortBy, PickDistinct>,
+  Groups extends Record<
+    string,
+    GroupIntent<
+      Leafs<ObjectAfterJoin>[],
+      AggregateOperation<Leafs<ObjectAfterJoin>, string>[],
+      SortByDefinition<Leafs<ObjectAfterJoin>>
+    >
   >,
+>(
+  params: ExecutorQueryParams<ObjectAfterJoin, Include, Rows, Groups>,
 ) => Promise<ExecutorQueryResponse<T, Include, Select, Groups>>) & {
   __base?: T;
-  __populated?: PSchema;
 };
 
-export type ExecutePOST<T, PSchema = PopulateSchema<T>> = (<
+export type ExecutePOST<T> = (<
   NewItem extends Omit<T, "_id">,
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<T, Include>,
@@ -115,10 +111,9 @@ export type ExecutePOST<T, PSchema = PopulateSchema<T>> = (<
   newItem: NewItem,
 ) => Promise<MutationResponse<T, Include, Select>>) & {
   __base?: T;
-  __populated?: PSchema;
   __method?: "POST";
 };
-export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
+export type ExecutePATCH<T> = (<
   NewItem extends Partial<Omit<T, "_id">>,
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<T, Include>,
@@ -134,10 +129,9 @@ export type ExecutePATCH<T, PSchema = PopulateSchema<T>> = (<
   },
 ) => Promise<MutationResponse<T, Include, Select>>) & {
   __base?: T;
-  __populated?: PSchema;
   __method?: "PATCH";
 };
-export type ExecuteDELETE<T, PSchema = PopulateSchema<T>> = (<
+export type ExecuteDELETE<T> = (<
   Include extends NormalizeArray<PopulatableKeys<T>[], string[]>,
   Select extends ExtractSelect<T, Include>,
 >(
@@ -151,7 +145,6 @@ export type ExecuteDELETE<T, PSchema = PopulateSchema<T>> = (<
   },
 ) => Promise<MutationResponse<T, Include, Select>[]>) & {
   __base?: T;
-  __populated?: PSchema;
 };
 export type ExecutorReturnType<T, Method extends METHOD> = Method extends "GET"
   ? ExecuteGET<T>
