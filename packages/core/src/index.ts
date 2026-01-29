@@ -294,13 +294,14 @@ export type SelectableFieldsAfterJoin<
 export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
   // If this field was an ObjectId in the original, after populate it becomes Full
   Base extends RefTo<infer R>
-    ? R | null
+    ? CleanRef<R> | null
     : // Arrays: preserve array, recurse element type
       Base extends readonly (infer U)[]
       ? SchemaAfterJoin<U, IncludeUnion>[]
       : // Plain object: map keys
-        Base extends object
-        ? {
+        Base extends Scalar
+        ? Base
+        : {
             [K in keyof Base]: HasDirectInclude<IncludeUnion, K> extends true
               ? SchemaAfterJoin<Base[K]>
               : // else, if there are subpaths for this key (e.g. "friends.friend"), recurse with just those subpaths
@@ -310,9 +311,8 @@ export type SchemaAfterJoin<Base = {}, IncludeUnion = ""> =
                     Base[K],
                     SubPathsForKey<IncludeUnion, Extract<K, string>>
                   >;
-          }
-        : // primitives: just keep Base
-          Base;
+          };
+
 /**
  * Applies a selection filter (Mask) to a schema, returning only the requested fields.
  * * This utility is the engine behind "Projected" types. It recursively traverses

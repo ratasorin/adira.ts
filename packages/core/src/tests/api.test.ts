@@ -31,6 +31,17 @@ export type DemoAppAPI = {
     };
   };
 
+  "/api/generate/:id": {
+    GET: {
+      RequestParams: { id: string };
+      RequestBody: any;
+      ResponseBody: ArrayBuffer;
+      RequestQuery: {
+        asyncGenToken: string;
+      };
+    };
+  };
+
   "/api/categories": {
     GET: {
       RequestParams?: any;
@@ -79,7 +90,7 @@ export const createApiClient: CreateAxiosApiClient = (baseUrl) => {
 export const apiClient = createApiClient<DemoAppAPI>("http://localhost:3000");
 export const queryCategories = apiClient("/categories", "GET");
 
-queryCategories({
+const { run: runQueryCategories } = queryCategories({
   query: {
     include: ["createdBy", "parentCategory"],
     rows: (r) =>
@@ -97,10 +108,8 @@ queryCategories({
       }),
     }),
   },
-}).then((r) => {
-  if (isError(r)) return;
-  r.executor?.groups?.A.map(({ distinctNames, category }) => {
-    const name = category["createdBy.name"];
-    console.log({ distinctNames, name });
-  });
 });
+
+export const generatePdf = apiClient("/generate/:id", "GET");
+
+const { run: runGeneratePdf } = generatePdf({ query: { asyncGenToken: "" } });

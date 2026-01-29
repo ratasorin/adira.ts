@@ -5,9 +5,9 @@
   "main": "src/index.api.d.ts",
   "types": "src/index.api.d.ts",
   "peerDependencies": {
-    "@n/adira.core.ts": "file://../../packages/core"
+    "@n/adira.core.ts": "*"
   },
   "devDependencies": {
-    "@n/adira.core.ts": "file://../../packages/core"
+    "@n/adira.core.ts": "*"
   }
 }

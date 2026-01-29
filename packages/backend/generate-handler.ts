@@ -72,7 +72,8 @@ const generateGroupQuery = (
   // 1. Group Identity (Stay flat in _id for simplicity during aggregation)
   const groupIdentity: Record<string, string> = {};
   for (const field of by) {
-    groupIdentity[field] = `$${field}`;
+    const safeKey = field.replace(/\./g, "_");
+    groupIdentity[safeKey] = `$${field}`;
   }
 
   const groupStage: Record<string, any> = {
@@ -92,7 +93,8 @@ const generateGroupQuery = (
   };
 
   for (const field of by) {
-    projection.category[field] = `$_id.${field}`;
+    const safeKey = field.replace(/\./g, "_");
+    projection.category[field] = `$_id.${safeKey}`;
   }
 
   if (aggregates) {
@@ -107,11 +109,13 @@ const generateGroupQuery = (
 const generateSortQuery = (
   sort: SortByDefinition<unknown> | undefined,
 ): PipelineStage[] => {
+  console.log({ sort });
   if (sort) {
     const $sort = filterDefined(sort);
     return [{ $sort }];
   } else return [];
 };
+
 export const generateExecutor = <Method extends Backend.METHOD, T>(
   method: Method,
   model: Model<T & Document>,
@@ -148,16 +152,13 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
       // If groups are provided, we use $facet to run them alongside the main items
       if (groups && Object.keys(groups).length > 0) {
         const facetStages: Record<string, any[]> = {
-          items: [
-            ...generateSortQuery(sortBy),
-            generateProjectionQuery(select),
-            { $skip: offset },
-            { $limit: limit },
-          ],
+          items: itemsPipeline,
         };
 
         for (const [key, groupIntent] of Object.entries(groups)) {
           facetStages[key] = [
+            ...lookupStages,
+            ...filterStage,
             ...generateGroupQuery(groupIntent.by, groupIntent.aggregates),
             ...generateSortQuery(groupIntent.sortBy),
             ...(groupIntent.limit ? [{ $limit: groupIntent.limit }] : []),
@@ -165,13 +166,13 @@ export const generateExecutor = <Method extends Backend.METHOD, T>(
         }
 
         const [facetResult] = await model.aggregate([{ $facet: facetStages }]);
-
+        const { items: rows, ..._groups } = facetResult;
         return {
-          rows: facetResult.items,
-          groups: facetResult,
+          rows,
+          groups: _groups,
         };
       } else {
-        const [results] = await model.aggregate(itemsPipeline);
+        const results = await model.aggregate(itemsPipeline);
         return {
           rows: results,
         } as any;

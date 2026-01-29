@@ -1,54 +1,10 @@
 import { ICategory } from "../models/Category";
 import { Backend } from "@n/adira.core.ts";
 import { ErrorResponse } from "../types";
-declare const getCategories: Backend.ExecuteGET<ICategory, {
-    _id: string;
-    name: string;
-    description: string;
-    slug: string;
-    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
-    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt?: Date | undefined;
-}>;
-declare const createCategory: Backend.ExecutePOST<ICategory, {
-    _id: string;
-    name: string;
-    description: string;
-    slug: string;
-    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
-    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt?: Date | undefined;
-}>;
-declare const updateCategory: Backend.ExecutePATCH<ICategory, {
-    _id: string;
-    name: string;
-    description: string;
-    slug: string;
-    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
-    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt?: Date | undefined;
-}>;
-declare const deleteCategory: Backend.ExecuteDELETE<ICategory, {
-    _id: string;
-    name: string;
-    description: string;
-    slug: string;
-    parentCategory: import("@n/adira.core.ts").CleanRef<ICategory> | null;
-    createdBy: import("@n/adira.core.ts").CleanRef<import("../models/User").IUser> | null;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt?: Date | undefined;
-}>;
+declare const getCategories: Backend.ExecuteGET<ICategory>;
+declare const createCategory: Backend.ExecutePOST<ICategory>;
+declare const updateCategory: Backend.ExecutePATCH<ICategory>;
+declare const deleteCategory: Backend.ExecuteDELETE<ICategory>;
 export type GetCategoriesFn = typeof getCategories;
 export type CreateCategoryFn = typeof createCategory;
 export type UpdateCategoryFn = typeof updateCategory;

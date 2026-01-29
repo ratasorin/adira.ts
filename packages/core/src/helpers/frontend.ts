@@ -7,19 +7,25 @@ import {
   TupleToUnion,
   ExecutorQueryParams,
   RowIntent,
+  RowHelper,
 } from "..";
 import { PopulatableKeys } from "..";
 export type HTTPMethod = "GET" | "POST" | "PATCH" | "DELETE";
 export type AllKeys<T> = T extends unknown ? keyof T : never;
-export type APIMethods<API, R extends keyof API> = keyof API[R] & HTTPMethod;
+
+export type EndpointMethods<Endpoint> = keyof Endpoint;
+
+export type APIDefinition = Record<string, Partial<Record<HTTPMethod, any>>>;
 
 type StripAPI<Path extends string> = Path extends `/api${infer Rest}`
   ? Rest & string
   : string;
 
-export type PublicAPIPaths<API> = {
+export type PublicPathMap<API> = {
   [K in keyof API as StripAPI<K & string>]: K;
 };
+
+export type PublicRoute<PathMap> = keyof PathMap & string;
 
 export type ExtractQuery<
   Endpoint,
@@ -89,69 +95,103 @@ export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
   : never;
 
 export type ExtractResBody<
-  Endpoint,
+  Endpoints,
   Method extends HTTPMethod,
-> = Method extends keyof Endpoint
-  ? Endpoint[Method] extends { ResponseBody?: infer RB }
+> = Method extends keyof Endpoints
+  ? Endpoints[Method] extends { ResponseBody?: infer RB }
     ? RB
     : never
   : never;
 
+export type AxiosQueryFunctionParams<Query, Path> = { query: Query } & ([
+  Path,
+] extends [never]
+  ? {}
+  : { path: Path });
+
 export type AxiosApiClientQuery<
-  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
-  Path extends keyof PublicAPIPaths<API> & string,
-  ResponseBody,
-> = <
-  Method extends "GET",
-  BaseQuery extends ExtractQuery<Endpoint, Method>,
-  Base extends ExtractBase<BaseQuery>,
-  const Include extends PopulatableKeys<Base>[],
-  const Full extends SchemaAfterJoin<Base, TupleToUnion<Include>>,
-  const Rows extends RowIntent<string[], any, any>,
-  PathParam extends ExtractReqPath<Endpoint, Method>,
-  const Groups extends Record<string, any> | undefined = undefined,
-  Endpoint extends API[PublicAPIPaths<API>[Path] & keyof API] =
-    API[PublicAPIPaths<API>[Path] & string],
->(
-  params: {
-    query: ExecutorQueryParams<Full, Include, Rows, Groups>;
-  } & ([PathParam] extends [never] ? {} : { path: PathParam }),
-) => Promise<
-  HydrateResponse<ResponseBody, Method, Include, Rows["select"], Groups>
->;
+  API extends APIDefinition,
+  InternalPath extends keyof APIDefinition,
+  Method extends HTTPMethod = "GET",
+  Endpoints = API[InternalPath & keyof API],
+  ResponseBody = ExtractResBody<Endpoints, Method>,
+  Query = ExtractQuery<Endpoints, Method>,
+  Base = ExtractBase<Query>,
+  PathParam = ExtractReqPath<Endpoints, Method>,
+> = [ExtractResponseMetadata<ResponseBody>] extends [never]
+  ? (params: AxiosQueryFunctionParams<Query, PathParam>) => {
+      run: () => Promise<ResponseBody>;
+    }
+  : <
+      const Include extends PopulatableKeys<Base>[],
+      const Full extends SchemaAfterJoin<Base, TupleToUnion<Include>>,
+      const Rows extends RowIntent<string[], any, any>,
+      const Groups extends Record<string, any> | undefined = undefined,
+    >(
+      params: {
+        query: ExecutorQueryParams<Full, Include, Rows, Groups>;
+      } & ([PathParam] extends [never] ? {} : { path: PathParam }),
+    ) => {
+      run: () => Promise<
+        HydrateResponse<ResponseBody, Method, Include, Rows["select"], Groups>
+      >;
+    };
 
 export type AxiosApiClientMutate<
-  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
-  Path extends keyof PublicAPIPaths<API> & string,
+  API extends APIDefinition,
+  InternalPath extends keyof API,
   Method extends "POST" | "PATCH" | "DELETE",
-  ResponseBody,
-> = <
-  Data extends ExtractReqBody<Endpoint, Method>,
-  PathParam extends ExtractReqPath<Endpoint, Method>,
-  PublicPaths extends PublicAPIPaths<API>,
-  Endpoint extends API[keyof API] = API[PublicPaths[Path] & keyof API],
->(
-  data: Data,
-  path?: PathParam,
-) => Promise<HydrateResponse<ResponseBody, Method, [], [], {}>>;
+  Endpoints = API[InternalPath & keyof API],
+  ResponseBody = ExtractResBody<Endpoints, Method>,
+  Data = ExtractReqBody<Endpoints, Method>,
+  PathParam = ExtractReqPath<Endpoints, Method>,
+  Query = ExtractQuery<Endpoints, Method>,
+  Base = ExtractBase<Query>,
+> = [ExtractResponseMetadata<ResponseBody>] extends [never]
+  ? (
+      params: { data: Data } & ([PathParam] extends [never]
+        ? {}
+        : { path: PathParam }),
+    ) => { run: () => Promise<ResponseBody> }
+  : <
+      const Include extends PopulatableKeys<Base>[],
+      const Rows extends RowIntent<string[], any, any>,
+    >(
+      params: {
+        data: Data;
+        // Mutations support 'include' and 'select' for the returned record
+        query?: {
+          include?: Include;
+          rows?: (
+            r: RowHelper<SchemaAfterJoin<Base, TupleToUnion<Include>>>,
+          ) => Rows;
+        };
+      } & ([PathParam] extends [never] ? {} : { path: PathParam }),
+    ) => {
+      run: () => Promise<
+        // Mutations return hydrated records, but usually no groups
+        HydrateResponse<ResponseBody, Method, Include, Rows["select"], {}>
+      >;
+    };
 
-export type CreateAxiosApiClient = <
-  API extends Record<string, Partial<Record<HTTPMethod, any>>>,
->(
+export type CreateAxiosApiClient = <API extends APIDefinition>(
   baseUrl: string,
   __?: API,
 ) => <
-  PublicPaths extends PublicAPIPaths<API>,
-  Path extends keyof PublicPaths & string,
-  Method extends HTTPMethod,
-  ResponseBody extends ExtractResBody<Endpoint, Method>,
-  Endpoint extends API[PublicPaths[Path] & keyof API] = API[PublicPaths[Path] &
-    keyof API],
+  PathsMap extends PublicPathMap<API>,
+  PublicPath extends PublicRoute<PathsMap>,
+  Method extends EndpointMethods<Endpoints>,
+  InternalPath = PathsMap[PublicPath],
+  Endpoints = API[InternalPath & keyof API],
 >(
-  path: Path,
+  path: PublicPath,
   method: Method,
-) => ExtractResponseMetadata<ResponseBody> extends never
-  ? ResponseBody
-  : AxiosApiClientQuery<API, Path, ResponseBody>;
+) => Method extends "GET"
+  ? AxiosApiClientQuery<API, InternalPath & string>
+  : AxiosApiClientMutate<
+      API,
+      InternalPath & string,
+      Exclude<Method & HTTPMethod, "GET">
+    >;
 
 export {};

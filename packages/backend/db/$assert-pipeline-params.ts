@@ -100,9 +100,6 @@ function parseJsonValue(val: any): any {
   return val;
 }
 
-/**
- * Recursively walks the filter object to sanitize regex and dates
- */
 function sanitizeFilters(obj: any): any {
   if (obj === null || obj === undefined) return obj;
 
@@ -147,7 +144,7 @@ export function normalizeParams(
       : ((params.rows || {}) as RowIntent<any[], any, any>);
 
   const select = rowData.select || [];
-  const sortBy = rowData.sortBy || {};
+  const sortBy = rowData.sortBy;
   const pickDistinct = rowData.pickDistinct;
   const limit = rowData.limit ?? 50;
   const offset = rowData.offset ?? 0;
@@ -156,7 +153,7 @@ export function normalizeParams(
   const groupsRaw =
     typeof params.groups === "function"
       ? params.groups(identity)
-      : params.groups || {};
+      : params.groups;
 
   // Validation
   assertArray<string>(include, (i) => typeof i === "string", "include");
