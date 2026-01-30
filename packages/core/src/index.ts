@@ -223,15 +223,16 @@ export type PathsForKey<Q extends any[] = [], K extends string = ""> = Extract<
   `${K}` | `${K}.${string}`
 >;
 
-// Extract only direct matches (e.g., "user")
-export type DirectMatch<Q extends any[] = [], K extends string = ""> = Extract<
-  Q[number],
-  K
->;
+export type QueryMatchKeys<
+  Keys extends any[] = [],
+  Query extends string = "",
+> = Extract<Keys[number], Query>;
 
-// Extract nested matches (e.g., "user.name" → "name")
-export type NestedMatches<Q extends any[] = [], K extends string = ""> =
-  Extract<Q[number], `${K}.${string}`> extends `${K}.${infer Rest}`
+export type NestedQueryMatchKeys<
+  Keys extends any[] = [],
+  Query extends string = "",
+> =
+  Extract<Keys[number], `${Query}.${string}`> extends `${Query}.${infer Rest}`
     ? [Rest]
     : [];
 
@@ -239,25 +240,28 @@ export type NestedMatches<Q extends any[] = [], K extends string = ""> =
  * Builds a nested selection object from a query object
  *
  * @template T - The object type to analyze
- * @template Q - A partial record mapping leaf paths to boolean values
+ * @template Select - A list of keys to keep from the original object
  * @returns A nested object representing the selection
  *
  * @example
  * ```ts
  * type User = { name: string; address: { street: string; city: string } };
- * type Selection = NestedSelection<User, { name: true; "address.street": true }>;
+ * type Selection = NestedSelection<User, ["name", "address.street"]>;
  * // Result: { name: true; address: { street: true } }
  * ```
  */
-export type NestedSelection<T = {}, Q extends any[] = []> = T extends any[]
-  ? NestedSelection<Element<T>, Q>[]
+export type NestedSelection<T = {}, Select extends any[] = []> = T extends any[]
+  ? NestedSelection<Element<T>, Select>[]
   : {
-      [K in keyof T as PathsForKey<Q, K & string> extends never
+      [K in keyof T as PathsForKey<Select, K & string> extends never
         ? never
-        : K]: DirectMatch<Q, K & string> extends never
+        : K]: QueryMatchKeys<Select, K & string> extends never
         ? T[K] extends any[]
-          ? NestedSelection<Element<T[K]>, NestedMatches<Q, K & string>>[]
-          : NestedSelection<T[K], NestedMatches<Q, K & string>>
+          ? NestedSelection<
+              Element<T[K]>,
+              NestedQueryMatchKeys<Select, K & string>
+            >[]
+          : NestedSelection<T[K], NestedQueryMatchKeys<Select, K & string>>
         : T[K];
     };
 
@@ -344,7 +348,7 @@ export type ExtractSelect<
 export type ProjectedShape<
   Base,
   Include extends string,
-  Select extends any[],
+  Select extends string[],
 > = Mask<SchemaAfterJoin<Base, Include>, Select>;
 
 export type RowIntent<Select, SortBy, PickDistinct> = {

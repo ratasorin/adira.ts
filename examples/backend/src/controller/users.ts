@@ -1,13 +1,18 @@
-import { generateExecutor } from "@n/adira.backend.ts";
+import {
+  buildDeleteHandler,
+  buildGetHandler,
+  buildPatchHandler,
+  buildPostHandler,
+} from "@n/adira.backend.ts";
 import User, { IUser } from "../models/User";
 import { Backend } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
 
-const getUsers = generateExecutor<"GET", IUser>("GET", User);
-const createUser = generateExecutor<"POST", IUser>("POST", User);
-const updateUser = generateExecutor<"PATCH", IUser>("PATCH", User);
-const deleteUser = generateExecutor<"DELETE", IUser>("DELETE", User);
+const getUsers = buildGetHandler<IUser>(User);
+const createUser = buildPostHandler<IUser>(User);
+const updateUser = buildPatchHandler<IUser>(User);
+const deleteUser = buildDeleteHandler<IUser>(User);
 
 export type GetUsersFn = typeof getUsers;
 export type CreateUserFn = typeof createUser;
@@ -16,7 +21,7 @@ export type DeleteUserFn = typeof deleteUser;
 
 export const getUsersHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetUsersFn>>,
-  res: Response<Backend.InferHandlerResponse<GetUsersFn, {}> | ErrorResponse>,
+  res: Response<Backend.InferHandlerResponse<GetUsersFn> | ErrorResponse>,
 ) => {
   try {
     const users = await getUsers(req.query);
@@ -36,7 +41,7 @@ export const createUserHandler = async (
     Backend.InferRequestBody<CreateUserFn>,
     Backend.InferHandlerParams<CreateUserFn>
   >,
-  res: Response<Backend.InferHandlerResponse<CreateUserFn, {}> | ErrorResponse>,
+  res: Response<Backend.InferHandlerResponse<CreateUserFn> | ErrorResponse>,
 ) => {
   try {
     const user = await createUser(req.query, req.body);
@@ -56,7 +61,7 @@ export const updateUserHandler = async (
     Backend.InferRequestBody<UpdateUserFn>,
     Backend.InferHandlerParams<UpdateUserFn>
   >,
-  res: Response<Backend.InferHandlerResponse<UpdateUserFn, {}> | ErrorResponse>,
+  res: Response<Backend.InferHandlerResponse<UpdateUserFn> | ErrorResponse>,
 ) => {
   try {
     const { id } = req.params;
@@ -82,7 +87,7 @@ export const deleteUserHandler = async (
     any,
     Backend.InferHandlerParams<DeleteUserFn>
   >,
-  res: Response<Backend.InferHandlerResponse<DeleteUserFn, {}> | ErrorResponse>,
+  res: Response<Backend.InferHandlerResponse<DeleteUserFn> | ErrorResponse>,
 ) => {
   try {
     const user = await deleteUser(req.params.id, req.query, {

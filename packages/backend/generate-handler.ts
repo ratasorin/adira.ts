@@ -76,26 +76,38 @@ const generateGroupQuery = (
     groupIdentity[safeKey] = `$${field}`;
   }
 
-  const groupStage: Record<string, any> = {
-    _id: groupIdentity,
+  const groupStage: PipelineStage.Group = {
+    $group: {
+      _id: groupIdentity,
+      ...aggregates?.reduce(
+        (acc, { on, fn, as }) => ({
+          ...acc,
+          [as]: fn === "$count" ? { $sum: 1 } : { [fn]: `$${on}` },
+        }),
+        {},
+      ),
+    },
   };
 
-  if (aggregates) {
-    for (const { on, fn, as } of aggregates) {
-      groupStage[as] = fn === "$count" ? { $sum: 1 } : { [fn]: `$${on}` };
-    }
-  }
-
-  // 3. The "Re-inflation" Projection
-  const projection: Record<string, any> = {
-    _id: 0,
-    category: {},
-  };
+  let categoryLogic: any = {};
 
   for (const field of by) {
     const safeKey = field.replace(/\./g, "_");
-    projection.category[field] = `$_id.${safeKey}`;
+
+    categoryLogic = {
+      $setField: {
+        field: field,
+        input: categoryLogic,
+        value: `$_id.${safeKey}`,
+      },
+    };
   }
+
+  // 3. The "Re-inflation" Projection
+  const projection: PipelineStage.Project["$project"] = {
+    _id: 0,
+    category: categoryLogic,
+  };
 
   if (aggregates) {
     for (const { as } of aggregates) {
@@ -103,160 +115,163 @@ const generateGroupQuery = (
     }
   }
 
-  return [{ $group: groupStage }, { $project: projection }];
+  const projectStage: PipelineStage.Project = { $project: projection };
+
+  return [groupStage, projectStage];
 };
 
 const generateSortQuery = (
   sort: SortByDefinition<unknown> | undefined,
 ): PipelineStage[] => {
-  console.log({ sort });
   if (sort) {
     const $sort = filterDefined(sort);
     return [{ $sort }];
   } else return [];
 };
 
-export const generateExecutor = <Method extends Backend.METHOD, T>(
-  method: Method,
+export const buildGetHandler = <
+  T = {},
+  V extends PipelineStage.AddFields | undefined = undefined,
+>(
   model: Model<T & Document>,
-): Backend.ExecutorReturnType<T, Method> => {
-  if (method === "GET") {
-    const fn: Backend.ExecuteGET<T> = async (params) => {
-      const {
-        where,
-        groups,
-        include,
-        limit,
-        offset,
-        select,
-        pickDistinct,
-        sortBy,
-      } = normalizeParams(params);
+  v?: V,
+): Backend.ExecuteGET<T> => {
+  return async (params) => {
+    const {
+      where,
+      groups,
+      include,
+      limit,
+      offset,
+      select,
+      pickDistinct,
+      sortBy,
+    } = normalizeParams(params);
 
-      const projectStage = generateProjectionQuery(select);
-      const lookupStages = generateLookupQuery(model, include);
-      const pickDistinctStage = generatePickDistinctQuery(pickDistinct);
-      const filterStage = generateFilterQuery(where);
-      const sortStage = generateSortQuery(sortBy);
+    const projectStage = generateProjectionQuery(select);
+    const lookupStages = generateLookupQuery(model, include);
+    const pickDistinctStage = generatePickDistinctQuery(pickDistinct);
+    const filterStage = generateFilterQuery(where);
+    const sortStage = generateSortQuery(sortBy);
 
-      const itemsPipeline = [
-        ...lookupStages,
-        ...pickDistinctStage,
-        ...filterStage,
-        ...sortStage,
-        projectStage,
-        { $skip: offset },
-        { $limit: limit },
-      ];
+    const itemsPipeline = [
+      ...lookupStages,
+      ...pickDistinctStage,
+      ...filterStage,
+      ...sortStage,
+      projectStage,
+      { $skip: offset },
+      { $limit: limit },
+    ];
 
-      // If groups are provided, we use $facet to run them alongside the main items
-      if (groups && Object.keys(groups).length > 0) {
-        const facetStages: Record<string, any[]> = {
-          items: itemsPipeline,
-        };
+    // If groups are provided, we use $facet to run them alongside the main items
+    if (groups && Object.keys(groups).length > 0) {
+      const facetStages: Record<string, any[]> = {
+        items: itemsPipeline,
+      };
 
-        for (const [key, groupIntent] of Object.entries(groups)) {
-          facetStages[key] = [
-            ...lookupStages,
-            ...filterStage,
-            ...generateGroupQuery(groupIntent.by, groupIntent.aggregates),
-            ...generateSortQuery(groupIntent.sortBy),
-            ...(groupIntent.limit ? [{ $limit: groupIntent.limit }] : []),
-          ];
-        }
-
-        const [facetResult] = await model.aggregate([{ $facet: facetStages }]);
-        const { items: rows, ..._groups } = facetResult;
-        return {
-          rows,
-          groups: _groups,
-        };
-      } else {
-        const results = await model.aggregate(itemsPipeline);
-        return {
-          rows: results,
-        } as any;
-      }
-    };
-    return fn as any;
-  }
-
-  if (method === "POST") {
-    const fn: Backend.ExecutePOST<T> = async (params, newItem) => {
-      const { include, select } = normalizeParams(params);
-
-      const pipeline: PipelineStage[] = [];
-
-      const projectStage = generateProjectionQuery(select);
-      const lookupStages = generateLookupQuery(model, include);
-      pipeline.push(...lookupStages, projectStage);
-
-      const newRecord = await model.create(newItem);
-      pipeline.unshift({ $match: { _id: newRecord._id } });
-
-      const [record] = await model.aggregate(pipeline);
-
-      return record;
-    };
-    return fn as Backend.ExecutorReturnType<T, Method>;
-  }
-
-  if (method === "DELETE") {
-    const fn: Backend.ExecuteDELETE<T> = async (id, params, config) => {
-      const { include, select } = normalizeParams(params);
-
-      const pipeline: PipelineStage[] = [];
-
-      const projectStage = generateProjectionQuery(select);
-      const lookupStages = generateLookupQuery(model, include);
-      pipeline.push(...lookupStages, projectStage);
-
-      // First, get the record to return it
-      pipeline.unshift({ $match: { _id: new mongoose.Types.ObjectId(id) } });
-      const [record] = await model.aggregate(pipeline);
-
-      if (!record) throw new Error(`Record with id ${id} not found!`);
-
-      // Perform the deletion
-      if (config.softDelete) {
-        await config.softDelete();
-      } else {
-        await model.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+      for (const [key, groupIntent] of Object.entries(groups)) {
+        facetStages[key] = [
+          ...lookupStages,
+          ...filterStage,
+          ...generateGroupQuery(groupIntent.by, groupIntent.aggregates),
+          ...generateSortQuery(groupIntent.sortBy),
+          ...(groupIntent.limit ? [{ $limit: groupIntent.limit }] : []),
+        ];
       }
 
-      return [record];
-    };
-    return fn as Backend.ExecutorReturnType<T, Method>;
-  }
+      const [facetResult] = await model.aggregate([{ $facet: facetStages }]);
+      const { items: rows, ..._groups } = facetResult;
+      console.log({ groups: JSON.stringify(_groups) });
+      return {
+        rows,
+        groups: _groups,
+      };
+    } else {
+      const results = await model.aggregate(itemsPipeline);
+      return {
+        rows: results,
+      } as any;
+    }
+  };
+};
 
-  if (method === "PATCH") {
-    const fn: Backend.ExecutePATCH<T> = async (id, params, fields, config) => {
-      const { include, select } = normalizeParams(params);
+export const buildPostHandler = <T>(
+  model: Model<T & Document>,
+): Backend.ExecutePOST<T> => {
+  return async (params, newItem) => {
+    const { include, select } = normalizeParams(params);
 
-      const pipeline: PipelineStage[] = [];
+    const pipeline: PipelineStage[] = [];
 
-      const projectStage = generateProjectionQuery(select);
-      const lookupStages = generateLookupQuery(model, include);
-      pipeline.push(...lookupStages, projectStage);
+    const projectStage = generateProjectionQuery(select);
+    const lookupStages = generateLookupQuery(model, include);
+    pipeline.push(...lookupStages, projectStage);
 
-      const oldRecord = await model.findById(new mongoose.Types.ObjectId(id));
-      if (!oldRecord) throw new Error(`Old: Record with id ${id} not found!`);
+    const newRecord = await model.create(newItem);
+    pipeline.unshift({ $match: { _id: newRecord._id } });
 
-      const newRecord = await model.findByIdAndUpdate(
-        new mongoose.Types.ObjectId(id),
-        fields,
-        { new: config.createNewRecord, runValidators: true },
-      );
+    const [record] = await model.aggregate(pipeline);
 
-      if (!newRecord) throw new Error(`New: Record with id ${id} not found!`);
-      pipeline.unshift({ $match: { _id: newRecord._id } });
+    return record;
+  };
+};
 
-      const [record] = await model.aggregate(pipeline);
+export const buildPatchHandler = <T>(
+  model: Model<T & Document>,
+): Backend.ExecutePATCH<T> => {
+  return async (id, params, fields, config) => {
+    const { include, select } = normalizeParams(params);
 
-      return record;
-    };
-    return fn as Backend.ExecutorReturnType<T, Method>;
-  }
+    const pipeline: PipelineStage[] = [];
 
-  throw new Error(`Unsupported method: ${method}`);
+    const projectStage = generateProjectionQuery(select);
+    const lookupStages = generateLookupQuery(model, include);
+    pipeline.push(...lookupStages, projectStage);
+
+    const oldRecord = await model.findById(new mongoose.Types.ObjectId(id));
+    if (!oldRecord) throw new Error(`Old: Record with id ${id} not found!`);
+
+    const newRecord = await model.findByIdAndUpdate(
+      new mongoose.Types.ObjectId(id),
+      fields,
+      { new: config.createNewRecord, runValidators: true },
+    );
+
+    if (!newRecord) throw new Error(`New: Record with id ${id} not found!`);
+    pipeline.unshift({ $match: { _id: newRecord._id } });
+
+    const [record] = await model.aggregate(pipeline);
+
+    return record;
+  };
+};
+
+export const buildDeleteHandler = <T>(
+  model: Model<T & Document>,
+): Backend.ExecuteDELETE<T> => {
+  return async (id, params, config) => {
+    const { include, select } = normalizeParams(params);
+
+    const pipeline: PipelineStage[] = [];
+
+    const projectStage = generateProjectionQuery(select);
+    const lookupStages = generateLookupQuery(model, include);
+    pipeline.push(...lookupStages, projectStage);
+
+    // First, get the record to return it
+    pipeline.unshift({ $match: { _id: new mongoose.Types.ObjectId(id) } });
+    const [record] = await model.aggregate(pipeline);
+
+    if (!record) throw new Error(`Record with id ${id} not found!`);
+
+    // Perform the deletion
+    if (config.softDelete) {
+      await config.softDelete();
+    } else {
+      await model.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+    }
+
+    return [record];
+  };
 };

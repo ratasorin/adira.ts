@@ -1,16 +1,18 @@
-import { generateExecutor } from "@n/adira.backend.ts";
+import {
+  buildDeleteHandler,
+  buildGetHandler,
+  buildPatchHandler,
+  buildPostHandler,
+} from "@n/adira.backend.ts";
 import Category, { ICategory } from "../models/Category";
 import { Backend } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
 
-const getCategories = generateExecutor<"GET", ICategory>("GET", Category);
-const createCategory = generateExecutor<"POST", ICategory>("POST", Category);
-const updateCategory = generateExecutor<"PATCH", ICategory>("PATCH", Category);
-const deleteCategory = generateExecutor<"DELETE", ICategory>(
-  "DELETE",
-  Category,
-);
+const getCategories = buildGetHandler<ICategory>(Category);
+const createCategory = buildPostHandler<ICategory>(Category);
+const updateCategory = buildPatchHandler<ICategory>(Category);
+const deleteCategory = buildDeleteHandler<ICategory>(Category);
 
 export type GetCategoriesFn = typeof getCategories;
 export type CreateCategoryFn = typeof createCategory;
@@ -19,9 +21,7 @@ export type DeleteCategoryFn = typeof deleteCategory;
 
 export const getCategoriesHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetCategoriesFn>>,
-  res: Response<
-    Backend.InferHandlerResponse<GetCategoriesFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<GetCategoriesFn> | ErrorResponse>,
 ) => {
   try {
     const categories = await getCategories(req.query);
@@ -41,9 +41,7 @@ export const createCategoryHandler = async (
     Backend.InferRequestBody<CreateCategoryFn>,
     Backend.InferHandlerParams<CreateCategoryFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<CreateCategoryFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<CreateCategoryFn> | ErrorResponse>,
 ) => {
   try {
     const category = await createCategory(req.query, req.body);
@@ -63,9 +61,7 @@ export const updateCategoryHandler = async (
     Backend.InferRequestBody<UpdateCategoryFn>,
     Backend.InferHandlerParams<UpdateCategoryFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<UpdateCategoryFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<UpdateCategoryFn> | ErrorResponse>,
 ) => {
   try {
     const { id } = req.params;
@@ -91,9 +87,7 @@ export const deleteCategoryHandler = async (
     any,
     Backend.InferHandlerParams<DeleteCategoryFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<DeleteCategoryFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<DeleteCategoryFn> | ErrorResponse>,
 ) => {
   try {
     const category = await deleteCategory(req.params.id, req.body, {

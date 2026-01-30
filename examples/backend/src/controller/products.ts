@@ -1,13 +1,18 @@
-import { generateExecutor } from "@n/adira.backend.ts";
+import {
+  buildDeleteHandler,
+  buildGetHandler,
+  buildPatchHandler,
+  buildPostHandler,
+} from "@n/adira.backend.ts";
 import Product, { IProduct } from "../models/Product";
 import { Backend } from "@n/adira.core.ts";
 import { Request, Response } from "express";
 import { ErrorResponse } from "../types";
 
-const getProducts = generateExecutor<"GET", IProduct>("GET", Product);
-const createProduct = generateExecutor<"POST", IProduct>("POST", Product);
-const updateProduct = generateExecutor<"PATCH", IProduct>("PATCH", Product);
-const deleteProduct = generateExecutor<"DELETE", IProduct>("DELETE", Product);
+const getProducts = buildGetHandler<IProduct>(Product);
+const createProduct = buildPostHandler<IProduct>(Product);
+const updateProduct = buildPatchHandler<IProduct>(Product);
+const deleteProduct = buildDeleteHandler<IProduct>(Product);
 
 export type GetProductsFn = typeof getProducts;
 export type CreateProductFn = typeof createProduct;
@@ -16,9 +21,7 @@ export type DeleteProductFn = typeof deleteProduct;
 
 export const getProductsHandler = async (
   req: Request<any, any, any, Backend.InferHandlerParams<GetProductsFn>>,
-  res: Response<
-    Backend.InferHandlerResponse<GetProductsFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<GetProductsFn> | ErrorResponse>,
 ) => {
   try {
     const products = await getProducts(req.query);
@@ -38,9 +41,7 @@ export const createProductHandler = async (
     Backend.InferRequestBody<CreateProductFn>,
     Backend.InferHandlerParams<CreateProductFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<CreateProductFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<CreateProductFn> | ErrorResponse>,
 ) => {
   try {
     const product = await createProduct(req.query, req.body);
@@ -60,9 +61,7 @@ export const updateProductHandler = async (
     Backend.InferRequestBody<UpdateProductFn>,
     Backend.InferHandlerParams<UpdateProductFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<UpdateProductFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<UpdateProductFn> | ErrorResponse>,
 ) => {
   try {
     const { id } = req.params;
@@ -88,9 +87,7 @@ export const deleteProductHandler = async (
     any,
     Backend.InferHandlerParams<DeleteProductFn>
   >,
-  res: Response<
-    Backend.InferHandlerResponse<DeleteProductFn, {}> | ErrorResponse
-  >,
+  res: Response<Backend.InferHandlerResponse<DeleteProductFn> | ErrorResponse>,
 ) => {
   try {
     const product = await deleteProduct(req.params.id, req.query, {

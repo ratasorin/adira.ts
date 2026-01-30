@@ -78,7 +78,7 @@ export type InferHandlerResponse<
 export type NormalizeArray<A, T> = A extends never[] ? T : A;
 export type METHOD = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-export type ExecuteGET<T> = (<
+export type ExecuteGET<T, V extends Record<string, unknown> = {}> = (<
   Include extends PopulatableKeys<T>[],
   ObjectAfterJoin extends SchemaAfterJoin<T, TupleToUnion<Include>>,
   Select extends ExtractSelect<T, Include>,
@@ -146,12 +146,3 @@ export type ExecuteDELETE<T> = (<
 ) => Promise<MutationResponse<T, Include, Select>[]>) & {
   __base?: T;
 };
-export type ExecutorReturnType<T, Method extends METHOD> = Method extends "GET"
-  ? ExecuteGET<T>
-  : Method extends "POST"
-    ? ExecutePOST<T>
-    : Method extends "PATCH"
-      ? ExecutePATCH<T>
-      : Method extends "DELETE"
-        ? ExecuteDELETE<T>
-        : never;

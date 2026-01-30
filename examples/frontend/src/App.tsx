@@ -22,9 +22,9 @@ const { run: runQueryCategories } = queryCategories({
           "name",
           "slug",
           "createdAt",
-          "createdBy",
           "isActive",
           "description",
+          "createdBy.name",
         ],
       }),
     groups: (g) => ({
@@ -91,11 +91,15 @@ function App() {
         </a>
       </div>
       <h1>Vite + React</h1>
-
+      {categories.map((c) => (
+        <div>
+          {c.name} - {c.createdBy?.name}
+        </div>
+      ))}
       {groups?.map((g) => {
         return (
           <div>
-            createdBy: {g.category["createdBy.name"]}
+            createdBy: {JSON.stringify(g.category["createdBy.name"])}
             Total: {g.totalIn}
           </div>
         );
