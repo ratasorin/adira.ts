@@ -14,7 +14,7 @@ fi
 domain=${PUBLIC_ORIGIN#https://}
 certbot_image=certbot/certbot:v5.8.0
 mkdir -p /var/www/letsencrypt /etc/letsencrypt /var/lib/letsencrypt
-chmod 0755 /var/www/letsencrypt
+chmod 0755 /var/www /var/www/letsencrypt
 
 # This host is dedicated to Monefy. Keep public traffic outside Docker and
 # never serve authentication or application data over plaintext HTTP.

@@ -87,6 +87,7 @@ else:
         self.assertIn("proxy_pass http://127.0.0.1:8080;", configs[1])
         self.assertIn("proxy_set_header X-Forwarded-Proto https;", configs[1])
         self.assertEqual((self.root / "var/www/letsencrypt").stat().st_mode & 0o777, 0o755)
+        self.assertEqual((self.root / "var/www").stat().st_mode & 0o777, 0o755)
         timer = self.root / "etc/systemd/system/monefy-renew-tls.timer"
         self.assertIn("Persistent=true", timer.read_text())
 
