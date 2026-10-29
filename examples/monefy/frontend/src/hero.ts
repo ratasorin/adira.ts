@@ -5,6 +5,6 @@ const green = {
   800: "#28493c", 900: "#223c32",
 };
 export default heroui({ themes: {
-  light: { colors: { primary: { ...green, DEFAULT: "#3f725c", foreground: "#ffffff" }, focus: "#598c75" } },
-  dark: { colors: { primary: { ...green, DEFAULT: "#83aa97", foreground: "#112219" }, focus: "#83aa97" } },
+  light: { colors: { primary: { ...green, DEFAULT: "#3f725c", foreground: "#ffffff" }, secondary: { ...green, DEFAULT: "#3f725c", foreground: "#ffffff" }, focus: "#598c75" } },
+  dark: { colors: { primary: { ...green, DEFAULT: "#83aa97", foreground: "#112219" }, secondary: { ...green, DEFAULT: "#83aa97", foreground: "#112219" }, focus: "#83aa97" } },
 } });
