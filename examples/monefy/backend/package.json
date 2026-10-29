@@ -1,0 +1,46 @@
+{
+  "name": "@monefy/backend",
+  "private": true,
+  "version": "1.1.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/index.js",
+    "worker": "node dist/src/pdf/worker.js",
+    "seed": "node dist/src/config/seed.js",
+    "types:generate": "node scripts/generate-api.cjs"
+  },
+  "dependencies": {
+    "@n/adira.backend.ts": "*",
+    "@n/adira.core.ts": "*",
+    "amqplib": "^0.10.9",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.3",
+    "nodemailer": "^7.0.10",
+    "pdfmake": "^0.2.20",
+    "redis": "^5.10.0",
+    "zod": "^4.3.0",
+    "express-async-errors": "^3.1.1",
+    "multer": "^2.0.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@n/adira.generator.ts": "*",
+    "@types/amqplib": "^0.10.8",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
+    "@types/nodemailer": "^7.0.0",
+    "@types/pdfmake": "^0.2.12",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "@types/multer": "^2.0.0"
+  }
+}

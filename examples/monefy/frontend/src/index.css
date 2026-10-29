@@ -1,0 +1,239 @@
+@import "tailwindcss";
+@plugin './hero.ts';
+/* Note: You may need to change the path to fit your project structure */
+@source '../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+@plugin "@tailwindcss/container-queries";
+@theme {
+  --color-primary-50: #f4f8f6;
+  --color-primary-100: #e6efea;
+  --color-primary-200: #d0dfd6;
+  --color-primary-300: #aec8ba;
+  --color-primary-400: #83aa97;
+  --color-primary-500: #598c75;
+  --color-primary-600: #3f725c;
+  --color-primary-700: #315b49;
+  --color-primary-800: #28493c;
+  --color-primary-900: #223c32;
+  --color-primary-950: #112219;
+
+  --color-primary: var(--color-primary-500);
+  --color-primary-foreground: #e6efea;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  font-family: "Inter", serif;
+  --hue: 163;
+  --hue2: 43;
+  --fg: hsl(0, 0%, 100%);
+}
+
+svg {
+  transition: stroke-dashoffset 150ms linear 0.1s !important;
+}
+
+:root.light {
+  --shadow-sm: 0 0 2px rgb(0 0 0 / 0.05);
+  --shadow: 0 0 6px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 0 9px rgb(0 0 0 / 0.1), 0 0 3px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 0 15px rgb(0 0 0 / 0.1), 0 0 6px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 0 25px rgb(0 0 0 / 0.1), 0 0 10px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 0 50px rgb(0 0 0 / 0.25);
+
+  --action-hover-opacity: 0.1;
+  --action-selected-opacity: 0.1;
+  --action-disabled-opacity: 0.25;
+  --action-focus-opacity: 0.15;
+  --action-activated-opacity: 0.15;
+
+  --color-action-active: rgba(0, 0, 0, 0.55);
+  --color-action-hover: rgba(0, 0, 0, 0.05);
+  --color-action-selected: rgba(0, 0, 0, 0.1);
+  --color-action-disabled: rgba(0, 0, 0, 0.5);
+  --color-action-disabledBackground: rgba(0, 0, 0, 0.2);
+  --color-action-focus: rgba(0, 0, 0, 0.15);
+
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #ededed;
+  --color-gray-200: #dedede;
+  --color-gray-300: #c8c8c8;
+  --color-gray-400: #adadad;
+  --color-gray-500: #999999;
+  --color-gray-600: #888888;
+  --color-gray-700: #7b7b7b;
+  --color-gray-800: #676767;
+  --color-gray-900: #545454;
+
+  --color-neutral-contrast-text: rgba(0, 0, 0, 0.9);
+  --color-neutral-light: white;
+  --color-neutral-main: white;
+  --color-neutral-dark: #c8c8c8;
+
+  --color-primary-light: #3f725c;
+  --color-primary-main: #315b49;
+  --color-primary-dark: #223c32;
+
+  --color-secondary-light: #f4f8f6;
+  --color-secondary-main: #e6efea;
+  --color-secondary-dark: #d0dfd6;
+  --color-secondary-contrast-text: #223c32;
+
+  --color-error-light: #f44336;
+  --color-error-main: #e53935;
+  --color-error-dark: #d32f2f;
+  --color-error-contrast-text: #ffffff;
+
+  --color-chip-error-text: #d51515;
+  --color-chip-error-background: #ffcdd2;
+
+  --color-warning-light: #ffab32;
+  --color-warning-main: #ff900a;
+  --color-warning-dark: #ff7800;
+  --color-warning-contrast-text: #ffffff;
+
+  --color-chip-warning-text: #ff7800;
+  --color-chip-warning-background: #fff3d3;
+
+  --color-info-light: #4c87e5;
+  --color-info-main: #376bd9;
+  --color-info-dark: #2e57c7;
+  --color-info-contrast-text: #ffffff;
+
+  --color-success-light: #43a047;
+  --color-success-main: #388e3c;
+  --color-success-dark: #1b5e20;
+  --color-success-contrast-text: #ffffff;
+
+  --color-chip-success-text: #1b5e20;
+  --color-chip-success-background: #c8e6c9;
+
+  --color-text-primary: rgba(0, 0, 0, 0.9);
+  --color-text-secondary: rgba(0, 0, 0, 0.55);
+  --color-text-disabled: rgba(0, 0, 0, 0.4);
+
+  --color-divider: rgba(0, 0, 0, 0.12);
+  --color-no-selected-divider: rgba(230, 230, 230);
+
+  --color-background-paper: #ffffff;
+  --color-background-default: #ffffff;
+  --color-background-input: #ffffff;
+
+  --color-primary-contrast-background: #3f725c;
+  --color-primary-system-main: #e6e6e6;
+}
+
+:root.dark {
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
+  --action-hover-opacity: 0.1;
+  --action-selected-opacity: 0.1;
+  --action-disabled-opacity: 0.25;
+  --action-focus-opacity: 0.15;
+  --action-activated-opacity: 0.15;
+
+  --color-action-active: #ffffff;
+  --color-action-hover: rgba(255, 255, 255, 0.05);
+  --color-action-selected: rgba(255, 255, 255, 0.1);
+  --color-action-disabled: rgba(255, 255, 255, 0.5);
+  --color-action-disabledBackground: rgba(255, 255, 255, 0.2);
+  --color-action-focus: rgba(255, 255, 255, 0.15);
+
+  --color-neutral-contrast-text: white;
+  --color-neutral-light: #7b7b7b;
+  --color-neutral-main: #676767;
+  --color-neutral-dark: #464646;
+
+  --color-primary-light: #d0dfd6;
+  --color-primary-main: #aec8ba;
+  --color-primary-dark: #598c75;
+
+  --color-secondary-light: #e6efea;
+  --color-secondary-main: #d0dfd6;
+  --color-secondary-dark: #aec8ba;
+  --color-secondary-contrast-text: #223c32;
+
+  --color-error-light: #ffcdd2;
+  --color-error-main: #ef9a9a;
+  --color-error-dark: #e57373;
+  --color-error-background: #ffcdd2;
+  --color-error-contrast-text: rgba(0, 0, 0, 0.87);
+
+  --color-chip-error-text: #d51515;
+  --color-chip-error-background: #ffcdd2;
+
+  --color-warning-light: #fff3d3;
+  --color-warning-main: #ffe3a5;
+  --color-warning-dark: #ffcd6d;
+  --color-warning-contrast-text: rgba(0, 0, 0, 0.87);
+
+  --color-chip-warning-text: #ff7800;
+  --color-chip-warning-background: #fff3d3;
+
+  --color-info-light: #deeafb;
+  --color-info-main: #c5dcf8;
+  --color-info-dark: #9dc7f3;
+  --color-info-contrast-text: rgba(0, 0, 0, 0.87);
+
+  --color-success-light: #c8e6c9;
+  --color-success-main: #a5d6a7;
+  --color-success-dark: #81c784;
+  --color-success-contrast-text: rgba(0, 0, 0, 0.87);
+
+  --color-chip-success-text: #1b5e20;
+  --color-chip-success-background: #c8e6c9;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-disabled: rgba(255, 255, 255, 0.5);
+
+  --color-divider: rgba(255, 255, 255, 0.12);
+  --color-no-selected-divider: rgba(166, 166, 166);
+
+  --color-background-paper: #222;
+  --color-background-default: #272727;
+  --color-background-input: #3f3f3f;
+
+  --color-primary-contrast-background: #8c8c8c;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(3px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes float-accelerate {
+  0% {
+    transform: translateY(5px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(5px);
+  }
+}
+
+@keyframes float-slow {
+  0% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+  100% {
+    transform: translateY(-2px);
+  }
+}

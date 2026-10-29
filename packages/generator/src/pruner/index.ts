@@ -1,13 +1,18 @@
 import ts from "typescript";
 import fs from "fs";
 import { printSymbols } from "../utils/tests";
+import { DependencyResolver } from "../utils/dependency-resolver";
+import { isCoreReadExecutor } from "../utils/public-read-types";
 
 export class SymbolPruner {
+  private readonly resolver: DependencyResolver;
   constructor(
     private checker: ts.TypeChecker,
     private keepSet: Set<ts.Symbol>,
     private program: ts.Program,
-  ) {}
+  ) {
+    this.resolver = new DependencyResolver(program, []);
+  }
 
   /**
    * Prunes the file in place.
@@ -237,6 +242,20 @@ export class SymbolPruner {
 
         // --- 8. DEEP SANITIZATION: Type References ---
         else if (ts.isTypeReferenceNode(node)) {
+          if (
+            node.typeArguments &&
+            isCoreReadExecutor(node, this.checker, this.resolver)
+          ) {
+            return ts.visitEachChild(
+              factory.updateTypeReferenceNode(
+                node,
+                node.typeName,
+                factory.createNodeArray(node.typeArguments.slice(0, 1)),
+              ),
+              visit,
+              context,
+            );
+          }
           const typeNameText = node.typeName.getText();
           if (
             typeNameText === "Serialize" ||
@@ -259,6 +278,23 @@ export class SymbolPruner {
         // --- 9. NEW: DEEP SANITIZATION: Inline Import Types ---
         // Handles: import("@n/adira").Serialize<T, R>
         else if (ts.isImportTypeNode(node)) {
+          if (
+            node.typeArguments &&
+            isCoreReadExecutor(node, this.checker, this.resolver)
+          ) {
+            return ts.visitEachChild(
+              factory.updateImportTypeNode(
+                node,
+                node.argument,
+                node.attributes,
+                node.qualifier,
+                factory.createNodeArray(node.typeArguments.slice(0, 1)),
+                node.isTypeOf,
+              ),
+              visit,
+              context,
+            );
+          }
           // A. Handle Serialize Unwrapping
           // Check the 'qualifier' (the right hand side: .Serialize)
           const qualifierText = node.qualifier ? node.qualifier.getText() : "";

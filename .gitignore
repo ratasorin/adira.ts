@@ -1,2 +1,6 @@
 node_modules
 dist
+/examples/monefy/**/.env
+/examples/monefy/**/.env.*
+!/examples/monefy/**/.env.example
+/examples/monefy/**/__pycache__/

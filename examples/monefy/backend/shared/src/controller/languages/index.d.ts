@@ -1,0 +1,10 @@
+import type { IInvoiceTemplateTranslation } from "../../models/invoice/TemplateTranslations";
+import { type Json } from "../../types/json";
+import { ErrorResponse } from "../../types";
+import { Backend } from "@n/adira.core.ts";
+export declare const getTemplateTranslations: Backend.ExecuteGET<IInvoiceTemplateTranslation, {}>;
+export declare const createTemplateTranslations: Backend.ExecutePOST<IInvoiceTemplateTranslation>;
+export declare const patchTemplateTranslation: Backend.ExecutePATCH<IInvoiceTemplateTranslation>;
+export type GetTemplateTranslationsFn = typeof getTemplateTranslations;
+export type PatchTemplateTranslationsFn = typeof patchTemplateTranslation;
+export type PostTemplateTranslationsFn = typeof createTemplateTranslations;

@@ -1,0 +1,130 @@
+name: monefy
+x-app-environment: &app-environment
+  NODE_ENV: ${NODE_ENV:-development}
+  MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/monefy}
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://monefy:${RABBITMQ_PASSWORD:-monefy-local}@rabbitmq:5672
+  JWT_SECRET: ${JWT_SECRET:-monefy-local-development-secret-change-before-deployment}
+  PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+  PDF_ARTIFACT_DIR: /data/previews
+  ASSET_DIR: /data/assets
+  PDF_CACHE_SECONDS: ${PDF_CACHE_SECONDS:-86400}
+  PDF_DEVELOPMENT_DELAY: ${PDF_DEVELOPMENT_DELAY:-false}
+  REGISTRATION_EMAIL_DOMAIN: ${REGISTRATION_EMAIL_DOMAIN:-monefy.ro}
+  MAIL_FROM: ${MAIL_FROM:-Monefy <noreply@monefy.ro>}
+  SMTP_HOST: ${SMTP_HOST:-mailpit}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE:-monefy-frontend:local}
+    build:
+      context: ../..
+      dockerfile: examples/monefy/frontend/Dockerfile
+    ports: ["${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:8080"]
+    environment:
+      BACKEND_UPSTREAM: backend:5000
+      NGINX_ENVSUBST_FILTER: BACKEND_UPSTREAM
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
+  backend:
+    image: ${BACKEND_IMAGE:-monefy-backend:local}
+    build:
+      context: ../..
+      dockerfile: examples/monefy/backend/Dockerfile
+    environment: *app-environment
+    volumes: ["previews:/data/previews", "assets:/data/assets"]
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+    init: true
+  pdf-worker:
+    image: ${BACKEND_IMAGE:-monefy-backend:local}
+    command: ["node", "backend/dist/src/pdf/worker.js"]
+    environment: *app-environment
+    volumes: ["previews:/data/previews", "assets:/data/assets"]
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const {createClient}=require('redis');const c=createClient({url:process.env.REDIS_URL});c.connect().then(()=>c.keys('monefy:worker:*')).then(v=>process.exit(v.length?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+  mongo:
+    image: mongo:7.0
+    volumes: ["mongo:/data/db"]
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:7.4-alpine
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory",
+        "256mb",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    volumes: ["redis:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:4.1-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: monefy
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-monefy-local}
+    volumes: ["rabbitmq:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+  mailpit:
+    image: axllent/mailpit:v1.27
+    profiles: ["dev"]
+    ports: ["127.0.0.1:8025:8025"]
+    restart: unless-stopped
+  seed:
+    image: ${BACKEND_IMAGE:-monefy-backend:local}
+    profiles: ["tools"]
+    command: ["node", "backend/dist/src/config/seed.js"]
+    volumes: ["assets:/data/assets"]
+    environment:
+      <<: *app-environment
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-MonefyDemo2026!}
+    depends_on:
+      mongo: { condition: service_healthy }
+    restart: "no"
+volumes:
+  previews:
+  assets:
+  mongo:
+  redis:
+  rabbitmq:
