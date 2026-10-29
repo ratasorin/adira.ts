@@ -9,7 +9,6 @@ import {
   SortByDefinition,
   RowIntent,
   GroupIntent,
-  EXECUTOR_KEY,
   RELATED_KEY,
   ExecutorQueryParams,
 } from "..";
@@ -17,6 +16,7 @@ import { PickDistinctDefinition } from "..";
 import { AggregateOperation } from "..";
 import { WhereDefinition } from "..";
 import { Leafs } from "..";
+import type { ExecutedRead, ReadQuery, ResourceLike } from "../read";
 
 export type InferInclude<Base> = PopulatableKeys<Base>[] & {
   __base?: Base;
@@ -50,29 +50,47 @@ export type InferRequestBody<Handler> = Handler extends {
   : never;
 
 export type InferHandlerParams<Handler> = Handler extends {
-  __base?: infer Base;
+  readonly __resource: infer R extends ResourceLike;
 }
-  ? ExecutorQueryParams<
-      PopulateSchema<Base>,
-      InferInclude<Base>,
-      InferRows<PopulateSchema<Base>>,
-      InferGroups<PopulateSchema<Base>>
-    >
-  : {
-      error: "Handler is not an executor, check Request's fourth type argument is a InferHandlerParams<ExecutorFn>";
-    };
+  ? ReadQuery<R>
+  : Handler extends {
+        __base?: infer Base;
+      }
+    ? ExecutorQueryParams<
+        PopulateSchema<Base>,
+        InferInclude<Base>,
+        InferRows<PopulateSchema<Base>>,
+        InferGroups<PopulateSchema<Base>>
+      >
+    : {
+        error: "Handler is not an executor, check Request's fourth type argument is a InferHandlerParams<ExecutorFn>";
+      };
 
 export type InferHandlerResponse<
   Handler,
   HandlerExtraWork = undefined,
-> = Handler extends {
-  __base?: infer T;
-}
-  ? {
-      [EXECUTOR_KEY]: any;
+> = Handler extends { readonly __resource: infer R extends ResourceLike }
+  ? ExecutedRead<R> & {
       [RELATED_KEY]?: HandlerExtraWork;
-      __base?: T;
+      __resource?: R;
     }
+  : Handler extends {
+        __base?: infer T;
+      }
+    ? HandlerResult<Handler, HandlerExtraWork> & {
+        __base?: T;
+        __related?: HandlerExtraWork;
+      }
+    : never;
+
+type HandlerResult<Handler, Extra> = Handler extends (
+  ...args: never[]
+) => infer Result
+  ? Awaited<Result> extends infer Data
+    ? Data extends readonly unknown[]
+      ? { [K in keyof Data]: Data[K] & { [RELATED_KEY]?: Extra } }
+      : Data & { [RELATED_KEY]?: Extra }
+    : never
   : never;
 
 export type NormalizeArray<A, T> = A extends never[] ? T : A;
@@ -141,7 +159,7 @@ export type ExecuteDELETE<T> = (<
     select?: Select;
   },
   config: {
-    softDelete?: () => any;
+    softDelete?: () => unknown;
   },
 ) => Promise<MutationResponse<T, Include, Select>[]>) & {
   __base?: T;

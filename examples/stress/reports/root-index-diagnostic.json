@@ -1,0 +1,3974 @@
+{
+  "createdAt": "2026-10-21T08:50:20.371Z",
+  "note": "Targeted comparison of the reference backend starting find queries and Adira root native aggregations on identical medium seed/indexes. Reference executionStats excludes later aggregates, JavaScript scoring, and display reads; Adira root cursor statistics exclude foreign lookup and later application work. No hints or index changes.",
+  "metadata": {
+    "profile": "medium",
+    "config": {
+      "tenants": 4,
+      "agents": 200,
+      "accounts": 1500,
+      "products": 2000,
+      "orders": 30000
+    },
+    "counts": {
+      "stress_tenants": 4,
+      "stress_agents": 800,
+      "stress_accounts": 6000,
+      "stress_products": 8000,
+      "stress_orders": 120000,
+      "stress_lines": 480000,
+      "stress_shipments": 90000,
+      "stress_tickets": 36000,
+      "stress_inventory": 16000
+    },
+    "asOf": 1790812800000,
+    "since": 1783036800000,
+    "seededAt": "2026-10-21T08:50:19.726Z",
+    "seedMs": 15719.406896999999,
+    "distribution": "35% of orders belong to five whale accounts per tenant; remaining orders are uniform; four lines/order"
+  },
+  "comparisons": [
+    {
+      "workload": "risk",
+      "collection": "stress_accounts",
+      "indexDefinitions": [
+        {
+          "v": 2,
+          "key": {
+            "_id": 1
+          },
+          "name": "_id_"
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "deletedAt": 1,
+            "region": 1,
+            "name": 1
+          },
+          "name": "tenantId_1_deletedAt_1_region_1_name_1",
+          "background": true
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "deletedAt": 1,
+            "tier": 1,
+            "name": 1
+          },
+          "name": "tenantId_1_deletedAt_1_tier_1_name_1",
+          "background": true
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "managerId": 1
+          },
+          "name": "tenantId_1_managerId_1",
+          "background": true
+        }
+      ],
+      "referenceQuery": {
+        "filter": {
+          "tenantId": "010000000000000000000000",
+          "deletedAt": null,
+          "region": {
+            "$in": [
+              "EU",
+              "NA"
+            ]
+          },
+          "tier": {
+            "$ne": "starter"
+          }
+        },
+        "sort": {
+          "name": 1,
+          "_id": 1
+        }
+      },
+      "adiraSummary": {
+        "indexes": [],
+        "scans": [
+          "COLLSCAN"
+        ],
+        "docs": 6000,
+        "keys": 0,
+        "returned": 486
+      },
+      "referenceSummary": {
+        "indexes": [
+          "tenantId_1_deletedAt_1_region_1_name_1"
+        ],
+        "scans": [],
+        "docs": 730,
+        "keys": 732,
+        "returned": 486
+      },
+      "adiraExplanation": {
+        "explainVersion": "1",
+        "stages": [
+          {
+            "$cursor": {
+              "queryPlanner": {
+                "namespace": "adira_stress_temporary.stress_accounts",
+                "parsedQuery": {
+                  "$and": [
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$tenantId",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": "010000000000000000000000"
+                              }
+                            ]
+                          },
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$deletedAt",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": null
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$in": [
+                              {
+                                "$ifNull": [
+                                  "$region",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": [
+                                  "EU",
+                                  "NA"
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "$not": [
+                              {
+                                "$and": [
+                                  {
+                                    "$eq": [
+                                      {
+                                        "$ifNull": [
+                                          "$tier",
+                                          {
+                                            "$const": null
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "$const": "starter"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "indexFilterSet": false,
+                "queryHash": "25842F88",
+                "planCacheShapeHash": "25842F88",
+                "planCacheKey": "15AC4B1B",
+                "optimizationTimeMillis": 1,
+                "maxIndexedOrSolutionsReached": false,
+                "maxIndexedAndSolutionsReached": false,
+                "maxScansToExplodeReached": false,
+                "prunedSimilarIndexes": false,
+                "winningPlan": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "transformBy": {
+                    "_id": 1,
+                    "creditLimitCents": 1,
+                    "name": 1,
+                    "region": 1,
+                    "tenantId": 1,
+                    "tier": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$in": [
+                                  {
+                                    "$ifNull": [
+                                      "$region",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": [
+                                      "EU",
+                                      "NA"
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "$not": [
+                                  {
+                                    "$and": [
+                                      {
+                                        "$eq": [
+                                          {
+                                            "$ifNull": [
+                                              "$tier",
+                                              {
+                                                "$const": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "$const": "starter"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "direction": "forward"
+                  }
+                },
+                "rejectedPlans": []
+              },
+              "executionStats": {
+                "executionSuccess": true,
+                "nReturned": 486,
+                "executionTimeMillis": 354,
+                "totalKeysExamined": 0,
+                "totalDocsExamined": 6000,
+                "executionStages": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "nReturned": 486,
+                  "executionTimeMillisEstimate": 3,
+                  "works": 6001,
+                  "advanced": 486,
+                  "needTime": 5514,
+                  "needYield": 0,
+                  "saveState": 10,
+                  "restoreState": 9,
+                  "isEOF": 1,
+                  "transformBy": {
+                    "_id": 1,
+                    "creditLimitCents": 1,
+                    "name": 1,
+                    "region": 1,
+                    "tenantId": 1,
+                    "tier": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$in": [
+                                  {
+                                    "$ifNull": [
+                                      "$region",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": [
+                                      "EU",
+                                      "NA"
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "$not": [
+                                  {
+                                    "$and": [
+                                      {
+                                        "$eq": [
+                                          {
+                                            "$ifNull": [
+                                              "$tier",
+                                              {
+                                                "$const": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "$const": "starter"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "nReturned": 486,
+                    "executionTimeMillisEstimate": 3,
+                    "works": 6001,
+                    "advanced": 486,
+                    "needTime": 5514,
+                    "needYield": 0,
+                    "saveState": 10,
+                    "restoreState": 9,
+                    "isEOF": 1,
+                    "direction": "forward",
+                    "docsExamined": 6000
+                  }
+                }
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 7
+          },
+          {
+            "$set": {
+              "id": {
+                "$convert": {
+                  "input": "$_id",
+                  "to": {
+                    "$const": "string"
+                  },
+                  "format": {
+                    "$const": "auto"
+                  }
+                }
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 7
+          },
+          {
+            "$lookup": {
+              "from": "stress_orders",
+              "as": "_finance",
+              "localField": "_id",
+              "foreignField": "accountId",
+              "let": {
+                "tenant": "$tenantId"
+              },
+              "pipeline": [
+                {
+                  "$match": {
+                    "deletedAt": null,
+                    "placedAt": {
+                      "$gte": 1783036800000
+                    },
+                    "status": {
+                      "$in": [
+                        "paid",
+                        "shipped"
+                      ]
+                    },
+                    "$expr": {
+                      "$eq": [
+                        "$tenantId",
+                        "$$tenant"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "$group": {
+                    "_id": null,
+                    "gross": {
+                      "$sum": "$totalCents"
+                    },
+                    "refunded": {
+                      "$sum": "$refundedCents"
+                    },
+                    "count": {
+                      "$sum": 1
+                    }
+                  }
+                }
+              ]
+            },
+            "totalDocsExamined": 2618,
+            "totalKeysExamined": 2618,
+            "collectionScans": 0,
+            "indexesUsed": [
+              "accountId_1_tenantId_1_placedAt_-1__id_1"
+            ],
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 195
+          },
+          {
+            "$lookup": {
+              "from": "stress_lines",
+              "as": "_cost",
+              "localField": "_id",
+              "foreignField": "accountId",
+              "let": {
+                "tenant": "$tenantId"
+              },
+              "pipeline": [
+                {
+                  "$match": {
+                    "deletedAt": null,
+                    "placedAt": {
+                      "$gte": 1783036800000
+                    },
+                    "status": {
+                      "$in": [
+                        "paid",
+                        "shipped"
+                      ]
+                    },
+                    "$expr": {
+                      "$eq": [
+                        "$tenantId",
+                        "$$tenant"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "$group": {
+                    "_id": null,
+                    "cost": {
+                      "$sum": "$costCents"
+                    }
+                  }
+                }
+              ]
+            },
+            "totalDocsExamined": 10472,
+            "totalKeysExamined": 10472,
+            "collectionScans": 0,
+            "indexesUsed": [
+              "accountId_1_tenantId_1_placedAt_-1"
+            ],
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$set": {
+              "grossRevenueCents": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_finance.gross",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              },
+              "refundedCents": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_finance.refunded",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              },
+              "revenueOrderCount": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_finance.count",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              },
+              "costCents": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_cost.cost",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$project": {
+              "_finance": false,
+              "_cost": false,
+              "_id": true
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$set": {
+              "netRevenueCents": {
+                "$add": [
+                  "$grossRevenueCents",
+                  {
+                    "$multiply": [
+                      "$refundedCents",
+                      {
+                        "$const": -1
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$set": {
+              "__adira_pred_0": {
+                "$in": [
+                  {
+                    "$ifNull": [
+                      "$region",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": [
+                      "EU",
+                      "NA"
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$match": {
+              "__adira_pred_0": {
+                "$_internalExprEq": true
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$set": {
+              "__adira_pred_3": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$tier",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": "starter"
+                  }
+                ]
+              }
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$match": {
+              "$and": [
+                {
+                  "__adira_pred_0": {
+                    "$_internalExprEq": true
+                  }
+                },
+                {
+                  "$expr": {
+                    "$and": [
+                      {
+                        "$eq": [
+                          "$__adira_pred_0",
+                          {
+                            "$const": true
+                          }
+                        ]
+                      },
+                      {
+                        "$not": [
+                          {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  "$__adira_pred_3",
+                                  {
+                                    "$const": true
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          },
+          {
+            "$project": {
+              "_id": true,
+              "id": true,
+              "netRevenueCents": true,
+              "creditLimitCents": true,
+              "name": true,
+              "region": true,
+              "grossRevenueCents": true,
+              "refundedCents": true,
+              "costCents": true,
+              "revenueOrderCount": true,
+              "__adira_pred_0": true,
+              "__adira_pred_3": true
+            },
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 354
+          }
+        ],
+        "queryShapeHash": "52A38D9800A3D647274A618F7120A15B38875F7BFE77ABB3E2669DF509C382F3",
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "command": {
+          "aggregate": "stress_accounts",
+          "pipeline": [
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$tenantId",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": "010000000000000000000000"
+                        }
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$deletedAt",
+                            null
+                          ]
+                        },
+                        null
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$in": [
+                            {
+                              "$ifNull": [
+                                "$region",
+                                null
+                              ]
+                            },
+                            {
+                              "$literal": [
+                                "EU",
+                                "NA"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    {
+                                      "$ifNull": [
+                                        "$tier",
+                                        null
+                                      ]
+                                    },
+                                    {
+                                      "$literal": "starter"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "id": {
+                  "$toString": "$_id"
+                }
+              }
+            },
+            {
+              "$lookup": {
+                "from": "stress_orders",
+                "localField": "_id",
+                "foreignField": "accountId",
+                "let": {
+                  "tenant": "$tenantId"
+                },
+                "pipeline": [
+                  {
+                    "$match": {
+                      "deletedAt": null,
+                      "placedAt": {
+                        "$gte": 1783036800000
+                      },
+                      "status": {
+                        "$in": [
+                          "paid",
+                          "shipped"
+                        ]
+                      },
+                      "$expr": {
+                        "$eq": [
+                          "$tenantId",
+                          "$$tenant"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "$group": {
+                      "_id": null,
+                      "gross": {
+                        "$sum": "$totalCents"
+                      },
+                      "refunded": {
+                        "$sum": "$refundedCents"
+                      },
+                      "count": {
+                        "$sum": 1
+                      }
+                    }
+                  }
+                ],
+                "as": "_finance"
+              }
+            },
+            {
+              "$lookup": {
+                "from": "stress_lines",
+                "localField": "_id",
+                "foreignField": "accountId",
+                "let": {
+                  "tenant": "$tenantId"
+                },
+                "pipeline": [
+                  {
+                    "$match": {
+                      "deletedAt": null,
+                      "placedAt": {
+                        "$gte": 1783036800000
+                      },
+                      "status": {
+                        "$in": [
+                          "paid",
+                          "shipped"
+                        ]
+                      },
+                      "$expr": {
+                        "$eq": [
+                          "$tenantId",
+                          "$$tenant"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "$group": {
+                      "_id": null,
+                      "cost": {
+                        "$sum": "$costCents"
+                      }
+                    }
+                  }
+                ],
+                "as": "_cost"
+              }
+            },
+            {
+              "$set": {
+                "grossRevenueCents": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_finance.gross",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                },
+                "refundedCents": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_finance.refunded",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                },
+                "revenueOrderCount": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_finance.count",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                },
+                "costCents": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_cost.cost",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "$unset": [
+                "_finance",
+                "_cost"
+              ]
+            },
+            {
+              "$set": {
+                "netRevenueCents": {
+                  "$add": [
+                    "$grossRevenueCents",
+                    {
+                      "$multiply": [
+                        "$refundedCents",
+                        {
+                          "$literal": -1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_0": {
+                  "$in": [
+                    {
+                      "$ifNull": [
+                        "$region",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": [
+                        "EU",
+                        "NA"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_3": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$tier",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "starter"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                "$__adira_pred_0",
+                                true
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$or": [
+                                {
+                                  "$and": [
+                                    {
+                                      "$literal": true
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$and": [
+                                    {
+                                      "$literal": true
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$not": [
+                                {
+                                  "$and": [
+                                    {
+                                      "$eq": [
+                                        "$__adira_pred_3",
+                                        true
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$project": {
+                "id": 1,
+                "netRevenueCents": 1,
+                "creditLimitCents": 1,
+                "_id": 1,
+                "name": 1,
+                "region": 1,
+                "grossRevenueCents": 1,
+                "refundedCents": 1,
+                "costCents": 1,
+                "revenueOrderCount": 1,
+                "__adira_pred_0": 1,
+                "__adira_pred_3": 1
+              }
+            }
+          ],
+          "cursor": {},
+          "$db": "adira_stress_temporary"
+        },
+        "ok": 1
+      },
+      "referenceExplanation": {
+        "explainVersion": "1",
+        "queryPlanner": {
+          "namespace": "adira_stress_temporary.stress_accounts",
+          "parsedQuery": {
+            "$and": [
+              {
+                "deletedAt": {
+                  "$eq": null
+                }
+              },
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "region": {
+                  "$in": [
+                    "EU",
+                    "NA"
+                  ]
+                }
+              },
+              {
+                "tier": {
+                  "$not": {
+                    "$eq": "starter"
+                  }
+                }
+              }
+            ]
+          },
+          "indexFilterSet": false,
+          "queryHash": "305D320E",
+          "planCacheShapeHash": "305D320E",
+          "planCacheKey": "556D3E2D",
+          "optimizationTimeMillis": 10,
+          "maxIndexedOrSolutionsReached": false,
+          "maxIndexedAndSolutionsReached": false,
+          "maxScansToExplodeReached": false,
+          "prunedSimilarIndexes": false,
+          "winningPlan": {
+            "isCached": false,
+            "stage": "SORT",
+            "sortPattern": {
+              "name": 1,
+              "_id": 1
+            },
+            "memLimit": 104857600,
+            "type": "simple",
+            "inputStage": {
+              "stage": "FETCH",
+              "filter": {
+                "$and": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "tier": {
+                      "$not": {
+                        "$eq": "starter"
+                      }
+                    }
+                  }
+                ]
+              },
+              "inputStage": {
+                "stage": "IXSCAN",
+                "keyPattern": {
+                  "tenantId": 1,
+                  "deletedAt": 1,
+                  "region": 1,
+                  "name": 1
+                },
+                "indexName": "tenantId_1_deletedAt_1_region_1_name_1",
+                "isMultiKey": false,
+                "multiKeyPaths": {
+                  "tenantId": [],
+                  "deletedAt": [],
+                  "region": [],
+                  "name": []
+                },
+                "isUnique": false,
+                "isSparse": false,
+                "isPartial": false,
+                "indexVersion": 2,
+                "direction": "forward",
+                "indexBounds": {
+                  "tenantId": [
+                    "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                  ],
+                  "deletedAt": [
+                    "[null, null]"
+                  ],
+                  "region": [
+                    "[\"EU\", \"EU\"]",
+                    "[\"NA\", \"NA\"]"
+                  ],
+                  "name": [
+                    "[MinKey, MaxKey]"
+                  ]
+                }
+              }
+            }
+          },
+          "rejectedPlans": [
+            {
+              "isCached": false,
+              "stage": "SORT",
+              "sortPattern": {
+                "name": 1,
+                "_id": 1
+              },
+              "memLimit": 104857600,
+              "type": "simple",
+              "inputStage": {
+                "stage": "FETCH",
+                "filter": {
+                  "$and": [
+                    {
+                      "deletedAt": {
+                        "$eq": null
+                      }
+                    },
+                    {
+                      "region": {
+                        "$in": [
+                          "EU",
+                          "NA"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "inputStage": {
+                  "stage": "IXSCAN",
+                  "keyPattern": {
+                    "tenantId": 1,
+                    "deletedAt": 1,
+                    "tier": 1,
+                    "name": 1
+                  },
+                  "indexName": "tenantId_1_deletedAt_1_tier_1_name_1",
+                  "isMultiKey": false,
+                  "multiKeyPaths": {
+                    "tenantId": [],
+                    "deletedAt": [],
+                    "tier": [],
+                    "name": []
+                  },
+                  "isUnique": false,
+                  "isSparse": false,
+                  "isPartial": false,
+                  "indexVersion": 2,
+                  "direction": "forward",
+                  "indexBounds": {
+                    "tenantId": [
+                      "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                    ],
+                    "deletedAt": [
+                      "[null, null]"
+                    ],
+                    "tier": [
+                      "[MinKey, \"starter\")",
+                      "(\"starter\", MaxKey]"
+                    ],
+                    "name": [
+                      "[MinKey, MaxKey]"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "isCached": false,
+              "stage": "SORT",
+              "sortPattern": {
+                "name": 1,
+                "_id": 1
+              },
+              "memLimit": 104857600,
+              "type": "simple",
+              "inputStage": {
+                "stage": "FETCH",
+                "filter": {
+                  "$and": [
+                    {
+                      "tier": {
+                        "$not": {
+                          "$eq": "starter"
+                        }
+                      }
+                    },
+                    {
+                      "deletedAt": {
+                        "$eq": null
+                      }
+                    },
+                    {
+                      "region": {
+                        "$in": [
+                          "EU",
+                          "NA"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "inputStage": {
+                  "stage": "IXSCAN",
+                  "keyPattern": {
+                    "tenantId": 1,
+                    "managerId": 1
+                  },
+                  "indexName": "tenantId_1_managerId_1",
+                  "isMultiKey": false,
+                  "multiKeyPaths": {
+                    "tenantId": [],
+                    "managerId": []
+                  },
+                  "isUnique": false,
+                  "isSparse": false,
+                  "isPartial": false,
+                  "indexVersion": 2,
+                  "direction": "forward",
+                  "indexBounds": {
+                    "tenantId": [
+                      "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                    ],
+                    "managerId": [
+                      "[MinKey, MaxKey]"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "executionStats": {
+          "executionSuccess": true,
+          "nReturned": 486,
+          "executionTimeMillis": 10,
+          "totalKeysExamined": 732,
+          "totalDocsExamined": 730,
+          "executionStages": {
+            "isCached": false,
+            "stage": "SORT",
+            "nReturned": 486,
+            "executionTimeMillisEstimate": 0,
+            "works": 1219,
+            "advanced": 486,
+            "needTime": 732,
+            "needYield": 0,
+            "saveState": 0,
+            "restoreState": 0,
+            "isEOF": 1,
+            "sortPattern": {
+              "name": 1,
+              "_id": 1
+            },
+            "memLimit": 104857600,
+            "type": "simple",
+            "totalDataSizeSorted": 164024,
+            "usedDisk": false,
+            "spills": 0,
+            "spilledRecords": 0,
+            "spilledBytes": 0,
+            "spilledDataStorageSize": 0,
+            "inputStage": {
+              "stage": "FETCH",
+              "filter": {
+                "$and": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "tier": {
+                      "$not": {
+                        "$eq": "starter"
+                      }
+                    }
+                  }
+                ]
+              },
+              "nReturned": 486,
+              "executionTimeMillisEstimate": 0,
+              "works": 732,
+              "advanced": 486,
+              "needTime": 245,
+              "needYield": 0,
+              "saveState": 0,
+              "restoreState": 0,
+              "isEOF": 1,
+              "docsExamined": 730,
+              "alreadyHasObj": 0,
+              "inputStage": {
+                "stage": "IXSCAN",
+                "nReturned": 730,
+                "executionTimeMillisEstimate": 0,
+                "works": 732,
+                "advanced": 730,
+                "needTime": 1,
+                "needYield": 0,
+                "saveState": 0,
+                "restoreState": 0,
+                "isEOF": 1,
+                "keyPattern": {
+                  "tenantId": 1,
+                  "deletedAt": 1,
+                  "region": 1,
+                  "name": 1
+                },
+                "indexName": "tenantId_1_deletedAt_1_region_1_name_1",
+                "isMultiKey": false,
+                "multiKeyPaths": {
+                  "tenantId": [],
+                  "deletedAt": [],
+                  "region": [],
+                  "name": []
+                },
+                "isUnique": false,
+                "isSparse": false,
+                "isPartial": false,
+                "indexVersion": 2,
+                "direction": "forward",
+                "indexBounds": {
+                  "tenantId": [
+                    "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                  ],
+                  "deletedAt": [
+                    "[null, null]"
+                  ],
+                  "region": [
+                    "[\"EU\", \"EU\"]",
+                    "[\"NA\", \"NA\"]"
+                  ],
+                  "name": [
+                    "[MinKey, MaxKey]"
+                  ]
+                },
+                "keysExamined": 732,
+                "seeks": 2,
+                "dupsTested": 0,
+                "dupsDropped": 0
+              }
+            }
+          }
+        },
+        "queryShapeHash": "D01737336063ABA1A73A332DB9DD8B79B2760F2293E816E44A874A85FAC0E0DC",
+        "command": {
+          "find": "stress_accounts",
+          "filter": {
+            "tenantId": "010000000000000000000000",
+            "deletedAt": null,
+            "region": {
+              "$in": [
+                "EU",
+                "NA"
+              ]
+            },
+            "tier": {
+              "$ne": "starter"
+            }
+          },
+          "sort": {
+            "name": 1,
+            "_id": 1
+          },
+          "$db": "adira_stress_temporary"
+        },
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "ok": 1
+      }
+    },
+    {
+      "workload": "orderOps",
+      "collection": "stress_orders",
+      "indexDefinitions": [
+        {
+          "v": 2,
+          "key": {
+            "_id": 1
+          },
+          "name": "_id_"
+        },
+        {
+          "v": 2,
+          "key": {
+            "accountId": 1,
+            "tenantId": 1,
+            "placedAt": -1,
+            "_id": 1
+          },
+          "name": "accountId_1_tenantId_1_placedAt_-1__id_1",
+          "background": true
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "deletedAt": 1,
+            "region": 1,
+            "placedAt": -1
+          },
+          "name": "tenantId_1_deletedAt_1_region_1_placedAt_-1",
+          "background": true
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "managerId": 1,
+            "placedAt": -1
+          },
+          "name": "tenantId_1_managerId_1_placedAt_-1",
+          "background": true
+        }
+      ],
+      "referenceQuery": {
+        "filter": {
+          "tenantId": "010000000000000000000000",
+          "deletedAt": null,
+          "region": "EU",
+          "placedAt": {
+            "$gte": 1788220800000
+          },
+          "status": {
+            "$ne": "cancelled"
+          }
+        }
+      },
+      "adiraSummary": {
+        "indexes": [],
+        "scans": [
+          "COLLSCAN"
+        ],
+        "docs": 120000,
+        "keys": 0,
+        "returned": 668
+      },
+      "referenceSummary": {
+        "indexes": [
+          "tenantId_1_deletedAt_1_region_1_placedAt_-1"
+        ],
+        "scans": [],
+        "docs": 749,
+        "keys": 749,
+        "returned": 668
+      },
+      "adiraExplanation": {
+        "explainVersion": "1",
+        "stages": [
+          {
+            "$cursor": {
+              "queryPlanner": {
+                "namespace": "adira_stress_temporary.stress_orders",
+                "parsedQuery": {
+                  "$and": [
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$tenantId",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": "010000000000000000000000"
+                              }
+                            ]
+                          },
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$deletedAt",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": null
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$region",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": "EU"
+                              }
+                            ]
+                          },
+                          {
+                            "$isNumber": [
+                              "$placedAt"
+                            ]
+                          },
+                          {
+                            "$gte": [
+                              "$placedAt",
+                              {
+                                "$const": 1788220800000
+                              }
+                            ]
+                          },
+                          {
+                            "$not": [
+                              {
+                                "$and": [
+                                  {
+                                    "$eq": [
+                                      {
+                                        "$ifNull": [
+                                          "$status",
+                                          {
+                                            "$const": null
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "$const": "cancelled"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "placedAt": {
+                        "$_internalExprGte": 1788220800000
+                      }
+                    }
+                  ]
+                },
+                "indexFilterSet": false,
+                "queryHash": "A442E5D1",
+                "planCacheShapeHash": "A442E5D1",
+                "planCacheKey": "F81A119B",
+                "optimizationTimeMillis": 0,
+                "maxIndexedOrSolutionsReached": false,
+                "maxIndexedAndSolutionsReached": false,
+                "maxScansToExplodeReached": false,
+                "prunedSimilarIndexes": false,
+                "winningPlan": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "transformBy": {
+                    "_id": 1,
+                    "accountId": 1,
+                    "number": 1,
+                    "placedAt": 1,
+                    "refundedCents": 1,
+                    "region": 1,
+                    "status": 1,
+                    "totalCents": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$region",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "EU"
+                                  }
+                                ]
+                              },
+                              {
+                                "$isNumber": [
+                                  "$placedAt"
+                                ]
+                              },
+                              {
+                                "$gte": [
+                                  "$placedAt",
+                                  {
+                                    "$const": 1788220800000
+                                  }
+                                ]
+                              },
+                              {
+                                "$not": [
+                                  {
+                                    "$and": [
+                                      {
+                                        "$eq": [
+                                          {
+                                            "$ifNull": [
+                                              "$status",
+                                              {
+                                                "$const": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "$const": "cancelled"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "direction": "forward"
+                  }
+                },
+                "rejectedPlans": []
+              },
+              "executionStats": {
+                "executionSuccess": true,
+                "nReturned": 668,
+                "executionTimeMillis": 103,
+                "totalKeysExamined": 0,
+                "totalDocsExamined": 120000,
+                "executionStages": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "nReturned": 668,
+                  "executionTimeMillisEstimate": 79,
+                  "works": 120001,
+                  "advanced": 668,
+                  "needTime": 119332,
+                  "needYield": 0,
+                  "saveState": 11,
+                  "restoreState": 10,
+                  "isEOF": 1,
+                  "transformBy": {
+                    "_id": 1,
+                    "accountId": 1,
+                    "number": 1,
+                    "placedAt": 1,
+                    "refundedCents": 1,
+                    "region": 1,
+                    "status": 1,
+                    "totalCents": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$region",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "EU"
+                                  }
+                                ]
+                              },
+                              {
+                                "$isNumber": [
+                                  "$placedAt"
+                                ]
+                              },
+                              {
+                                "$gte": [
+                                  "$placedAt",
+                                  {
+                                    "$const": 1788220800000
+                                  }
+                                ]
+                              },
+                              {
+                                "$not": [
+                                  {
+                                    "$and": [
+                                      {
+                                        "$eq": [
+                                          {
+                                            "$ifNull": [
+                                              "$status",
+                                              {
+                                                "$const": null
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "$const": "cancelled"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "nReturned": 668,
+                    "executionTimeMillisEstimate": 79,
+                    "works": 120001,
+                    "advanced": 668,
+                    "needTime": 119332,
+                    "needYield": 0,
+                    "saveState": 11,
+                    "restoreState": 10,
+                    "isEOF": 1,
+                    "direction": "forward",
+                    "docsExamined": 120000
+                  }
+                }
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "id": {
+                "$convert": {
+                  "input": "$_id",
+                  "to": {
+                    "$const": "string"
+                  },
+                  "format": {
+                    "$const": "auto"
+                  }
+                }
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "netCents": {
+                "$add": [
+                  "$totalCents",
+                  {
+                    "$multiply": [
+                      "$refundedCents",
+                      {
+                        "$const": -1
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "__adira_pred_0": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$region",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": "EU"
+                  }
+                ]
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$match": {
+              "__adira_pred_0": {
+                "$_internalExprEq": true
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "__adira_pred_1": {
+                "$and": [
+                  {
+                    "$isNumber": [
+                      "$placedAt"
+                    ]
+                  },
+                  {
+                    "$gte": [
+                      "$placedAt",
+                      {
+                        "$const": 1788220800000
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$match": {
+              "__adira_pred_1": {
+                "$_internalExprEq": true
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "__adira_pred_2": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$status",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": "pending"
+                  }
+                ]
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$set": {
+              "__adira_pred_4": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$status",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": "cancelled"
+                  }
+                ]
+              }
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$match": {
+              "$and": [
+                {
+                  "$expr": {
+                    "$and": [
+                      {
+                        "$eq": [
+                          "$__adira_pred_0",
+                          {
+                            "$const": true
+                          }
+                        ]
+                      },
+                      {
+                        "$eq": [
+                          "$__adira_pred_1",
+                          {
+                            "$const": true
+                          }
+                        ]
+                      },
+                      {
+                        "$not": [
+                          {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  "$__adira_pred_4",
+                                  {
+                                    "$const": true
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "__adira_pred_0": {
+                    "$_internalExprEq": true
+                  }
+                },
+                {
+                  "__adira_pred_1": {
+                    "$_internalExprEq": true
+                  }
+                }
+              ]
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          },
+          {
+            "$project": {
+              "_id": true,
+              "id": true,
+              "totalCents": true,
+              "status": true,
+              "placedAt": true,
+              "number": true,
+              "netCents": true,
+              "accountId": true,
+              "__adira_pred_0": true,
+              "__adira_pred_1": true,
+              "__adira_pred_2": true,
+              "__adira_pred_4": true
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 101
+          }
+        ],
+        "queryShapeHash": "40947D1EF2296B446C839D65A5223B3843AB5BC08ADCFD81AA54707783B33750",
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "command": {
+          "aggregate": "stress_orders",
+          "pipeline": [
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$tenantId",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": "010000000000000000000000"
+                        }
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$deletedAt",
+                            null
+                          ]
+                        },
+                        null
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            {
+                              "$ifNull": [
+                                "$region",
+                                null
+                              ]
+                            },
+                            {
+                              "$literal": "EU"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$and": [
+                            {
+                              "$isNumber": "$placedAt"
+                            },
+                            {
+                              "$gte": [
+                                "$placedAt",
+                                {
+                                  "$literal": 1788220800000
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    {
+                                      "$ifNull": [
+                                        "$status",
+                                        null
+                                      ]
+                                    },
+                                    {
+                                      "$literal": "cancelled"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "id": {
+                  "$toString": "$_id"
+                }
+              }
+            },
+            {
+              "$set": {
+                "netCents": {
+                  "$add": [
+                    "$totalCents",
+                    {
+                      "$multiply": [
+                        "$refundedCents",
+                        {
+                          "$literal": -1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_0": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$region",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "EU"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_1": {
+                  "$and": [
+                    {
+                      "$isNumber": "$placedAt"
+                    },
+                    {
+                      "$gte": [
+                        "$placedAt",
+                        {
+                          "$literal": 1788220800000
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_2": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$status",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "pending"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_4": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$status",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "cancelled"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                "$__adira_pred_0",
+                                true
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                "$__adira_pred_1",
+                                true
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$or": [
+                                {
+                                  "$and": [
+                                    {
+                                      "$eq": [
+                                        "$__adira_pred_2",
+                                        true
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$and": [
+                                    {
+                                      "$literal": true
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$not": [
+                                {
+                                  "$and": [
+                                    {
+                                      "$eq": [
+                                        "$__adira_pred_4",
+                                        true
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$project": {
+                "id": 1,
+                "totalCents": 1,
+                "status": 1,
+                "placedAt": 1,
+                "number": 1,
+                "netCents": 1,
+                "accountId": 1,
+                "_id": 1,
+                "__adira_pred_0": 1,
+                "__adira_pred_1": 1,
+                "__adira_pred_2": 1,
+                "__adira_pred_4": 1
+              }
+            }
+          ],
+          "cursor": {},
+          "$db": "adira_stress_temporary"
+        },
+        "ok": 1
+      },
+      "referenceExplanation": {
+        "explainVersion": "1",
+        "queryPlanner": {
+          "namespace": "adira_stress_temporary.stress_orders",
+          "parsedQuery": {
+            "$and": [
+              {
+                "deletedAt": {
+                  "$eq": null
+                }
+              },
+              {
+                "region": {
+                  "$eq": "EU"
+                }
+              },
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "placedAt": {
+                  "$gte": 1788220800000
+                }
+              },
+              {
+                "status": {
+                  "$not": {
+                    "$eq": "cancelled"
+                  }
+                }
+              }
+            ]
+          },
+          "indexFilterSet": false,
+          "queryHash": "2A1D21C3",
+          "planCacheShapeHash": "2A1D21C3",
+          "planCacheKey": "8924868A",
+          "optimizationTimeMillis": 1,
+          "maxIndexedOrSolutionsReached": false,
+          "maxIndexedAndSolutionsReached": false,
+          "maxScansToExplodeReached": false,
+          "prunedSimilarIndexes": false,
+          "winningPlan": {
+            "isCached": false,
+            "stage": "FETCH",
+            "filter": {
+              "$and": [
+                {
+                  "deletedAt": {
+                    "$eq": null
+                  }
+                },
+                {
+                  "status": {
+                    "$not": {
+                      "$eq": "cancelled"
+                    }
+                  }
+                }
+              ]
+            },
+            "inputStage": {
+              "stage": "IXSCAN",
+              "keyPattern": {
+                "tenantId": 1,
+                "deletedAt": 1,
+                "region": 1,
+                "placedAt": -1
+              },
+              "indexName": "tenantId_1_deletedAt_1_region_1_placedAt_-1",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "tenantId": [],
+                "deletedAt": [],
+                "region": [],
+                "placedAt": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "tenantId": [
+                  "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                ],
+                "deletedAt": [
+                  "[null, null]"
+                ],
+                "region": [
+                  "[\"EU\", \"EU\"]"
+                ],
+                "placedAt": [
+                  "[inf, 1788220800000.0]"
+                ]
+              }
+            }
+          },
+          "rejectedPlans": [
+            {
+              "isCached": false,
+              "stage": "FETCH",
+              "filter": {
+                "$and": [
+                  {
+                    "status": {
+                      "$not": {
+                        "$eq": "cancelled"
+                      }
+                    }
+                  },
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "region": {
+                      "$eq": "EU"
+                    }
+                  }
+                ]
+              },
+              "inputStage": {
+                "stage": "IXSCAN",
+                "keyPattern": {
+                  "tenantId": 1,
+                  "managerId": 1,
+                  "placedAt": -1
+                },
+                "indexName": "tenantId_1_managerId_1_placedAt_-1",
+                "isMultiKey": false,
+                "multiKeyPaths": {
+                  "tenantId": [],
+                  "managerId": [],
+                  "placedAt": []
+                },
+                "isUnique": false,
+                "isSparse": false,
+                "isPartial": false,
+                "indexVersion": 2,
+                "direction": "forward",
+                "indexBounds": {
+                  "tenantId": [
+                    "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                  ],
+                  "managerId": [
+                    "[MinKey, MaxKey]"
+                  ],
+                  "placedAt": [
+                    "[inf, 1788220800000.0]"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "executionStats": {
+          "executionSuccess": true,
+          "nReturned": 668,
+          "executionTimeMillis": 3,
+          "totalKeysExamined": 749,
+          "totalDocsExamined": 749,
+          "executionStages": {
+            "isCached": false,
+            "stage": "FETCH",
+            "filter": {
+              "$and": [
+                {
+                  "deletedAt": {
+                    "$eq": null
+                  }
+                },
+                {
+                  "status": {
+                    "$not": {
+                      "$eq": "cancelled"
+                    }
+                  }
+                }
+              ]
+            },
+            "nReturned": 668,
+            "executionTimeMillisEstimate": 0,
+            "works": 750,
+            "advanced": 668,
+            "needTime": 81,
+            "needYield": 0,
+            "saveState": 0,
+            "restoreState": 0,
+            "isEOF": 1,
+            "docsExamined": 749,
+            "alreadyHasObj": 0,
+            "inputStage": {
+              "stage": "IXSCAN",
+              "nReturned": 749,
+              "executionTimeMillisEstimate": 0,
+              "works": 750,
+              "advanced": 749,
+              "needTime": 0,
+              "needYield": 0,
+              "saveState": 0,
+              "restoreState": 0,
+              "isEOF": 1,
+              "keyPattern": {
+                "tenantId": 1,
+                "deletedAt": 1,
+                "region": 1,
+                "placedAt": -1
+              },
+              "indexName": "tenantId_1_deletedAt_1_region_1_placedAt_-1",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "tenantId": [],
+                "deletedAt": [],
+                "region": [],
+                "placedAt": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "tenantId": [
+                  "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                ],
+                "deletedAt": [
+                  "[null, null]"
+                ],
+                "region": [
+                  "[\"EU\", \"EU\"]"
+                ],
+                "placedAt": [
+                  "[inf, 1788220800000.0]"
+                ]
+              },
+              "keysExamined": 749,
+              "seeks": 1,
+              "dupsTested": 0,
+              "dupsDropped": 0
+            }
+          }
+        },
+        "queryShapeHash": "A4D7A05AE2EE8D6C26A3CC3620C59F2A1AC8F0333746A3D04BE68A1964833F56",
+        "command": {
+          "find": "stress_orders",
+          "filter": {
+            "tenantId": "010000000000000000000000",
+            "deletedAt": null,
+            "region": "EU",
+            "placedAt": {
+              "$gte": 1788220800000
+            },
+            "status": {
+              "$ne": "cancelled"
+            }
+          },
+          "$db": "adira_stress_temporary"
+        },
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "ok": 1
+      }
+    },
+    {
+      "workload": "replenishment",
+      "collection": "stress_products",
+      "indexDefinitions": [
+        {
+          "v": 2,
+          "key": {
+            "_id": 1
+          },
+          "name": "_id_"
+        },
+        {
+          "v": 2,
+          "key": {
+            "tenantId": 1,
+            "deletedAt": 1,
+            "category": 1,
+            "active": 1,
+            "sku": 1
+          },
+          "name": "tenantId_1_deletedAt_1_category_1_active_1_sku_1",
+          "background": true
+        }
+      ],
+      "referenceQuery": {
+        "filter": {
+          "tenantId": "010000000000000000000000",
+          "deletedAt": null,
+          "category": "hardware",
+          "active": true
+        }
+      },
+      "adiraSummary": {
+        "indexes": [],
+        "scans": [
+          "COLLSCAN"
+        ],
+        "docs": 8000,
+        "keys": 0,
+        "returned": 356
+      },
+      "referenceSummary": {
+        "indexes": [
+          "tenantId_1_deletedAt_1_category_1_active_1_sku_1"
+        ],
+        "scans": [],
+        "docs": 356,
+        "keys": 356,
+        "returned": 356
+      },
+      "adiraExplanation": {
+        "explainVersion": "1",
+        "stages": [
+          {
+            "$cursor": {
+              "queryPlanner": {
+                "namespace": "adira_stress_temporary.stress_products",
+                "parsedQuery": {
+                  "$and": [
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$tenantId",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": "010000000000000000000000"
+                              }
+                            ]
+                          },
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$deletedAt",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": null
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "$expr": {
+                        "$and": [
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$category",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": "hardware"
+                              }
+                            ]
+                          },
+                          {
+                            "$eq": [
+                              {
+                                "$ifNull": [
+                                  "$active",
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              },
+                              {
+                                "$const": true
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "indexFilterSet": false,
+                "queryHash": "B69B80E8",
+                "planCacheShapeHash": "B69B80E8",
+                "planCacheKey": "84053A7E",
+                "optimizationTimeMillis": 0,
+                "maxIndexedOrSolutionsReached": false,
+                "maxIndexedAndSolutionsReached": false,
+                "maxScansToExplodeReached": false,
+                "prunedSimilarIndexes": false,
+                "winningPlan": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "transformBy": {
+                    "_id": 1,
+                    "active": 1,
+                    "category": 1,
+                    "name": 1,
+                    "sku": 1,
+                    "tenantId": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$category",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "hardware"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$active",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": true
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "direction": "forward"
+                  }
+                },
+                "rejectedPlans": []
+              },
+              "executionStats": {
+                "executionSuccess": true,
+                "nReturned": 356,
+                "executionTimeMillis": 97,
+                "totalKeysExamined": 0,
+                "totalDocsExamined": 8000,
+                "executionStages": {
+                  "isCached": false,
+                  "stage": "PROJECTION_SIMPLE",
+                  "nReturned": 356,
+                  "executionTimeMillisEstimate": 2,
+                  "works": 8001,
+                  "advanced": 356,
+                  "needTime": 7644,
+                  "needYield": 0,
+                  "saveState": 7,
+                  "restoreState": 6,
+                  "isEOF": 1,
+                  "transformBy": {
+                    "_id": 1,
+                    "active": 1,
+                    "category": 1,
+                    "name": 1,
+                    "sku": 1,
+                    "tenantId": 1
+                  },
+                  "inputStage": {
+                    "stage": "COLLSCAN",
+                    "filter": {
+                      "$and": [
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$tenantId",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "010000000000000000000000"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$deletedAt",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": null
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "$expr": {
+                            "$and": [
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$category",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": "hardware"
+                                  }
+                                ]
+                              },
+                              {
+                                "$eq": [
+                                  {
+                                    "$ifNull": [
+                                      "$active",
+                                      {
+                                        "$const": null
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "$const": true
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "nReturned": 356,
+                    "executionTimeMillisEstimate": 2,
+                    "works": 8001,
+                    "advanced": 356,
+                    "needTime": 7644,
+                    "needYield": 0,
+                    "saveState": 7,
+                    "restoreState": 6,
+                    "isEOF": 1,
+                    "direction": "forward",
+                    "docsExamined": 8000
+                  }
+                }
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 3
+          },
+          {
+            "$set": {
+              "id": {
+                "$convert": {
+                  "input": "$_id",
+                  "to": {
+                    "$const": "string"
+                  },
+                  "format": {
+                    "$const": "auto"
+                  }
+                }
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 3
+          },
+          {
+            "$lookup": {
+              "from": "stress_inventory",
+              "as": "_stock",
+              "localField": "_id",
+              "foreignField": "productId",
+              "let": {
+                "tenant": "$tenantId"
+              },
+              "pipeline": [
+                {
+                  "$match": {
+                    "deletedAt": null,
+                    "$expr": {
+                      "$eq": [
+                        "$tenantId",
+                        "$$tenant"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "$group": {
+                    "_id": null,
+                    "onHand": {
+                      "$sum": "$onHand"
+                    },
+                    "reserved": {
+                      "$sum": "$reserved"
+                    }
+                  }
+                }
+              ]
+            },
+            "totalDocsExamined": 712,
+            "totalKeysExamined": 712,
+            "collectionScans": 0,
+            "indexesUsed": [
+              "productId_1_tenantId_1_deletedAt_1_warehouse_1"
+            ],
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$set": {
+              "onHand": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_stock.onHand",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              },
+              "reserved": {
+                "$ifNull": [
+                  {
+                    "$arrayElemAt": [
+                      "$_stock.reserved",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  },
+                  {
+                    "$const": 0
+                  }
+                ]
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$project": {
+              "_stock": false,
+              "_id": true
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$set": {
+              "available": {
+                "$add": [
+                  "$onHand",
+                  {
+                    "$multiply": [
+                      "$reserved",
+                      {
+                        "$const": -1
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$set": {
+              "__adira_pred_0": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$category",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": "hardware"
+                  }
+                ]
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$match": {
+              "__adira_pred_0": {
+                "$_internalExprEq": true
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$set": {
+              "__adira_pred_1": {
+                "$eq": [
+                  {
+                    "$ifNull": [
+                      "$active",
+                      {
+                        "$const": null
+                      }
+                    ]
+                  },
+                  {
+                    "$const": true
+                  }
+                ]
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$match": {
+              "$and": [
+                {
+                  "__adira_pred_1": {
+                    "$_internalExprEq": true
+                  }
+                },
+                {
+                  "$expr": {
+                    "$and": [
+                      {
+                        "$eq": [
+                          "$__adira_pred_0",
+                          {
+                            "$const": true
+                          }
+                        ]
+                      },
+                      {
+                        "$eq": [
+                          "$__adira_pred_1",
+                          {
+                            "$const": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "__adira_pred_0": {
+                    "$_internalExprEq": true
+                  }
+                },
+                {
+                  "__adira_pred_1": {
+                    "$_internalExprEq": true
+                  }
+                }
+              ]
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$set": {
+              "__adira_pred_3": {
+                "$and": [
+                  {
+                    "$isNumber": [
+                      "$available"
+                    ]
+                  },
+                  {
+                    "$lt": [
+                      "$available",
+                      {
+                        "$const": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          },
+          {
+            "$project": {
+              "_id": true,
+              "id": true,
+              "available": true,
+              "name": true,
+              "sku": true,
+              "onHand": true,
+              "reserved": true,
+              "__adira_pred_0": true,
+              "__adira_pred_1": true,
+              "__adira_pred_3": true
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 97
+          }
+        ],
+        "queryShapeHash": "603A2AA8766E81D74AB693C204EAB4FCD2E9D6E1A5547A97C2AB6183DED64FAB",
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "command": {
+          "aggregate": "stress_products",
+          "pipeline": [
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$tenantId",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": "010000000000000000000000"
+                        }
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$deletedAt",
+                            null
+                          ]
+                        },
+                        null
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            {
+                              "$ifNull": [
+                                "$category",
+                                null
+                              ]
+                            },
+                            {
+                              "$literal": "hardware"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            {
+                              "$ifNull": [
+                                "$active",
+                                null
+                              ]
+                            },
+                            {
+                              "$literal": true
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "id": {
+                  "$toString": "$_id"
+                }
+              }
+            },
+            {
+              "$lookup": {
+                "from": "stress_inventory",
+                "localField": "_id",
+                "foreignField": "productId",
+                "let": {
+                  "tenant": "$tenantId"
+                },
+                "pipeline": [
+                  {
+                    "$match": {
+                      "deletedAt": null,
+                      "$expr": {
+                        "$eq": [
+                          "$tenantId",
+                          "$$tenant"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "$group": {
+                      "_id": null,
+                      "onHand": {
+                        "$sum": "$onHand"
+                      },
+                      "reserved": {
+                        "$sum": "$reserved"
+                      }
+                    }
+                  }
+                ],
+                "as": "_stock"
+              }
+            },
+            {
+              "$set": {
+                "onHand": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_stock.onHand",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                },
+                "reserved": {
+                  "$ifNull": [
+                    {
+                      "$arrayElemAt": [
+                        "$_stock.reserved",
+                        0
+                      ]
+                    },
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "$unset": "_stock"
+            },
+            {
+              "$set": {
+                "available": {
+                  "$add": [
+                    "$onHand",
+                    {
+                      "$multiply": [
+                        "$reserved",
+                        {
+                          "$literal": -1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_0": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$category",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "hardware"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_1": {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$active",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": true
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$set": {
+                "__adira_pred_3": {
+                  "$and": [
+                    {
+                      "$isNumber": "$available"
+                    },
+                    {
+                      "$lt": [
+                        "$available",
+                        {
+                          "$literal": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$match": {
+                "$expr": {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                "$__adira_pred_0",
+                                true
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                "$__adira_pred_1",
+                                true
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "$and": [
+                            {
+                              "$or": [
+                                {
+                                  "$and": [
+                                    {
+                                      "$literal": true
+                                    }
+                                  ]
+                                },
+                                {
+                                  "$and": [
+                                    {
+                                      "$eq": [
+                                        "$__adira_pred_3",
+                                        true
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$project": {
+                "id": 1,
+                "available": 1,
+                "_id": 1,
+                "name": 1,
+                "sku": 1,
+                "onHand": 1,
+                "reserved": 1,
+                "__adira_pred_0": 1,
+                "__adira_pred_1": 1,
+                "__adira_pred_3": 1
+              }
+            }
+          ],
+          "cursor": {},
+          "$db": "adira_stress_temporary"
+        },
+        "ok": 1
+      },
+      "referenceExplanation": {
+        "explainVersion": "1",
+        "queryPlanner": {
+          "namespace": "adira_stress_temporary.stress_products",
+          "parsedQuery": {
+            "$and": [
+              {
+                "active": {
+                  "$eq": true
+                }
+              },
+              {
+                "category": {
+                  "$eq": "hardware"
+                }
+              },
+              {
+                "deletedAt": {
+                  "$eq": null
+                }
+              },
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              }
+            ]
+          },
+          "indexFilterSet": false,
+          "queryHash": "CA677C8F",
+          "planCacheShapeHash": "CA677C8F",
+          "planCacheKey": "EFD7224F",
+          "optimizationTimeMillis": 0,
+          "maxIndexedOrSolutionsReached": false,
+          "maxIndexedAndSolutionsReached": false,
+          "maxScansToExplodeReached": false,
+          "prunedSimilarIndexes": false,
+          "winningPlan": {
+            "isCached": false,
+            "stage": "FETCH",
+            "filter": {
+              "deletedAt": {
+                "$eq": null
+              }
+            },
+            "inputStage": {
+              "stage": "IXSCAN",
+              "keyPattern": {
+                "tenantId": 1,
+                "deletedAt": 1,
+                "category": 1,
+                "active": 1,
+                "sku": 1
+              },
+              "indexName": "tenantId_1_deletedAt_1_category_1_active_1_sku_1",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "tenantId": [],
+                "deletedAt": [],
+                "category": [],
+                "active": [],
+                "sku": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "tenantId": [
+                  "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                ],
+                "deletedAt": [
+                  "[null, null]"
+                ],
+                "category": [
+                  "[\"hardware\", \"hardware\"]"
+                ],
+                "active": [
+                  "[true, true]"
+                ],
+                "sku": [
+                  "[MinKey, MaxKey]"
+                ]
+              }
+            }
+          },
+          "rejectedPlans": []
+        },
+        "executionStats": {
+          "executionSuccess": true,
+          "nReturned": 356,
+          "executionTimeMillis": 2,
+          "totalKeysExamined": 356,
+          "totalDocsExamined": 356,
+          "executionStages": {
+            "isCached": false,
+            "stage": "FETCH",
+            "filter": {
+              "deletedAt": {
+                "$eq": null
+              }
+            },
+            "nReturned": 356,
+            "executionTimeMillisEstimate": 0,
+            "works": 357,
+            "advanced": 356,
+            "needTime": 0,
+            "needYield": 0,
+            "saveState": 0,
+            "restoreState": 0,
+            "isEOF": 1,
+            "docsExamined": 356,
+            "alreadyHasObj": 0,
+            "inputStage": {
+              "stage": "IXSCAN",
+              "nReturned": 356,
+              "executionTimeMillisEstimate": 0,
+              "works": 357,
+              "advanced": 356,
+              "needTime": 0,
+              "needYield": 0,
+              "saveState": 0,
+              "restoreState": 0,
+              "isEOF": 1,
+              "keyPattern": {
+                "tenantId": 1,
+                "deletedAt": 1,
+                "category": 1,
+                "active": 1,
+                "sku": 1
+              },
+              "indexName": "tenantId_1_deletedAt_1_category_1_active_1_sku_1",
+              "isMultiKey": false,
+              "multiKeyPaths": {
+                "tenantId": [],
+                "deletedAt": [],
+                "category": [],
+                "active": [],
+                "sku": []
+              },
+              "isUnique": false,
+              "isSparse": false,
+              "isPartial": false,
+              "indexVersion": 2,
+              "direction": "forward",
+              "indexBounds": {
+                "tenantId": [
+                  "[ObjectId('010000000000000000000000'), ObjectId('010000000000000000000000')]"
+                ],
+                "deletedAt": [
+                  "[null, null]"
+                ],
+                "category": [
+                  "[\"hardware\", \"hardware\"]"
+                ],
+                "active": [
+                  "[true, true]"
+                ],
+                "sku": [
+                  "[MinKey, MaxKey]"
+                ]
+              },
+              "keysExamined": 356,
+              "seeks": 1,
+              "dupsTested": 0,
+              "dupsDropped": 0
+            }
+          }
+        },
+        "queryShapeHash": "67CD9B3F03F7EE04E3DC1BDBA4E5FFFC2C9D8DF1BD3C1EE0D2B0D4BD2F3D1502",
+        "command": {
+          "find": "stress_products",
+          "filter": {
+            "tenantId": "010000000000000000000000",
+            "deletedAt": null,
+            "category": "hardware",
+            "active": true
+          },
+          "$db": "adira_stress_temporary"
+        },
+        "serverInfo": {
+          "host": "sorin-HP-EliteBook-745-G6",
+          "port": 40523,
+          "version": "8.2.1",
+          "gitVersion": "3312bdcf28aa65f5930005e21c2cb130f648b8c3"
+        },
+        "serverParameters": {
+          "internalQueryFacetBufferSizeBytes": 104857600,
+          "internalQueryFacetMaxOutputDocSizeBytes": 104857600,
+          "internalLookupStageIntermediateDocumentMaxSizeBytes": 104857600,
+          "internalDocumentSourceGroupMaxMemoryBytes": 104857600,
+          "internalQueryMaxBlockingSortMemoryUsageBytes": 104857600,
+          "internalQueryProhibitBlockingMergeOnMongoS": 0,
+          "internalQueryMaxAddToSetBytes": 104857600,
+          "internalDocumentSourceSetWindowFieldsMaxMemoryBytes": 104857600,
+          "internalQueryFrameworkControl": "trySbeRestricted",
+          "internalQueryPlannerIgnoreIndexWithCollationForRegex": 1
+        },
+        "ok": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+.adira/
+node_modules/
+**/dist/
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.data/
+playwright-report/
+test-results/

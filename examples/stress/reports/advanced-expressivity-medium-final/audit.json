@@ -1,0 +1,307 @@
+{
+  "verifiedSources": [
+    "server/adira.ts",
+    "server/reference.ts",
+    "server/reference-advanced.ts",
+    "server/metrics.ts",
+    "server/native-fields.ts",
+    "server/benchmark.ts",
+    "shared/advanced-workloads.ts",
+    "shared/resources.ts"
+  ],
+  "measuredResponses": 1008,
+  "summaryGroups": 42,
+  "samplesPerGroup": 24,
+  "tenantWorkloadPreflights": 20,
+  "engineComparisons": 22,
+  "expressivityProbes": 5,
+  "commandTotals": {
+    "directory/adira": {
+      "commands": 1,
+      "returned": 40,
+      "callbacks": {}
+    },
+    "directory/reference": {
+      "commands": 1,
+      "returned": 40,
+      "callbacks": {}
+    },
+    "finances/adira": {
+      "commands": 10,
+      "returned": 970,
+      "callbacks": {
+        "revenueBatch": 4,
+        "revenueParents": 486,
+        "costBatch": 1,
+        "costParents": 30,
+        "marginBps": 30
+      }
+    },
+    "finances/reference": {
+      "commands": 6,
+      "returned": 1394,
+      "callbacks": {}
+    },
+    "risk/adira": {
+      "commands": 25,
+      "returned": 2099,
+      "callbacks": {
+        "revenueBatch": 4,
+        "revenueParents": 486,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      }
+    },
+    "risk/reference": {
+      "commands": 10,
+      "returned": 2099,
+      "callbacks": {
+        "riskScore": 486
+      }
+    },
+    "account360/adira": {
+      "commands": 6,
+      "returned": 65,
+      "callbacks": {
+        "revenueBatch": 1,
+        "revenueParents": 12,
+        "exposureBatch": 1,
+        "riskScore": 12,
+        "managerPortfolioBatch": 1,
+        "uniqueManagers": 12,
+        "managerPortfolioParents": 12,
+        "priority": 24,
+        "stockStatus": 94
+      }
+    },
+    "account360/reference": {
+      "commands": 12,
+      "returned": 324,
+      "callbacks": {
+        "riskScore": 12,
+        "stockStatus": 94,
+        "priority": 24
+      }
+    },
+    "orderOps/adira": {
+      "commands": 4,
+      "returned": 708,
+      "callbacks": {
+        "priority": 668,
+        "stockStatus": 78
+      }
+    },
+    "orderOps/reference": {
+      "commands": 6,
+      "returned": 830,
+      "callbacks": {
+        "priority": 688,
+        "stockStatus": 76
+      }
+    },
+    "replenishment/adira": {
+      "commands": 11,
+      "returned": 1093,
+      "callbacks": {
+        "stockBatch": 3,
+        "stockParents": 356,
+        "daysCover": 356,
+        "stockStatus": 50
+      }
+    },
+    "replenishment/reference": {
+      "commands": 7,
+      "returned": 1118,
+      "callbacks": {
+        "daysCover": 356,
+        "stockStatus": 50
+      }
+    },
+    "revenueQuality/adira": {
+      "commands": 22,
+      "returned": 2382,
+      "callbacks": {
+        "revenueBatch": 1,
+        "revenueParents": 20,
+        "costBatch": 1,
+        "costParents": 20,
+        "marginBps": 20,
+        "priority": 15
+      }
+    },
+    "revenueQuality/reference": {
+      "commands": 5,
+      "returned": 960,
+      "callbacks": {
+        "priority": 15
+      }
+    },
+    "fulfillment/adira": {
+      "commands": 52,
+      "returned": 2467,
+      "callbacks": {
+        "priority": 1195,
+        "fulfillmentScore": 1195,
+        "stockStatus": 74
+      }
+    },
+    "fulfillment/adiraBatched": {
+      "commands": 48,
+      "returned": 8364,
+      "callbacks": {
+        "priority": 1195,
+        "shortageBatch": 2,
+        "shortageParents": 1195,
+        "shortageLines": 4780,
+        "shortageDistinctProducts": 2312,
+        "fulfillmentScore": 1195,
+        "stockStatus": 74
+      }
+    },
+    "fulfillment/reference": {
+      "commands": 5,
+      "returned": 9669,
+      "callbacks": {
+        "distinctStockProducts": 1823,
+        "priority": 1195,
+        "fulfillmentScore": 1195,
+        "stockStatus": 37
+      }
+    },
+    "nestedTriage/adira": {
+      "commands": 13,
+      "returned": 49,
+      "callbacks": {
+        "managerPortfolioBatch": 1,
+        "uniqueManagers": 12,
+        "managerPortfolioParents": 12,
+        "priority": 164,
+        "stockStatus": 16
+      }
+    },
+    "nestedTriage/reference": {
+      "commands": 8,
+      "returned": 116,
+      "callbacks": {
+        "distinctStockProducts": 19,
+        "stockStatus": 5
+      }
+    },
+    "portfolioConcentration/adira": {
+      "commands": 15,
+      "returned": 1118,
+      "callbacks": {
+        "revenueBatch": 4,
+        "revenueParents": 486,
+        "managerPortfolioBatch": 4,
+        "uniqueManagers": 138,
+        "managerPortfolioParents": 486
+      }
+    },
+    "portfolioConcentration/reference": {
+      "commands": 5,
+      "returned": 705,
+      "callbacks": {
+        "uniqueManagers": 100,
+        "managerPortfolioParents": 486
+      }
+    }
+  },
+  "rootIndexes": {
+    "directory": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "finances": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "risk": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "account360": {
+      "returned": 365,
+      "keysExamined": 365,
+      "docsExamined": 730,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "orderOps": {
+      "returned": 668,
+      "keysExamined": 749,
+      "docsExamined": 1498,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_placedAt_-1"
+      ]
+    },
+    "replenishment": {
+      "returned": 356,
+      "keysExamined": 356,
+      "docsExamined": 712,
+      "indexes": [
+        "tenantId_1_deletedAt_1_category_1_active_1_sku_1"
+      ]
+    },
+    "revenueQuality": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "fulfillment": {
+      "returned": 1195,
+      "keysExamined": 1342,
+      "docsExamined": 2676,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_placedAt_-1"
+      ]
+    },
+    "nestedTriage": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    },
+    "portfolioConcentration": {
+      "returned": 486,
+      "keysExamined": 733,
+      "docsExamined": 1460,
+      "indexes": [
+        "tenantId_1_deletedAt_1_region_1_name_1"
+      ]
+    }
+  },
+  "validation": {
+    "backendIntegrationTests": 171,
+    "stressIntegrationTests": 27,
+    "backendTypesAndDiagnostics": "passed",
+    "generatedExpressClientTest": "passed",
+    "stressServerFrontendTypesAndVite": "passed"
+  },
+  "postBenchmarkFormatting": {
+    "file": "server/metrics.ts",
+    "measuredSnapshot": "metrics-measured.ts.txt",
+    "measuredSha256": "d52c3a6cf9e51d7b68e91d9d2211809c70029f3c8b76796b42f4aa2ee3b35cf9",
+    "formattedSha256": "893b52a913fee052b47c6a14ae85f62a6ca2bf5a7a54f01ee0baecb47652d628",
+    "typescriptAstUnchanged": true
+  }
+}

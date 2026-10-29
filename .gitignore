@@ -1,2 +1,9 @@
 node_modules
 dist
+examples/stress/results/
+other
+/examples/monefy/**/.env
+/examples/monefy/**/.env.*
+!/examples/monefy/**/.env.example
+/examples/monefy/**/__pycache__/
+*.tsbuildinfo

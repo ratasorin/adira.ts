@@ -27,11 +27,6 @@
       "@n/adira.core.ts": ["../../core/index"]
     }
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "__tests__"]
 }

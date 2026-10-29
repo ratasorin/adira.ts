@@ -1,0 +1,378 @@
+{
+  "sameSettings": true,
+  "sameDigests": true,
+  "sameIndexes": true,
+  "sameBudgetOutcome": true,
+  "timedResponses": 576,
+  "views": [
+    {
+      "view": "directory",
+      "sameRootPipeline": true,
+      "bulkDependencies": {},
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 9.57,
+            "afterMs": 11.97,
+            "changePct": 25.1,
+            "beforeP95": 19.24,
+            "afterP95": 18.93,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 7.3,
+            "mongoAfter": 8.9
+          },
+          "reference": {
+            "beforeMs": 6.74,
+            "afterMs": 6.61,
+            "changePct": -2.0,
+            "beforeP95": 8.91,
+            "afterP95": 7.83,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 3.8,
+            "mongoAfter": 3.8
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 19.1,
+            "afterMs": 18.71,
+            "changePct": -2.1,
+            "beforeP95": 30.89,
+            "afterP95": 25.04,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 12.6,
+            "mongoAfter": 11.5
+          },
+          "reference": {
+            "beforeMs": 10.37,
+            "afterMs": 11.01,
+            "changePct": 6.2,
+            "beforeP95": 13.65,
+            "afterP95": 15.59,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 5.2,
+            "mongoAfter": 6.2
+          }
+        }
+      ]
+    },
+    {
+      "view": "finances",
+      "sameRootPipeline": true,
+      "bulkDependencies": {},
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 176.68,
+            "afterMs": 180.21,
+            "changePct": 2.0,
+            "beforeP95": 194.84,
+            "afterP95": 201.51,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 175.2,
+            "mongoAfter": 177.6
+          },
+          "reference": {
+            "beforeMs": 58.5,
+            "afterMs": 58.13,
+            "changePct": -0.6,
+            "beforeP95": 74.41,
+            "afterP95": 69.27,
+            "commandsBefore": 6,
+            "commandsAfter": 6,
+            "mongoBefore": 66,
+            "mongoAfter": 65
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 217.33,
+            "afterMs": 212.59,
+            "changePct": -2.2,
+            "beforeP95": 422.34,
+            "afterP95": 232.63,
+            "commandsBefore": 1,
+            "commandsAfter": 1,
+            "mongoBefore": 255.5,
+            "mongoAfter": 209.4
+          },
+          "reference": {
+            "beforeMs": 84.26,
+            "afterMs": 91.02,
+            "changePct": 8.0,
+            "beforeP95": 115.14,
+            "afterP95": 136.22,
+            "commandsBefore": 6,
+            "commandsAfter": 6,
+            "mongoBefore": 94,
+            "mongoAfter": 100.8
+          }
+        }
+      ]
+    },
+    {
+      "view": "risk",
+      "sameRootPipeline": true,
+      "bulkDependencies": {
+        "openTicketCount": {
+          "before": "mongodb",
+          "after": "bulk"
+        },
+        "lateShipmentCount": {
+          "before": "mongodb",
+          "after": "bulk"
+        }
+      },
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 735.6,
+            "afterMs": 330.62,
+            "changePct": -55.1,
+            "beforeP95": 832.05,
+            "afterP95": 392.0,
+            "commandsBefore": 18,
+            "commandsAfter": 18,
+            "mongoBefore": 693.8,
+            "mongoAfter": 287.8
+          },
+          "reference": {
+            "beforeMs": 63.44,
+            "afterMs": 65.72,
+            "changePct": 3.6,
+            "beforeP95": 81.73,
+            "afterP95": 75.23,
+            "commandsBefore": 10,
+            "commandsAfter": 10,
+            "mongoBefore": 112.2,
+            "mongoAfter": 116.4
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 890.17,
+            "afterMs": 403.98,
+            "changePct": -54.6,
+            "beforeP95": 946.6,
+            "afterP95": 425.6,
+            "commandsBefore": 18,
+            "commandsAfter": 18,
+            "mongoBefore": 845.3,
+            "mongoAfter": 362.5
+          },
+          "reference": {
+            "beforeMs": 121.81,
+            "afterMs": 103.37,
+            "changePct": -15.1,
+            "beforeP95": 141.56,
+            "afterP95": 180.61,
+            "commandsBefore": 10,
+            "commandsAfter": 10,
+            "mongoBefore": 222.9,
+            "mongoAfter": 191.4
+          }
+        }
+      ]
+    },
+    {
+      "view": "account360",
+      "sameRootPipeline": true,
+      "bulkDependencies": {
+        "openTicketCount": {
+          "before": "mongodb",
+          "after": "bulk"
+        },
+        "lateShipmentCount": {
+          "before": "mongodb",
+          "after": "bulk"
+        }
+      },
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 166.04,
+            "afterMs": 164.15,
+            "changePct": -1.1,
+            "beforeP95": 208.01,
+            "afterP95": 193.16,
+            "commandsBefore": 5,
+            "commandsAfter": 5,
+            "mongoBefore": 161.2,
+            "mongoAfter": 155.8
+          },
+          "reference": {
+            "beforeMs": 30.57,
+            "afterMs": 29.61,
+            "changePct": -3.1,
+            "beforeP95": 39.5,
+            "afterP95": 37.39,
+            "commandsBefore": 12,
+            "commandsAfter": 12,
+            "mongoBefore": 60,
+            "mongoAfter": 66.8
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 195.36,
+            "afterMs": 228.81,
+            "changePct": 17.1,
+            "beforeP95": 211.8,
+            "afterP95": 293.97,
+            "commandsBefore": 5,
+            "commandsAfter": 5,
+            "mongoBefore": 176.5,
+            "mongoAfter": 215.7
+          },
+          "reference": {
+            "beforeMs": 67.04,
+            "afterMs": 65.87,
+            "changePct": -1.7,
+            "beforeP95": 86.91,
+            "afterP95": 89.75,
+            "commandsBefore": 12,
+            "commandsAfter": 12,
+            "mongoBefore": 133,
+            "mongoAfter": 133.1
+          }
+        }
+      ]
+    },
+    {
+      "view": "orderOps",
+      "sameRootPipeline": true,
+      "bulkDependencies": {},
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 132.12,
+            "afterMs": 119.85,
+            "changePct": -9.3,
+            "beforeP95": 155.33,
+            "afterP95": 134.92,
+            "commandsBefore": 4,
+            "commandsAfter": 4,
+            "mongoBefore": 98.8,
+            "mongoAfter": 94.8
+          },
+          "reference": {
+            "beforeMs": 24.3,
+            "afterMs": 24.18,
+            "changePct": -0.5,
+            "beforeP95": 35.59,
+            "afterP95": 25.82,
+            "commandsBefore": 6,
+            "commandsAfter": 6,
+            "mongoBefore": 17.2,
+            "mongoAfter": 16.2
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 155.01,
+            "afterMs": 185.25,
+            "changePct": 19.5,
+            "beforeP95": 216.54,
+            "afterP95": 196.99,
+            "commandsBefore": 4,
+            "commandsAfter": 4,
+            "mongoBefore": 135.2,
+            "mongoAfter": 149.9
+          },
+          "reference": {
+            "beforeMs": 63.73,
+            "afterMs": 69.09,
+            "changePct": 8.4,
+            "beforeP95": 66.85,
+            "afterP95": 75.27,
+            "commandsBefore": 6,
+            "commandsAfter": 6,
+            "mongoBefore": 60.5,
+            "mongoAfter": 65.3
+          }
+        }
+      ]
+    },
+    {
+      "view": "replenishment",
+      "sameRootPipeline": true,
+      "bulkDependencies": {
+        "unitsSold": {
+          "before": "mongodb",
+          "after": "bulk"
+        },
+        "warehouseCount": {
+          "before": "mongodb",
+          "after": "bulk"
+        }
+      },
+      "latency": [
+        {
+          "concurrency": 1,
+          "adira": {
+            "beforeMs": 509.34,
+            "afterMs": 202.22,
+            "changePct": -60.3,
+            "beforeP95": 619.14,
+            "afterP95": 350.53,
+            "commandsBefore": 11,
+            "commandsAfter": 11,
+            "mongoBefore": 519.2,
+            "mongoAfter": 185
+          },
+          "reference": {
+            "beforeMs": 43.8,
+            "afterMs": 42.42,
+            "changePct": -3.2,
+            "beforeP95": 52.49,
+            "afterP95": 61.47,
+            "commandsBefore": 7,
+            "commandsAfter": 7,
+            "mongoBefore": 44.6,
+            "mongoAfter": 45.7
+          }
+        },
+        {
+          "concurrency": 4,
+          "adira": {
+            "beforeMs": 617.04,
+            "afterMs": 258.38,
+            "changePct": -58.1,
+            "beforeP95": 651.44,
+            "afterP95": 281.88,
+            "commandsBefore": 11,
+            "commandsAfter": 11,
+            "mongoBefore": 591,
+            "mongoAfter": 234.4
+          },
+          "reference": {
+            "beforeMs": 61.26,
+            "afterMs": 62.21,
+            "changePct": 1.5,
+            "beforeP95": 98.76,
+            "afterP95": 90.41,
+            "commandsBefore": 7,
+            "commandsAfter": 7,
+            "mongoBefore": 66.4,
+            "mongoAfter": 65.3
+          }
+        }
+      ]
+    }
+  ]
+}

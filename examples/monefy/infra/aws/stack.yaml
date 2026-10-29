@@ -1,0 +1,288 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Monefy demo on one EC2 host with nginx HTTPS, durable data, ECR and GitHub OIDC deployment access; no load balancer.
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    ref: [{ at: README.md, has: demo architecture and DNS/TLS lifecycle }]
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: One public subnet with an internet-gateway route in the selected VPC.
+  SshKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Imported public key; keep the private key on the administrator's machine.
+  AdminCidr:
+    Type: String
+    AllowedPattern: "([0-9]{1,3}\\.){3}[0-9]{1,3}/32"
+    Description: Administrator public IPv4 address with /32; SSH is restricted to this address.
+  RootVolumeGiB:
+    Type: Number
+    Default: 16
+    MinValue: 16
+  DataVolumeGiB:
+    Type: Number
+    Default: 20
+    MinValue: 20
+  TlsEmail:
+    Type: String
+    AllowedPattern: "[^\\s@]+@[^\\s@]+\\.[^\\s@]+"
+    Description: Email for the Let's Encrypt certificate account.
+  PublicOrigin:
+    Type: String
+    Default: https://monefy.thood.ro
+    AllowedPattern: "https://[a-z0-9]+([.-][a-z0-9]+)*\\.[a-z]{2,}"
+    Description: HTTPS application origin matching the public DNS record; no port or path.
+  GitHubRepository:
+    Type: String
+    AllowedPattern: "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+    Description: GitHub owner/repository.
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ""
+    Description: Reuse the account GitHub OIDC provider if one already exists.
+  InstanceType:
+    Type: String
+    Default: t3.small
+  LatestAmi:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+Conditions:
+  CreateOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, ""]
+Resources:
+  FrontendRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AWS::StackName}-frontend"
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration: { ScanOnPush: true }
+      EncryptionConfiguration: { EncryptionType: AES256 }
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub "${AWS::StackName}-backend"
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration: { ScanOnPush: true }
+      EncryptionConfiguration: { EncryptionType: AES256 }
+  ReleaseBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration: { Status: Enabled }
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldReleases
+            Status: Enabled
+            ExpirationInDays: 90
+            NoncurrentVersionExpiration: { NoncurrentDays: 30 }
+  ReleaseBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReleaseBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource: [!GetAtt ReleaseBucket.Arn, !Sub "${ReleaseBucket.Arn}/*"]
+            Condition: { Bool: { "aws:SecureTransport": "false" } }
+  HostSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: dedicated demo web ingress; nginx replaces ALB TLS termination
+        must: [Only host uses this group; public web ports only; SSH restricted to administrator /32]
+    Properties:
+      GroupDescription: Public nginx HTTP/HTTPS and administrator-only SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: !Ref AdminCidr }
+  HostRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: SSM administration and release/image reads; secrets are provisioned in a private host file
+        must: [Keep release reads scoped to the artifact bucket; do not grant secret-store access]
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Policies:
+        - PolicyName: ApplicationConfiguration
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${ReleaseBucket.Arn}/releases/*"
+  HostProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref HostRole] }
+  Host:
+    Type: AWS::EC2::Instance
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: one demo host; nginx terminates TLS and proxies to loopback Docker port
+        must: [Keep Docker web binding on loopback; keep IMDSv2 required; DNS must follow public IP after stop/start]
+    Properties:
+      ImageId: !Ref LatestAmi
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref SshKeyName
+      CreditSpecification: { CPUCredits: standard }
+      IamInstanceProfile: !Ref HostProfile
+      MetadataOptions: { HttpTokens: required, HttpPutResponseHopLimit: 1 }
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnet
+          GroupSet: [!Ref HostSecurityGroup]
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: !Ref RootVolumeGiB, VolumeType: gp3, Encrypted: true }
+      Tags: [{ Key: Name, Value: !Sub "${AWS::StackName}-host" }]
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -euo pipefail
+          dnf install -y docker nginx python3 tar gzip util-linux
+          usermod -aG docker ec2-user
+          if [ ! -f /swapfile ]; then
+            fallocate -l 2G /swapfile
+            chmod 0600 /swapfile
+            mkswap /swapfile
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+          fi
+          swapon /swapfile || true
+          command -v curl
+          command -v aws
+          systemctl stop docker || true
+          for attempt in $(seq 1 180); do
+            if [ -b /dev/sdf ]; then data_device=/dev/sdf; break; fi
+            if [ -b /dev/nvme1n1 ]; then data_device=/dev/nvme1n1; break; fi
+            sleep 5
+          done
+          : "${data_device:?Data volume did not attach}"
+          if ! blkid "$data_device"; then mkfs -t xfs "$data_device"; fi
+          mkdir -p /var/lib/docker /opt/monefy/releases /usr/local/lib/docker/cli-plugins
+          data_uuid=$(blkid -s UUID -o value "$data_device")
+          echo "UUID=$data_uuid /var/lib/docker xfs defaults,nofail 0 2" >> /etc/fstab
+          mount /var/lib/docker
+          mkdir -p /etc/docker
+          printf '%s\n' '{"log-driver":"json-file","log-opts":{"max-size":"10m","max-file":"3"}}' > /etc/docker/daemon.json
+          cd /tmp
+          curl -fsSLO https://github.com/docker/compose/releases/download/v5.3.0/docker-compose-linux-x86_64
+          curl -fsSLO https://github.com/docker/compose/releases/download/v5.3.0/docker-compose-linux-x86_64.sha256
+          sha256sum -c docker-compose-linux-x86_64.sha256
+          install -m 0755 docker-compose-linux-x86_64 /usr/local/lib/docker/cli-plugins/docker-compose
+          systemctl enable --now docker amazon-ssm-agent
+          docker compose version
+          touch /opt/monefy/bootstrap-ready
+  DataVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AvailabilityZone: !GetAtt Host.AvailabilityZone
+      Size: !Ref DataVolumeGiB
+      VolumeType: gp3
+      Encrypted: true
+      Tags: [{ Key: Name, Value: !Sub "${AWS::StackName}-data" }]
+  DataAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: /dev/sdf
+      InstanceId: !Ref Host
+      VolumeId: !Ref DataVolume
+  GitHubProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated:
+                !If [
+                  CreateOidcProvider,
+                  !Ref GitHubProvider,
+                  !Ref ExistingGitHubOidcProviderArn,
+                ]
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepository}:environment:production"
+      Policies:
+        - PolicyName: PublishAndDeploy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  [
+                    ecr:BatchCheckLayerAvailability,
+                    ecr:InitiateLayerUpload,
+                    ecr:UploadLayerPart,
+                    ecr:CompleteLayerUpload,
+                    ecr:PutImage,
+                    ecr:BatchGetImage,
+                    ecr:GetDownloadUrlForLayer,
+                  ]
+                Resource:
+                  [
+                    !GetAtt FrontendRepository.Arn,
+                    !GetAtt BackendRepository.Arn,
+                  ]
+              - Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${ReleaseBucket.Arn}/releases/*"
+              - Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${Host}"
+                  - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-RunShellScript"
+              - Effect: Allow
+                Action: cloudformation:DescribeStacks
+                Resource: !Ref AWS::StackId
+              - Effect: Allow
+                Action: ssm:GetCommandInvocation
+                Resource: "*"
+Outputs:
+  DeploymentRoleArn: { Value: !GetAtt DeploymentRole.Arn }
+  FrontendRepositoryUri: { Value: !GetAtt FrontendRepository.RepositoryUri }
+  BackendRepositoryUri: { Value: !GetAtt BackendRepository.RepositoryUri }
+  InstanceId: { Value: !Ref Host }
+  ReleaseBucket: { Value: !Ref ReleaseBucket }
+  PublicOrigin: { Value: !Ref PublicOrigin }
+  PublicIp: { Value: !GetAtt Host.PublicIp }
+  TlsEmail: { Value: !Ref TlsEmail }
+  DataVolumeId: { Value: !Ref DataVolume }

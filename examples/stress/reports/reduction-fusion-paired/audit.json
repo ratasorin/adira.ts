@@ -1,0 +1,65 @@
+{
+  "createdAt": "2026-10-22T10:23:27.161Z",
+  "sourceHashes": {
+    "packages/backend/read/execute.ts": true,
+    "packages/core/src/read/query.ts": true,
+    "examples/stress/server/adira.ts": true,
+    "examples/stress/server/metrics.ts": true,
+    "examples/stress/server/native-fields.ts": true,
+    "examples/stress/server/reference.ts": true,
+    "examples/stress/server/reference-advanced.ts": true,
+    "examples/stress/server/fusion-benchmark.ts": true,
+    "examples/stress/shared/workloads.ts": true,
+    "examples/stress/shared/advanced-workloads.ts": true
+  },
+  "unchangedCapturedDemoSources": true,
+  "capturedModuleHashesMatch": true,
+  "paritySets": 20,
+  "measuredResponses": 720,
+  "summaries": 60,
+  "samplesPerSummary": 12,
+  "changedCommandCounts": [
+    "revenueQuality"
+  ],
+  "quality": {
+    "group": [
+      {
+        "loads": [
+          "recentOrderCount",
+          "recentOrderAverage",
+          "recentOrderMin",
+          "recentOrderMax"
+        ],
+        "phase": "membership"
+      }
+    ],
+    "reductionsBefore": 16,
+    "reductionsAfter": 4,
+    "commandsBefore": 22,
+    "commandsAfter": 10,
+    "callbacksUnchanged": {
+      "revenueBatch": 1,
+      "revenueParents": 20,
+      "costBatch": 1,
+      "costParents": 20,
+      "marginBps": 20,
+      "priority": 15
+    }
+  },
+  "verification": {
+    "backendIntegrationTests": 179,
+    "dashboardIntegrationTests": 27,
+    "backendTypes": true,
+    "nativeDiagnostics": true,
+    "generatedExpressClientContract": true,
+    "serverAndFrontendTypes": true,
+    "readBuild": true,
+    "frontendProductionBuild": true
+  },
+  "notes": [
+    "All timed outputs are digest-checked by the benchmark before a sample is accepted.",
+    "Captured baseline uses the pre-change compiled reader; only its demo reader import is rewired.",
+    "Source hashes match the measured implementation. Only documentation and this audit were added after timing.",
+    "Builds and tests were complete before the medium benchmark; untimed traces followed measurement."
+  ]
+}

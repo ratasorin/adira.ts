@@ -1,6 +1,5 @@
 import {
   SchemaAfterJoin,
-  EXECUTOR_KEY,
   RELATED_KEY,
   MutationResponse,
   QueryResponse,
@@ -8,14 +7,31 @@ import {
   ExecutorQueryParams,
   RowIntent,
   RowHelper,
+  GroupIntent,
+  AggregateOperation,
 } from "..";
 import { PopulatableKeys } from "..";
+import type {
+  ExactReadQuery,
+  ExecutedRead,
+  ReadQuery,
+  ReadResponse,
+  ResourceLike,
+  ResourceOfResponse,
+} from "../read";
 export type HTTPMethod = "GET" | "POST" | "PATCH" | "DELETE";
 export type AllKeys<T> = T extends unknown ? keyof T : never;
 
 export type EndpointMethods<Endpoint> = keyof Endpoint;
 
-export type APIDefinition = Record<string, Partial<Record<HTTPMethod, any>>>;
+export type APIDefinition = Record<
+  string,
+  Partial<Record<HTTPMethod, unknown>>
+>;
+type ResponseGroups = Record<
+  string,
+  GroupIntent<string[], AggregateOperation<string, string>[], unknown>
+>;
 
 type StripAPI<Path extends string> = Path extends `/api${infer Rest}`
   ? Rest & string
@@ -56,34 +72,35 @@ export type ExtractReqBody<Def, M extends HTTPMethod> = M extends keyof Def
     : never
   : never;
 
-export type ResponseBodyMetadata = {
-  [EXECUTOR_KEY]: any;
-  [RELATED_KEY]?: any;
-  __base?: any;
-};
+export type ResponseBodyMetadata = { __base?: unknown; __related?: unknown };
 
-type ExtractResponseMetadata<T> = T extends {
-  __base?: infer B;
-  [RELATED_KEY]?: infer R;
-}
-  ? { base: B; [RELATED_KEY]: R }
+type ExtractResponseMetadata<T> = T extends object
+  ? "__base" extends keyof T
+    ? T extends { __base?: infer B; __related?: infer R }
+      ? { base: B; [RELATED_KEY]: R }
+      : never
+    : never
   : never;
+
+type WithoutLegacyResponse<T> = T extends object
+  ? "__base" extends keyof T
+    ? never
+    : T
+  : T;
 
 export type HydrateResponse<
   RB,
   Method,
   Include extends string[],
   Select extends string[],
-  Groups extends Record<string, any> | undefined,
+  Groups extends ResponseGroups | undefined,
 > =
   ExtractResponseMetadata<RB> extends { base: infer B; [RELATED_KEY]: infer E }
     ? Method extends "GET"
-      ?
-          | QueryResponse<B, Include, Select, Groups, E>
-          | Exclude<RB, ResponseBodyMetadata>
-      :
-          | MutationResponse<B, Include, Select, E>
-          | Exclude<RB, ResponseBodyMetadata>
+      ? QueryResponse<B, Include, Select, Groups, E> | WithoutLegacyResponse<RB>
+      : Method extends "DELETE"
+        ? MutationResponse<B, Include, Select, E>[] | WithoutLegacyResponse<RB>
+        : MutationResponse<B, Include, Select, E> | WithoutLegacyResponse<RB>
     : { error: "Response body metadata missing __base" };
 
 export type ExtractReqPath<Def, M extends HTTPMethod> = M extends keyof Def
@@ -109,6 +126,25 @@ export type AxiosQueryFunctionParams<Query, Path> = { query: Query } & ([
   ? {}
   : { path: Path });
 
+type HydrateResourceResponse<
+  R extends ResourceLike,
+  Q,
+  Response,
+> = Response extends unknown
+  ? [ResourceOfResponse<Response>] extends [never]
+    ? Response
+    : ReadResponse<R, Q> & Omit<Response, keyof ExecutedRead<R> | "__resource">
+  : never;
+type ResourceQueryFunction<R extends ResourceLike, ResponseBody, Path> = <
+  const Q extends ReadQuery<R>,
+>(
+  params: { query: Q & ExactReadQuery<R, Q> } & ([Path] extends [never]
+    ? {}
+    : { path: Path }),
+) => {
+  run: () => Promise<HydrateResourceResponse<R, Q, ResponseBody>>;
+};
+
 export type AxiosApiClientQuery<
   API extends APIDefinition,
   InternalPath extends keyof APIDefinition,
@@ -118,24 +154,30 @@ export type AxiosApiClientQuery<
   Query = ExtractQuery<Endpoints, Method>,
   Base = ExtractBase<Query>,
   PathParam = ExtractReqPath<Endpoints, Method>,
-> = [ExtractResponseMetadata<ResponseBody>] extends [never]
-  ? (params: AxiosQueryFunctionParams<Query, PathParam>) => {
-      run: () => Promise<ResponseBody>;
-    }
-  : <
-      const Include extends PopulatableKeys<Base>[],
-      const Full extends SchemaAfterJoin<Base, TupleToUnion<Include>>,
-      const Rows extends RowIntent<string[], any, any>,
-      const Groups extends Record<string, any> | undefined = undefined,
-    >(
-      params: {
-        query: ExecutorQueryParams<Full, Include, Rows, Groups>;
-      } & ([PathParam] extends [never] ? {} : { path: PathParam }),
-    ) => {
-      run: () => Promise<
-        HydrateResponse<ResponseBody, Method, Include, Rows["select"], Groups>
-      >;
-    };
+> = [ResourceOfResponse<ResponseBody>] extends [never]
+  ? [ExtractResponseMetadata<ResponseBody>] extends [never]
+    ? (params: AxiosQueryFunctionParams<Query, PathParam>) => {
+        run: () => Promise<ResponseBody>;
+      }
+    : <
+        const Include extends PopulatableKeys<Base>[],
+        const Full extends SchemaAfterJoin<Base, TupleToUnion<Include>>,
+        const Rows extends RowIntent<string[], unknown, unknown>,
+        const Groups extends ResponseGroups | undefined = undefined,
+      >(
+        params: {
+          query: ExecutorQueryParams<Full, Include, Rows, Groups>;
+        } & ([PathParam] extends [never] ? {} : { path: PathParam }),
+      ) => {
+        run: () => Promise<
+          HydrateResponse<ResponseBody, Method, Include, Rows["select"], Groups>
+        >;
+      }
+  : ResourceQueryFunction<
+      ResourceOfResponse<ResponseBody>,
+      ResponseBody,
+      PathParam
+    >;
 
 export type AxiosApiClientMutate<
   API extends APIDefinition,
@@ -155,7 +197,7 @@ export type AxiosApiClientMutate<
     ) => { run: () => Promise<ResponseBody> }
   : <
       const Include extends PopulatableKeys<Base>[],
-      const Rows extends RowIntent<string[], any, any>,
+      const Rows extends RowIntent<string[], unknown, unknown>,
     >(
       params: {
         data: Data;

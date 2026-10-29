@@ -1,0 +1,13 @@
+import type { ICompany } from "../models/Company";
+import { type Json } from "../types/json";
+import { Backend } from "@n/adira.core.ts";
+import { CompanyDetails } from "../models/Company";
+import { ErrorResponse } from "../types";
+declare const getExecutor: Backend.ExecuteGET<ICompany, {}>;
+declare const postExecutor: Backend.ExecutePOST<ICompany>;
+declare const patchExecutor: Backend.ExecutePATCH<ICompany>;
+declare const patchMetadataExecutor: Backend.ExecutePATCH<ICompany>;
+export type CompaniesGetExecutor = typeof getExecutor;
+export type CompanyPostExecutor = typeof postExecutor;
+export type CompaniesPatchExecutor = typeof patchExecutor;
+export type CompanyMetadataPatchExecutor = typeof patchMetadataExecutor;

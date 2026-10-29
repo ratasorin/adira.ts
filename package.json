@@ -12,8 +12,17 @@
   "author": "Rata Sorin <ratasorin0@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "npm run build",
-    "test": "npm run test"
+    "build": "npm run build:read && npm run build -w packages/generator && npm run build -w packages/cli",
+    "build:read": "npm run build -w packages/core && npm run build -w packages/backend && npm run build -w packages/client",
+    "test": "npm run test:read && npm run test -w packages/generator -- --runInBand",
+    "test:read": "npm run build:read && npm run test -w packages/backend",
+    "demo:read": "npm run build:read && npm run demo:read -w packages/backend",
+    "stress:build": "npm run build:read && npm run build -w examples/stress",
+    "stress:seed": "npm run seed -w examples/stress --",
+    "stress:serve": "npm run serve -w examples/stress --",
+    "stress:demo": "npm run demo -w examples/stress --",
+    "stress:bench": "npm run benchmark -w examples/stress --",
+    "stress:test": "npm run test -w examples/stress"
   },
   "workspaces": [
     "packages/*",

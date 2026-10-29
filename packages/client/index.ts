@@ -32,6 +32,20 @@ const normalizeQuery = (rawQuery: any) => {
   };
 };
 
+// A JSON envelope preserves recursive Boolean expressions across query parsers
+// whose bracket-notation depth limits are lower than the resource query limit.
+const queryParams = (rawQuery: any) => {
+  const normalized = normalizeQuery(rawQuery);
+  if (
+    normalized.select &&
+    typeof normalized.select === "object" &&
+    !Array.isArray(normalized.select)
+  ) {
+    return { query: JSON.stringify(normalized) };
+  }
+  return normalized;
+};
+
 export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
   baseUrl,
   __,
@@ -53,7 +67,7 @@ export const createAxiosApiClient: Frontend.CreateAxiosApiClient = (
             const config: AxiosRequestConfig = {
               method: "get",
               url: `${baseUrl}${resolvedPath}`,
-              params: normalizeQuery(query),
+              params: queryParams(query),
             };
 
             const response = await axios(config);

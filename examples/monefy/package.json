@@ -1,0 +1,29 @@
+{
+  "name": "@examples/monefy",
+  "private": true,
+  "version": "1.1.0",
+  "workspaces": [
+    ".adira/*",
+    "backend",
+    "backend/shared",
+    "frontend"
+  ],
+  "scripts": {
+    "sync:adira": "node scripts/sync-adira.mjs",
+    "setup": "npm --prefix . run sync:adira && npm --prefix . install",
+    "build:adira": "npm --prefix . run build -w @n/adira.core.ts && npm --prefix . run build -w @n/adira.backend.ts && npm --prefix . run build -w @n/adira.client.ts && npm --prefix . run build -w @n/adira.generator.ts",
+    "build": "npm --prefix . run build:adira && npm --prefix . run build -w @monefy/backend && npm --prefix . run types:generate -w @monefy/backend && npm --prefix . run build -w @monefy/frontend",
+    "test": "node --test tests/pdf-cache.test.cjs",
+    "test:smoke": "node tests/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22.14"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.0",
+    "@types/node": "^24.10.1"
+  },
+  "overrides": {
+    "@internationalized/date": "3.12.4"
+  }
+}

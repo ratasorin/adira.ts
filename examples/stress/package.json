@@ -1,0 +1,45 @@
+{
+  "name": "@adira/stress",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node harness/clean-build.cjs && tsc -p tsconfig.server.json && node dist/harness/generate-controls.js && tsc -p tsconfig.frontend.json && vite build",
+    "generate:controls": "tsc -p tsconfig.server.json && node dist/harness/generate-controls.js",
+    "check:controls": "node dist/harness/generate-controls.js --check",
+    "seed": "node dist/harness/seed.js",
+    "serve": "node dist/harness/serve.js",
+    "dev": "vite --host 127.0.0.1",
+    "demo": "node dist/harness/demo.js",
+    "benchmark": "node dist/harness/benchmarks/run.js",
+    "benchmark:fusion": "node dist/harness/benchmarks/fusion.js",
+    "test:controls": "npm run check:controls && tsc -p tsconfig.controls.json && tsc -p tsconfig.frontend.json && node --test dist/tests/controls/query.test.js",
+    "test": "npm run test:controls && node --test dist/tests/integration/index.js",
+    "test:browser": "tsc -p tsconfig.browser.json && playwright test"
+  },
+  "dependencies": {
+    "@n/adira.backend.ts": "^0.1.0",
+    "@n/adira.core.ts": "^0.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "express": "^4.18.2",
+    "lucide-react": "^1.63.0",
+    "mongoose": "^8.19.3",
+    "radix-ui": "^1.8.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/express": "^4.17.21",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.3",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.3.3",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}

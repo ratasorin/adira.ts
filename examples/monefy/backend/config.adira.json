@@ -1,0 +1,17 @@
+{
+  "output": {
+    "dir": "./shared",
+    "file": "index.api.d.ts",
+    "typename": "MonefyAPI"
+  },
+  "registry": {
+    "name": "@monefy/types",
+    "version": "1.1.0",
+    "description": "Generated Monefy API contract",
+    "url": "http://localhost",
+    "port": 8888
+  },
+  "allowedDependencies": [
+    "@n/adira.core.ts"
+  ]
+}

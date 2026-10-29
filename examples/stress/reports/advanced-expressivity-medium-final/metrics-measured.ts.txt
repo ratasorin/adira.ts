@@ -1,0 +1,226 @@
+import type { PipelineStage } from "mongoose";
+import { defineResource, field, schema } from "@n/adira.core.ts";
+import type { BatchParent } from "@n/adira.backend.ts";
+import { Inventories, Lines, Orders, type Id, type Line } from "./models";
+import { SINCE } from "../shared/business";
+import { count, type RequestContext } from "./telemetry";
+
+type Input = {
+  readonly parents: readonly BatchParent<{ _id: Id }>[];
+  readonly context: RequestContext;
+};
+const parentKey = "__demo_parent_key";
+const idsFor = (parents: Input["parents"]) => [
+  ...new Map(parents.map(({ row }) => [String(row._id), row._id])).values(),
+];
+
+// Keep the exact tenant/soft-delete policy alongside the indexable tenant match.
+// In particular, an array containing a tenant ID or null is not that scalar.
+function activeTenant(context: RequestContext) {
+  return {
+    tenantId: context.tenantId,
+    $expr: {
+      $and: [
+        { $eq: ["$tenantId", { $literal: context.tenantId }] },
+        { $eq: [{ $ifNull: ["$deletedAt", null] }, null] },
+      ],
+    },
+  };
+}
+
+/** Preserve MongoDB lookup membership, including duplicate foreign array keys. */
+function parentGroups(
+  field: "accountId" | "productId",
+  ids: readonly Id[],
+): PipelineStage[] {
+  const foreign = `$${field}`;
+  return [
+    {
+      $set: {
+        [parentKey]: {
+          $cond: [
+            { $isArray: foreign },
+            { $setIntersection: [foreign, { $literal: ids }] },
+            [foreign],
+          ],
+        },
+      },
+    },
+    { $unwind: `$${parentKey}` },
+  ];
+}
+
+export const revenueOutput = schema.object({
+  grossRevenueCents: schema.number(),
+  refundedCents: schema.number(),
+  revenueOrderCount: schema.number(),
+});
+export const Revenue = defineResource({
+  grossRevenueCents: field.number(),
+  refundedCents: field.number(),
+  revenueOrderCount: field.number(),
+});
+
+export async function loadRevenue({ parents, context }: Input) {
+  count(context, "revenueBatch");
+  count(context, "revenueParents", parents.length);
+  const ids = idsFor(parents);
+  const totals = await Orders.aggregate<{
+    _id: Id;
+    grossRevenueCents: number;
+    refundedCents: number;
+    revenueOrderCount: number;
+  }>([
+    {
+      $match: {
+        ...activeTenant(context),
+        accountId: { $in: ids },
+        placedAt: { $gte: SINCE },
+        status: { $in: ["paid", "shipped"] },
+      },
+    },
+    ...parentGroups("accountId", ids),
+    {
+      $group: {
+        _id: `$${parentKey}`,
+        grossRevenueCents: { $sum: "$totalCents" },
+        refundedCents: { $sum: "$refundedCents" },
+        revenueOrderCount: { $sum: 1 },
+      },
+    },
+  ]);
+  const byId = new Map(totals.map((row) => [String(row._id), row]));
+  return parents.map(({ ref, row }) => {
+    const value = byId.get(String(row._id));
+    return {
+      ref,
+      rows: [
+        {
+          grossRevenueCents: value?.grossRevenueCents ?? 0,
+          refundedCents: value?.refundedCents ?? 0,
+          revenueOrderCount: value?.revenueOrderCount ?? 0,
+        },
+      ],
+    };
+  });
+}
+
+export const costOutput = schema.object({ costCents: schema.number() });
+export const Cost = defineResource({ costCents: field.number() });
+export async function loadCost({ parents, context }: Input) {
+  count(context, "costBatch");
+  count(context, "costParents", parents.length);
+  const ids = idsFor(parents);
+  const totals = await Lines.aggregate<{ _id: Id; costCents: number }>([
+    {
+      $match: {
+        ...activeTenant(context),
+        accountId: { $in: ids },
+        placedAt: { $gte: SINCE },
+        status: { $in: ["paid", "shipped"] },
+      },
+    },
+    ...parentGroups("accountId", ids),
+    { $group: { _id: `$${parentKey}`, costCents: { $sum: "$costCents" } } },
+  ]);
+  const byId = new Map(totals.map((row) => [String(row._id), row.costCents]));
+  return parents.map(({ ref, row }) => ({
+    ref,
+    rows: [{ costCents: byId.get(String(row._id)) ?? 0 }],
+  }));
+}
+
+export const stockOutput = schema.object({
+  onHand: schema.number(),
+  reserved: schema.number(),
+  warehouseCount: schema.number(),
+});
+export const Stock = defineResource({
+  onHand: field.number(),
+  reserved: field.number(),
+  warehouseCount: field.number(),
+});
+export async function loadStock({ parents, context }: Input) {
+  count(context, "stockBatch");
+  count(context, "stockParents", parents.length);
+  const ids = idsFor(parents);
+  const totals = await Inventories.aggregate<{
+    _id: Id;
+    onHand: number;
+    reserved: number;
+    warehouseCount: number;
+  }>([
+    { $match: { ...activeTenant(context), productId: { $in: ids } } },
+    ...parentGroups("productId", ids),
+    {
+      $group: {
+        _id: `$${parentKey}`,
+        onHand: { $sum: "$onHand" },
+        reserved: { $sum: "$reserved" },
+        warehouseCount: { $sum: 1 },
+      },
+    },
+  ]);
+  const byId = new Map(totals.map((row) => [String(row._id), row]));
+  return parents.map(({ ref, row }) => {
+    const value = byId.get(String(row._id));
+    return {
+      ref,
+      rows: [
+        {
+          onHand: value?.onHand ?? 0,
+          reserved: value?.reserved ?? 0,
+          warehouseCount: value?.warehouseCount ?? 0,
+        },
+      ],
+    };
+  });
+}
+
+export const shortageOutput = schema.object({ shortageUnits: schema.number() });
+export const ShortageSummary = defineResource({
+  shortageUnits: field.number(),
+});
+/** Alternative backend modeling: share stock scans across orders in one batch. */
+export async function loadOrderShortages({ parents, context }: Input) {
+  count(context, "shortageBatch");
+  count(context, "shortageParents", parents.length);
+  const lines = await Lines.collection
+    .find<Pick<Line, "orderId" | "productId" | "quantity">>(
+      { ...activeTenant(context), orderId: { $in: idsFor(parents) } },
+      { projection: { _id: 0, orderId: 1, productId: 1, quantity: 1 } },
+    )
+    .batchSize(10_000)
+    .toArray();
+  const productIds = [
+    ...new Map(lines.map((l) => [String(l.productId), l.productId])).values(),
+  ];
+  const stock = productIds.length
+    ? await Inventories.collection
+        .aggregate<{
+          _id: Id;
+          available: number;
+        }>([{ $match: { ...activeTenant(context), productId: { $in: productIds } } }, { $group: { _id: "$productId", available: { $sum: { $subtract: ["$onHand", "$reserved"] } } } }])
+        .toArray()
+    : [];
+  const finite = schema.number();
+  const available = new Map(
+    stock.map((row) => [String(row._id), finite.parse(row.available)]),
+  );
+  const totals = new Map<string, number>();
+  for (const line of lines) {
+    const shortage = Math.max(
+      0,
+      finite.parse(line.quantity) -
+        Math.max(0, available.get(String(line.productId)) ?? 0),
+    );
+    const id = String(line.orderId);
+    totals.set(id, (totals.get(id) ?? 0) + shortage);
+  }
+  count(context, "shortageLines", lines.length);
+  count(context, "shortageDistinctProducts", productIds.length);
+  return parents.map(({ ref, row }) => ({
+    ref,
+    rows: [{ shortageUnits: totals.get(String(row._id)) ?? 0 }],
+  }));
+}
