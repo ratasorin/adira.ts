@@ -2,6 +2,16 @@
 
 A powerful TypeScript-based tool for generating API definitions from Express.js REST endpoints with MongoDB schemas. This tool automatically analyzes your Express.js codebase to extract API route information and generate corresponding TypeScript type definitions, enabling seamless, strongly-typed backend integrations. Includes advanced utilities for generating MongoDB aggregation functions for rapid backend development.
 
+See the [draft architecture discussion](ARCHITECTURE.md) for proposed resource contracts, composable execution, filtering, and open design questions.
+
+The [composable read prototype](docs/composable-reads.md) is now implemented with typed MongoDB/application stages, custom relations and predicates, and the existing Express inference bridge. Run `npm run demo:read` to see actual queries, plans, and results, or `npm run test:read` for type checks and MongoDB integration tests. Both require a local `mongod` executable.
+
+The [Commerce stress example](examples/stress/README.md) adds a realistic dashboard, deterministic datasets up to 3.7 million documents, an independent conventional MongoDB backend, result-parity tests, and an HTTP benchmark with execution plans. Start with `npm run stress:build`, then `npm run stress:demo -- --profile medium` or `npm run stress:bench -- --profile medium`.
+
+Use [resolveBatch relation loaders](docs/resolve-batch.md) to own batch fetching through raw queries, services, or custom TypeScript while keeping typed parent/output shapes and Adira's managed filtering, pagination, and response validation.
+
+Use [`createReadContext<Context>()`](docs/read-context.md) to declare typed request context and injected services once. Its readers require compatible context, and callbacks infer it throughout the plan. Backend context stays out of generated frontend declarations.
+
 ## Overview
 
 Adira.ts is designed to bridge the gap between your Express.js API implementation and frontend consumption by automatically generating TypeScript type definitions based on your actual API routes and handler function signatures. The tool parses your Express.js routers and route handlers to extract:

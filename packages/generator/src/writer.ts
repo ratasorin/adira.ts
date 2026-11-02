@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ApiDefinition } from "src/handler/generate";
+import { ApiDefinition } from "./handler/generate";
 
 /**
  * Generates a package.json for the output artifact.

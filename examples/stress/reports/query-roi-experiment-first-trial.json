@@ -1,0 +1,3695 @@
+{
+  "createdAt": "2026-10-21T10:57:22.673Z",
+  "metadata": {
+    "profile": "medium",
+    "config": {
+      "tenants": 4,
+      "agents": 200,
+      "accounts": 1500,
+      "products": 2000,
+      "orders": 30000
+    },
+    "counts": {
+      "stress_tenants": 4,
+      "stress_agents": 800,
+      "stress_accounts": 6000,
+      "stress_products": 8000,
+      "stress_orders": 120000,
+      "stress_lines": 480000,
+      "stress_shipments": 90000,
+      "stress_tickets": 36000,
+      "stress_inventory": 16000
+    },
+    "asOf": 1790812800000,
+    "since": 1783036800000,
+    "seededAt": "2026-10-21T10:56:46.280Z",
+    "seedMs": 16194.357101000001,
+    "distribution": "35% of orders belong to five whale accounts per tenant; remaining orders are uniform; four lines/order"
+  },
+  "method": "Service Risk only; direct executors; six variants, same process/database, two warmups each, twelve sequential samples each with rotated/reversed order, first/last-tenant parity. All variants use existing public APIs; no library feature changes. Bundled parallel variants trade independent field pruning for manual concurrency. No HTTP timing or concurrency-4 measurement.",
+  "limitations": [
+    "Experimental narrower risk resource; not a replacement for all AccountResource capabilities or a generic optimizer.",
+    "JavaScript experiment; public output schemas and runtime policies are enforced, but this is not a TypeScript inference test.",
+    "Bulk variants normalize original foreign array keys and keep exact managed-count policies/filters. Revenue and exposure preserve the demo's existing raw business matches.",
+    "Different batch sizes and bundled inputs change execution granularity; repeated independent field work under other selections is not measured.",
+    "Twelve local samples are exploratory; driver times overlap in parallel variants and cannot be summed as request wall time."
+  ],
+  "parity": [
+    {
+      "mode": "reference",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "tenant": 0,
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    },
+    {
+      "mode": "current",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    },
+    {
+      "mode": "bulk-counts",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    },
+    {
+      "mode": "bulk-sequential",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "tenant": 3,
+      "digest": "a084c04c1870039193a870b6016de20865faea193ffc4bd0cb00913488cbcc93"
+    }
+  ],
+  "summaries": [
+    {
+      "mode": "current",
+      "samples": 12,
+      "p50Ms": 743.2699060000014,
+      "p95Ms": 838.869627,
+      "meanMs": 763.9837771666665,
+      "meanCommands": 18,
+      "meanMongoMs": 715.9166666666666
+    },
+    {
+      "mode": "bulk-counts",
+      "samples": 12,
+      "p50Ms": 413.5295200000037,
+      "p95Ms": 470.6122529999993,
+      "meanMs": 417.5476405833333,
+      "meanCommands": 22,
+      "meanMongoMs": 372.1666666666667
+    },
+    {
+      "mode": "bulk-sequential",
+      "samples": 12,
+      "p50Ms": 315.2420510000011,
+      "p95Ms": 384.44020199999795,
+      "meanMs": 330.23271341666594,
+      "meanCommands": 29,
+      "meanMongoMs": 277.5833333333333
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "samples": 12,
+      "p50Ms": 176.38678900000377,
+      "p95Ms": 203.89797700000054,
+      "meanMs": 180.3299614999993,
+      "meanCommands": 29,
+      "meanMongoMs": 345.1666666666667
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "samples": 12,
+      "p50Ms": 510.1319719999992,
+      "p95Ms": 547.7122040000031,
+      "meanMs": 510.0624335833333,
+      "meanCommands": 9,
+      "meanMongoMs": 1181
+    },
+    {
+      "mode": "reference",
+      "samples": 12,
+      "p50Ms": 66.46995400000014,
+      "p95Ms": 95.03876200000013,
+      "meanMs": 71.94605341666647,
+      "meanCommands": 10,
+      "meanMongoMs": 122
+    }
+  ],
+  "samples": [
+    {
+      "mode": "current",
+      "elapsedMs": 730.0739579999972,
+      "commands": 18,
+      "mongoMs": 674,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 160
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 229
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 231
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 54
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 417.9908710000018,
+      "commands": 22,
+      "mongoMs": 361,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 159
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 34
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 59
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 109
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 327.47263499999826,
+      "commands": 29,
+      "mongoMs": 272,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 18
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 162
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 33
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 59
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 170.24172199999884,
+      "commands": 29,
+      "mongoMs": 349,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 11
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 69
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 191
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 78
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 512.436142999999,
+      "commands": 9,
+      "mongoMs": 1152,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 137
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 684
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 319
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 67.76594399999885,
+      "commands": 10,
+      "mongoMs": 107,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 11
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 20
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 63
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 720.3796330000005,
+      "commands": 18,
+      "mongoMs": 674,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 157
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 233
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 239
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 45
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 83.73640199999863,
+      "commands": 10,
+      "mongoMs": 128,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 8
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 14
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 21
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 85
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 472.8384350000015,
+      "commands": 9,
+      "mongoMs": 1114,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 10
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 146
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 644
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 314
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 176.24361599999975,
+      "commands": 29,
+      "mongoMs": 350,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 55
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 200
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 83
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 313.1119839999992,
+      "commands": 29,
+      "mongoMs": 273,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 11
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 165
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 38
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 59
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 378.85844,
+      "commands": 22,
+      "mongoMs": 345,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 149
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 32
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 54
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 110
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 303.5517519999994,
+      "commands": 29,
+      "mongoMs": 260,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 9
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 158
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 31
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 62
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 175.2711670000026,
+      "commands": 29,
+      "mongoMs": 345,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 49
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 205
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 79
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 510.1319719999992,
+      "commands": 9,
+      "mongoMs": 1149,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 10
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 148
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 673
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 318
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 95.03876200000013,
+      "commands": 10,
+      "mongoMs": 133,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 10
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 14
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 20
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 89
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 803.1860009999982,
+      "commands": 18,
+      "mongoMs": 757,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 196
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 244
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 267
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 50
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 470.6122529999993,
+      "commands": 22,
+      "mongoMs": 425,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 204
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 39
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 69
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 113
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 315.2420510000011,
+      "commands": 29,
+      "mongoMs": 264,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 158
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 38
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 56
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 413.5295200000037,
+      "commands": 22,
+      "mongoMs": 365,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 157
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 33
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 68
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 107
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 716.6228599999959,
+      "commands": 18,
+      "mongoMs": 671,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 147
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 247
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 230
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 47
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 81.75058299999364,
+      "commands": 10,
+      "mongoMs": 144,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 7
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 87
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 24
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 26
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 491.75477500000125,
+      "commands": 9,
+      "mongoMs": 1101,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 148
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 647
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 294
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 181.48128999999608,
+      "commands": 29,
+      "mongoMs": 351,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 51
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 201
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 86
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 485.82785900000454,
+      "commands": 9,
+      "mongoMs": 1123,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 7
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 164
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 653
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 299
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 62.54976799999713,
+      "commands": 10,
+      "mongoMs": 101,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 15
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 17
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 57
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 743.2699060000014,
+      "commands": 18,
+      "mongoMs": 694,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 174
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 247
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 227
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 46
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 408.9762109999938,
+      "commands": 22,
+      "mongoMs": 369,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 160
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 36
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 62
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 111
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 379.50078499999654,
+      "commands": 29,
+      "mongoMs": 317,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 175
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 43
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 87
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 181.13788000000204,
+      "commands": 29,
+      "mongoMs": 326,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 50
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 188
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 75
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 481.7087399999946,
+      "commands": 9,
+      "mongoMs": 1130,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 14
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 158
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 647
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 311
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 162.96544499999436,
+      "commands": 29,
+      "mongoMs": 313,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 14
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 47
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 183
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 69
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 311.6054310000036,
+      "commands": 29,
+      "mongoMs": 264,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 10
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 159
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 39
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 56
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 418.95234199999686,
+      "commands": 22,
+      "mongoMs": 370,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 155
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 39
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 63
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 113
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 766.2137030000013,
+      "commands": 18,
+      "mongoMs": 724,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 150
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 254
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 271
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 49
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 62.7507970000006,
+      "commands": 10,
+      "mongoMs": 108,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 7
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 16
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 18
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 67
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 782.633898,
+      "commands": 18,
+      "mongoMs": 732,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 160
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 259
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 253
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 60
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 440.1760030000005,
+      "commands": 22,
+      "mongoMs": 379,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 166
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 35
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 63
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 115
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 327.3636369999949,
+      "commands": 29,
+      "mongoMs": 263,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 156
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 37
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 58
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 179.29342100000213,
+      "commands": 29,
+      "mongoMs": 350,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 12
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 56
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 196
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 86
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 541.4198679999972,
+      "commands": 9,
+      "mongoMs": 1231,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 174
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 709
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 335
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 65.14272599999822,
+      "commands": 10,
+      "mongoMs": 112,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 9
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 17
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 66
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 20
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 831.978074000006,
+      "commands": 18,
+      "mongoMs": 784,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 193
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 257
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 284
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 50
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 66.46995400000014,
+      "commands": 10,
+      "mongoMs": 110,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 9
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 14
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 62
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 25
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 483.5034539999979,
+      "commands": 9,
+      "mongoMs": 1173,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 11
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 142
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 682
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 338
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 196.14345499999763,
+      "commands": 29,
+      "mongoMs": 354,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 18
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 48
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 203
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 85
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 295.3787319999974,
+      "commands": 29,
+      "mongoMs": 260,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 10
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 159
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 31
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 60
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 413.1536629999973,
+      "commands": 22,
+      "mongoMs": 372,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 165
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 34
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 65
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 108
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 337.20206699999835,
+      "commands": 29,
+      "mongoMs": 271,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 163
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 37
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 58
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 188.5689809999967,
+      "commands": 29,
+      "mongoMs": 345,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 62
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 192
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 78
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 532.334612000006,
+      "commands": 9,
+      "mongoMs": 1286,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 14
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 696
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 252
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 324
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 77.17806500000006,
+      "commands": 10,
+      "mongoMs": 149,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 8
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 26
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 82
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 33
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 777.2293050000007,
+      "commands": 18,
+      "mongoMs": 734,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 199
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 255
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 229
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 51
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 420.73701599999913,
+      "commands": 22,
+      "mongoMs": 374,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 164
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 38
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 58
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 114
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 313.3773660000006,
+      "commands": 29,
+      "mongoMs": 259,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 11
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 155
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 36
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 57
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 414.6477900000027,
+      "commands": 22,
+      "mongoMs": 362,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 151
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 34
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 61
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 116
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 715.6322949999958,
+      "commands": 18,
+      "mongoMs": 668,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 154
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 224
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 245
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 45
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 65.83671500000492,
+      "commands": 10,
+      "mongoMs": 118,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 8
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 19
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 20
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 71
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 522.6919479999997,
+      "commands": 9,
+      "mongoMs": 1209,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 11
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 167
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 704
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 327
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 172.32779499999742,
+      "commands": 29,
+      "mongoMs": 331,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 51
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 187
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 80
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 538.3891929999954,
+      "commands": 9,
+      "mongoMs": 1241,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 11
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 148
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 743
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 339
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 64.33430600000429,
+      "commands": 10,
+      "mongoMs": 131,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 7
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 22
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 74
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 28
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 838.869627,
+      "commands": 18,
+      "mongoMs": 792,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 196
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 265
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 279
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 52
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 411.08957100000407,
+      "commands": 22,
+      "mongoMs": 380,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 158
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 43
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 65
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 114
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 354.5459190000038,
+      "commands": 29,
+      "mongoMs": 296,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 177
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 41
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 65
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 203.89797700000054,
+      "commands": 29,
+      "mongoMs": 384,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 16
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 55
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 229
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 84
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-512",
+      "elapsedMs": 547.7122040000031,
+      "commands": 9,
+      "mongoMs": 1263,
+      "callbacks": {
+        "summaryBatch": 1,
+        "revenueBatch": 1,
+        "ticketsBatch": 1,
+        "shipmentsBatch": 1,
+        "exposureBatch": 1,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 1,
+          "mongoMs": 10
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 170
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 755
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 328
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-parallel-128",
+      "elapsedMs": 176.38678900000377,
+      "commands": 29,
+      "mongoMs": 344,
+      "callbacks": {
+        "summaryBatch": 4,
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 13
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 51
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 204
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 76
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-sequential",
+      "elapsedMs": 384.44020199999795,
+      "commands": 29,
+      "mongoMs": 332,
+      "callbacks": {
+        "revenueBatch": 4,
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 15
+        },
+        "stress_orders": {
+          "commands": 15,
+          "mongoMs": 196
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 41
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 80
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "bulk-counts",
+      "elapsedMs": 401.8480070000005,
+      "commands": 22,
+      "mongoMs": 364,
+      "callbacks": {
+        "ticketsBatch": 4,
+        "shipmentsBatch": 4,
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 157
+        },
+        "stress_tickets": {
+          "commands": 8,
+          "mongoMs": 33
+        },
+        "stress_shipments": {
+          "commands": 4,
+          "mongoMs": 61
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 113
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "current",
+      "elapsedMs": 741.7160660000009,
+      "commands": 18,
+      "mongoMs": 687,
+      "callbacks": {
+        "exposureBatch": 4,
+        "riskScore": 486,
+        "riskBand": 25
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 165
+        },
+        "stress_tickets:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 236
+        },
+        "stress_shipments:parent-scoped": {
+          "commands": 4,
+          "mongoMs": 240
+        },
+        "stress_orders": {
+          "commands": 8,
+          "mongoMs": 46
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    },
+    {
+      "mode": "reference",
+      "elapsedMs": 70.79861900000105,
+      "commands": 10,
+      "mongoMs": 123,
+      "callbacks": {
+        "riskScore": 486
+      },
+      "phases": {
+        "stress_accounts": {
+          "commands": 2,
+          "mongoMs": 9
+        },
+        "stress_tickets": {
+          "commands": 2,
+          "mongoMs": 18
+        },
+        "stress_orders": {
+          "commands": 4,
+          "mongoMs": 70
+        },
+        "stress_shipments": {
+          "commands": 2,
+          "mongoMs": 26
+        }
+      },
+      "digest": "3f01116432b7a6fe7e16d8824589064e31f73c2244c6527997a017faa03adc28"
+    }
+  ],
+  "plans": {
+    "bulk-counts": {
+      "pipeline": [
+        {
+          "$match": {
+            "$and": [
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "$or": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "deletedAt": {
+                      "$type": "undefined"
+                    }
+                  }
+                ]
+              }
+            ],
+            "$expr": {
+              "$and": [
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$tenantId",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "010000000000000000000000"
+                    }
+                  ]
+                },
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$deletedAt",
+                        null
+                      ]
+                    },
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "region": {
+              "$in": [
+                "EU",
+                "NA"
+              ]
+            },
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$in": [
+                        {
+                          "$ifNull": [
+                            "$region",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": [
+                            "EU",
+                            "NA"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "$and": [
+                    {
+                      "$not": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                {
+                                  "$ifNull": [
+                                    "$tier",
+                                    null
+                                  ]
+                                },
+                                {
+                                  "$literal": "starter"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "id": {
+              "$toString": "$_id"
+            }
+          }
+        },
+        {
+          "$lookup": {
+            "from": "stress_orders",
+            "localField": "_id",
+            "foreignField": "accountId",
+            "let": {
+              "tenant": "$tenantId"
+            },
+            "pipeline": [
+              {
+                "$match": {
+                  "deletedAt": null,
+                  "placedAt": {
+                    "$gte": 1783036800000
+                  },
+                  "status": {
+                    "$in": [
+                      "paid",
+                      "shipped"
+                    ]
+                  },
+                  "$expr": {
+                    "$eq": [
+                      "$tenantId",
+                      "$$tenant"
+                    ]
+                  }
+                }
+              },
+              {
+                "$group": {
+                  "_id": null,
+                  "gross": {
+                    "$sum": "$totalCents"
+                  },
+                  "refunded": {
+                    "$sum": "$refundedCents"
+                  },
+                  "count": {
+                    "$sum": 1
+                  }
+                }
+              }
+            ],
+            "as": "_finance"
+          }
+        },
+        {
+          "$set": {
+            "grossRevenueCents": {
+              "$ifNull": [
+                {
+                  "$arrayElemAt": [
+                    "$_finance.gross",
+                    0
+                  ]
+                },
+                0
+              ]
+            },
+            "refundedCents": {
+              "$ifNull": [
+                {
+                  "$arrayElemAt": [
+                    "$_finance.refunded",
+                    0
+                  ]
+                },
+                0
+              ]
+            },
+            "revenueOrderCount": {
+              "$ifNull": [
+                {
+                  "$arrayElemAt": [
+                    "$_finance.count",
+                    0
+                  ]
+                },
+                0
+              ]
+            }
+          }
+        },
+        {
+          "$unset": "_finance"
+        },
+        {
+          "$set": {
+            "netRevenueCents": {
+              "$add": [
+                "$grossRevenueCents",
+                {
+                  "$multiply": [
+                    "$refundedCents",
+                    {
+                      "$literal": -1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_0": {
+              "$in": [
+                {
+                  "$ifNull": [
+                    "$region",
+                    null
+                  ]
+                },
+                {
+                  "$literal": [
+                    "EU",
+                    "NA"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_3": {
+              "$eq": [
+                {
+                  "$ifNull": [
+                    "$tier",
+                    null
+                  ]
+                },
+                {
+                  "$literal": "starter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            "$__adira_pred_0",
+                            true
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$or": [
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            },
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    "$__adira_pred_3",
+                                    true
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$project": {
+            "id": 1,
+            "netRevenueCents": 1,
+            "creditLimitCents": 1,
+            "_id": 1,
+            "name": 1,
+            "region": 1,
+            "grossRevenueCents": 1,
+            "refundedCents": 1,
+            "revenueOrderCount": 1,
+            "__adira_pred_0": 1,
+            "__adira_pred_3": 1
+          }
+        }
+      ],
+      "application": [
+        "load openTicketCount",
+        "load lateShipmentCount",
+        "load exposureCents",
+        "derive riskScore",
+        "evaluate Boolean filter",
+        "sort",
+        "paginate",
+        "derive riskBand"
+      ],
+      "nativePagination": false,
+      "deferredRelations": [],
+      "relationStrategies": {},
+      "relations": {},
+      "dependencies": {
+        "openTicketCount": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        },
+        "lateShipmentCount": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        },
+        "exposureCents": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        }
+      }
+    },
+    "bulk-sequential": {
+      "pipeline": [
+        {
+          "$match": {
+            "$and": [
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "$or": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "deletedAt": {
+                      "$type": "undefined"
+                    }
+                  }
+                ]
+              }
+            ],
+            "$expr": {
+              "$and": [
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$tenantId",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "010000000000000000000000"
+                    }
+                  ]
+                },
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$deletedAt",
+                        null
+                      ]
+                    },
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "region": {
+              "$in": [
+                "EU",
+                "NA"
+              ]
+            },
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$in": [
+                        {
+                          "$ifNull": [
+                            "$region",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": [
+                            "EU",
+                            "NA"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "$and": [
+                    {
+                      "$not": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                {
+                                  "$ifNull": [
+                                    "$tier",
+                                    null
+                                  ]
+                                },
+                                {
+                                  "$literal": "starter"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "id": {
+              "$toString": "$_id"
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_0": {
+              "$in": [
+                {
+                  "$ifNull": [
+                    "$region",
+                    null
+                  ]
+                },
+                {
+                  "$literal": [
+                    "EU",
+                    "NA"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_3": {
+              "$eq": [
+                {
+                  "$ifNull": [
+                    "$tier",
+                    null
+                  ]
+                },
+                {
+                  "$literal": "starter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            "$__adira_pred_0",
+                            true
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$or": [
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            },
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    "$__adira_pred_3",
+                                    true
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$project": {
+            "id": 1,
+            "creditLimitCents": 1,
+            "_id": 1,
+            "name": 1,
+            "region": 1,
+            "__adira_pred_0": 1,
+            "__adira_pred_3": 1
+          }
+        }
+      ],
+      "application": [
+        "load netRevenueCents",
+        "load openTicketCount",
+        "load lateShipmentCount",
+        "load exposureCents",
+        "derive riskScore",
+        "evaluate Boolean filter",
+        "sort",
+        "paginate",
+        "derive riskBand"
+      ],
+      "nativePagination": false,
+      "deferredRelations": [],
+      "relationStrategies": {},
+      "relations": {},
+      "dependencies": {
+        "netRevenueCents": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        },
+        "openTicketCount": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        },
+        "lateShipmentCount": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        },
+        "exposureCents": {
+          "operation": "sum",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        }
+      }
+    },
+    "bulk-parallel-128": {
+      "pipeline": [
+        {
+          "$match": {
+            "$and": [
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "$or": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "deletedAt": {
+                      "$type": "undefined"
+                    }
+                  }
+                ]
+              }
+            ],
+            "$expr": {
+              "$and": [
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$tenantId",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "010000000000000000000000"
+                    }
+                  ]
+                },
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$deletedAt",
+                        null
+                      ]
+                    },
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "region": {
+              "$in": [
+                "EU",
+                "NA"
+              ]
+            },
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$in": [
+                        {
+                          "$ifNull": [
+                            "$region",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": [
+                            "EU",
+                            "NA"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "$and": [
+                    {
+                      "$not": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                {
+                                  "$ifNull": [
+                                    "$tier",
+                                    null
+                                  ]
+                                },
+                                {
+                                  "$literal": "starter"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "id": {
+              "$toString": "$_id"
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_0": {
+              "$in": [
+                {
+                  "$ifNull": [
+                    "$region",
+                    null
+                  ]
+                },
+                {
+                  "$literal": [
+                    "EU",
+                    "NA"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_3": {
+              "$eq": [
+                {
+                  "$ifNull": [
+                    "$tier",
+                    null
+                  ]
+                },
+                {
+                  "$literal": "starter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            "$__adira_pred_0",
+                            true
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$or": [
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            },
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    "$__adira_pred_3",
+                                    true
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$project": {
+            "id": 1,
+            "creditLimitCents": 1,
+            "_id": 1,
+            "name": 1,
+            "region": 1,
+            "__adira_pred_0": 1,
+            "__adira_pred_3": 1
+          }
+        }
+      ],
+      "application": [
+        "load inputs",
+        "derive netRevenueCents",
+        "derive openTicketCount",
+        "derive lateShipmentCount",
+        "derive exposureCents",
+        "derive riskScore",
+        "evaluate Boolean filter",
+        "sort",
+        "paginate",
+        "derive riskBand"
+      ],
+      "nativePagination": false,
+      "deferredRelations": [],
+      "relationStrategies": {},
+      "relations": {},
+      "dependencies": {
+        "inputs": {
+          "operation": "get",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        }
+      }
+    },
+    "bulk-parallel-512": {
+      "pipeline": [
+        {
+          "$match": {
+            "$and": [
+              {
+                "tenantId": {
+                  "$eq": "010000000000000000000000"
+                }
+              },
+              {
+                "$or": [
+                  {
+                    "deletedAt": {
+                      "$eq": null
+                    }
+                  },
+                  {
+                    "deletedAt": {
+                      "$type": "undefined"
+                    }
+                  }
+                ]
+              }
+            ],
+            "$expr": {
+              "$and": [
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$tenantId",
+                        null
+                      ]
+                    },
+                    {
+                      "$literal": "010000000000000000000000"
+                    }
+                  ]
+                },
+                {
+                  "$eq": [
+                    {
+                      "$ifNull": [
+                        "$deletedAt",
+                        null
+                      ]
+                    },
+                    null
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "region": {
+              "$in": [
+                "EU",
+                "NA"
+              ]
+            },
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$in": [
+                        {
+                          "$ifNull": [
+                            "$region",
+                            null
+                          ]
+                        },
+                        {
+                          "$literal": [
+                            "EU",
+                            "NA"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "$and": [
+                    {
+                      "$not": [
+                        {
+                          "$and": [
+                            {
+                              "$eq": [
+                                {
+                                  "$ifNull": [
+                                    "$tier",
+                                    null
+                                  ]
+                                },
+                                {
+                                  "$literal": "starter"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "id": {
+              "$toString": "$_id"
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_0": {
+              "$in": [
+                {
+                  "$ifNull": [
+                    "$region",
+                    null
+                  ]
+                },
+                {
+                  "$literal": [
+                    "EU",
+                    "NA"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$set": {
+            "__adira_pred_3": {
+              "$eq": [
+                {
+                  "$ifNull": [
+                    "$tier",
+                    null
+                  ]
+                },
+                {
+                  "$literal": "starter"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$match": {
+            "$expr": {
+              "$and": [
+                {
+                  "$and": [
+                    {
+                      "$and": [
+                        {
+                          "$eq": [
+                            "$__adira_pred_0",
+                            true
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$or": [
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            },
+                            {
+                              "$and": [
+                                {
+                                  "$literal": true
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "$and": [
+                        {
+                          "$not": [
+                            {
+                              "$and": [
+                                {
+                                  "$eq": [
+                                    "$__adira_pred_3",
+                                    true
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$project": {
+            "id": 1,
+            "creditLimitCents": 1,
+            "_id": 1,
+            "name": 1,
+            "region": 1,
+            "__adira_pred_0": 1,
+            "__adira_pred_3": 1
+          }
+        }
+      ],
+      "application": [
+        "load inputs",
+        "derive netRevenueCents",
+        "derive openTicketCount",
+        "derive lateShipmentCount",
+        "derive exposureCents",
+        "derive riskScore",
+        "evaluate Boolean filter",
+        "sort",
+        "paginate",
+        "derive riskBand"
+      ],
+      "nativePagination": false,
+      "deferredRelations": [],
+      "relationStrategies": {},
+      "relations": {},
+      "dependencies": {
+        "inputs": {
+          "operation": "get",
+          "strategy": "application",
+          "reason": "Child candidates are supplied by resolveBatch",
+          "pipeline": [],
+          "child": {
+            "pipeline": [],
+            "application": [],
+            "nativePagination": false,
+            "deferredRelations": [],
+            "relationStrategies": {},
+            "relations": {},
+            "dependencies": {}
+          }
+        }
+      }
+    }
+  }
+}

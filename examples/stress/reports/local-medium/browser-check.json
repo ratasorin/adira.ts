@@ -1,0 +1,42 @@
+{
+  "scenarios": [
+    {
+      "title": "Account directory",
+      "rows": 40,
+      "parity": true
+    },
+    {
+      "title": "Revenue & margin",
+      "rows": 30,
+      "parity": true
+    },
+    {
+      "title": "Service risk",
+      "rows": 25,
+      "parity": true
+    },
+    {
+      "title": "Account 360°",
+      "rows": 12,
+      "parity": true
+    },
+    {
+      "title": "Order operations",
+      "rows": 20,
+      "parity": true
+    },
+    {
+      "title": "Replenishment",
+      "rows": 25,
+      "parity": true
+    }
+  ],
+  "mobile": {
+    "width": 430,
+    "documentWidth": 430,
+    "bodyWidth": 430
+  },
+  "plan": true,
+  "drawer": true,
+  "consoleErrors": []
+}

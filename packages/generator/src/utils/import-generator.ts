@@ -1,6 +1,6 @@
 import path from "path";
-import { ApiDefinition, HandlerApiDefinition } from "src/handler/generate";
-import { SymbolCollector } from "src/imports/collector";
+import { ApiDefinition, HandlerApiDefinition } from "../handler/generate";
+import { SymbolCollector } from "../imports/collector";
 import ts from "typescript";
 import { DependencyResolver } from "./dependency-resolver";
 

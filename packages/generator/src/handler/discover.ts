@@ -55,7 +55,9 @@ export async function discoverRouterDefinitions(
           const handler = args.slice(-1)[0];
           const handlerSymbol = checker.getSymbolAtLocation(handler)!;
           const originalHandlerSymbol =
-            checker.getAliasedSymbol(handlerSymbol)!;
+            handlerSymbol.flags & ts.SymbolFlags.Alias
+              ? checker.getAliasedSymbol(handlerSymbol)
+              : handlerSymbol;
 
           const handlerName = handlerSymbol.getName();
           const handlerPath =

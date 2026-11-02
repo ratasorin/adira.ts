@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "declaration": true,
+    "noEmitOnError": true
+  },
+  "include": [
+    "contracts/**/*.ts",
+    "server/**/*.ts",
+    "harness/**/*.ts",
+    "tests/integration/**/*.ts",
+    "tests/types/server.ts",
+    "queries/**/*.ts"
+  ]
+}

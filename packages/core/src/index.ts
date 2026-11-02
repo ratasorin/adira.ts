@@ -439,34 +439,33 @@ export type ExecutorQueryParams<Full, Include, Rows, Groups> = {
 
 export type MutationResponse<
   Base = {},
-  Include extends any[] = [],
-  Select extends any[] = [],
-  Extra = {},
-> = {
-  [K in ExecutorKey]?: ExecutorMutationResponse<Base, Include, Select>;
-} & {
-  [K in RelatedKey]?: Extra;
-};
+  Include extends string[] = [],
+  Select extends string[] = [],
+  Extra = undefined,
+> = ExecutorMutationResponse<Base, Include, Select> &
+  ([Extra] extends [undefined] ? {} : { [K in RelatedKey]?: Extra });
 
-export const EXECUTOR_KEY = "executor" as const;
 export const RELATED_KEY = "related" as const;
 
-export type ExecutorKey = typeof EXECUTOR_KEY; // "executor"
 export type RelatedKey = typeof RELATED_KEY; // "related"
 
 export type QueryResponse<
   Base,
   Include extends string[],
   Select extends string[],
-  Groups extends Record<string, GroupIntent<any, any, any>> | undefined,
+  Groups extends
+    | Record<
+        string,
+        GroupIntent<string[], AggregateOperation<string, string>[], unknown>
+      >
+    | undefined,
   Extra = undefined,
-> = {
-  [K in ExecutorKey]?: ExecutorQueryResponse<Base, Include, Select, Groups>;
-} & (Extra extends undefined
-  ? {}
-  : {
-      [K in RelatedKey]?: Extra;
-    });
+> = ExecutorQueryResponse<Base, Include, Select, Groups> &
+  (Extra extends undefined
+    ? {}
+    : {
+        [K in RelatedKey]?: Extra;
+      });
 
 // Scalar operators
 export type ScalarOperators<T> = {
@@ -600,6 +599,7 @@ export type PickDistinctDefinition<T = {}> = {
 
 export * as Backend from "./helpers/backend";
 export * as Frontend from "./helpers/frontend";
+export * from "./read";
 
 export interface AdiraConfig {
   output: {

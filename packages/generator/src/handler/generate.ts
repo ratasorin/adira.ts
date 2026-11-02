@@ -1,8 +1,7 @@
 import { DiscoveredHandler } from "./types";
 import { extractTypeGeneric, matchHandlerDeclaration } from "../utils";
 import ts from "typescript";
-import { SymbolCollector } from "src/imports/collector";
-import { getSymbolsName } from "src/utils/tests";
+import { SymbolCollector } from "../imports/collector";
 
 export type HandlerApiDefinition = {
   RequestParams?: ts.TypeNode;

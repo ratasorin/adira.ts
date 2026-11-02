@@ -1,0 +1,75 @@
+# Architecture stress test
+
+This review concerns the current composable-read prototype, not the proposed broader API in `ARCHITECTURE.md`. It tests expressiveness and execution contracts rather than throughput. No production data or database process was used for the targeted reproductions.
+
+“Unsupported” means that the supported builders cannot describe the implementation while retaining managed planning, dependency tracking, and response validation. Arbitrary TypeScript callbacks can call other systems, so many outcomes can be reproduced by manually performing work outside the planner. That is different from having a coherent provider contract for that work.
+
+## Scenarios and limits
+
+| Backend scenario                                                                                                                                        | Current support and restriction                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An invoices resource comes entirely from an HTTP service, SQL, or an in-memory index.                                                                   | No source-provider factory for this. The source types and executor are coupled to a MongoDB aggregation adapter. Low-level plan construction would require implementing the adapter's MongoDB-pipeline contract.                                                                                                                                                             |
+| A MongoDB product includes live inventory from another service, batched by all selected product IDs and projected to the requested child fields.        | Implemented through `.related({ requires, output, resolveBatch })`, returning complete candidates by opaque parent reference. Managed filtering, nested selection, ordering, and pagination run afterward. Query-aware pushdown is not part of this loader contract.                                                                                                         |
+| An include transforms child rows through `.map()`, `.transformBatch()`, or a native projection/group.                                                   | Implemented with `.related(source, join)` before transformations and `.one(Resource)`/`.many(Resource)` afterward. Direct and deferred reads both establish parent context before custom work. Legacy direct bindings still require their supplied source to retain the join field.                                                                                          |
+| A root field or predicate depends on a declared relation, such as an account's `outstandingBalance` depending on application-computed invoice balances. | Implemented through `relation.all(...)` and application `.load(...)`. Complete views reuse child plans/policies and can run before predicates/order or after pagination when safe. Count/exists, sum/avg/min/max, first/last, and to-one get now have native paths and bounded application fallbacks. Fetch sharing across distinct views remains future work.               |
+| A category exposes `parent` and `children`, recursively, with the incoming query determining traversal depth.                                           | Resource/binding definitions are expanded eagerly. There is no lazy reference. Cyclic binding graphs now fail with an explicit planning error; explicitly unrolled finite views remain possible.                                                                                                                                                                             |
+| A resource normalizes scores or computes ranks using a custom JavaScript algorithm across the complete input.                                           | Application transforms receive one row or one batch. There is no managed collect/reduce/finalize or custom-stream protocol. A batch containing the entire known bounded input can work; arbitrary batch sizes do not provide global semantics. Native backend-defined aggregation remains possible.                                                                          |
+| An application computes new tax bases, then MongoDB performs an aggregation over those exact transformed rows.                                          | There is no explicit transfer/materialization stage for returning transformed root rows to MongoDB. Deferred keyed relations already perform additional database reads, but do not continue a native pipeline over application-created values.                                                                                                                               |
+| An expensive native computation should be generated only when selected or used by filtering/ordering.                                                   | Native/application `.derive()` stages and `.native({ provides, requires, stages, output })` field producers are pruned by dependencies. Producer blocks execute atomically and add typed fields; parent preservation and complete read dependencies are currently backend promises. Unconditional native transforms and opaque application callbacks retain complete inputs. |
+| An external search supplies a complete matching ID set that should become a native MongoDB predicate before scanning candidates.                        | Filter factories are synchronous. There is no asynchronous predicate-preparation dependency that resolves a key set and feeds native compilation. An async per-row predicate works on bounded candidates, with different performance and budget behavior.                                                                                                                    |
+| A user selects only `address.city` from an embedded value object, or different fields for discriminated event variants.                                 | The selection grammar has scalar `true` or a relation subquery. It has no embedded-object projection or variant fragments. A custom schema can expose an object as an atomic value; that does not provide nested selection.                                                                                                                                                  |
+| The same approved computation is selected with two inputs, such as an amount converted to EUR and USD.                                                  | Scalar selections accept only `true`; there are no schema-defined field arguments or aliases. Fixed named fields or a differently modeled child resource can cover specific cases.                                                                                                                                                                                           |
+| A parent query uses `products.$some(...)`, independently of the page of products selected for display.                                                  | Generic relation predicates are absent from the grammar. Backend-defined predicates such as `hasAvailableProducts` already cover particular cases. This is a missing general capability, not an inability to implement an existence test.                                                                                                                                    |
+
+Built-in native joins still expose one `localField` and one unchanged `foreignField`. Compound/range matching and shared computation can now use `resolveBatch`, whose declared parent dependencies are not limited to equality keys. It supplies complete candidates rather than a native correlation expression or query-aware executor.
+
+The earlier raw-pipeline execution-scope issue is addressed by parent-scoped execution in both direct and deferred lookups. Custom `$limit`, `$group`, and window ranks retain the same meaning after parent application work forces deferred fetching. The [native relation pipeline guide](native-pipeline-correlation.md) documents the implemented API; [integration cases](../packages/backend/test/relation-context.cases.ts) now cover these paths. Input policies declared on `mongo.from` run before aggregation. Additional reads and result cardinality retain their own contracts.
+
+The [implemented relation-dependent computed fields](relation-dependent-fields.md) add typed relation-view dependencies to the existing derivation API. Compiler checks and MongoDB integration tests cover inference and execution. The remaining source/correlation limitations above still apply.
+
+## Targeted reproductions
+
+The original review checked these cases before relation-first composition was implemented:
+
+1. An in-memory TypeScript program accepts `creatorSource.map(row => ({ ...row }))` as the child of an otherwise valid relation.
+2. Constructing that relation then throws `Relation key '_id' must be retained unchanged by the native child plan`.
+3. An identity `transformBatch(rows => [...rows])` is rejected by the same guard.
+4. A manually constructed cyclic resource/binding graph originally caused `RangeError: Maximum call stack size exceeded`; definition expansion now rejects cycles explicitly.
+5. A query using `where.products.$some` is rejected as `Field 'products' is not filterable`.
+6. Inspecting a query that selects only `name` originally still included the native `total` derivation. Native dependency pruning now removes it unless a retained filter, ordering, relation, computation, or opaque callback/block needs it.
+
+Cases 1–3 now work through `.related()` declared before the transformation; their old direct-binding form remains conservative. The current regression cases also cover native key removal/rewriting, limits, grouping, ranks, overlapping array keys, nested dependencies, input policies, empty inputs, and cardinality/budgets in direct and deferred execution.
+
+Case 6 is covered by [native pruning regression cases](../packages/backend/test/native-pruning.cases.ts), including a deliberately failing MongoDB expression that never executes when unused. Unused managed derivations are not validated; retained values and raw output contracts keep validation. A child count therefore skips an unrelated derived numeric field, while summing that field still validates it. Pruning preserves stage placement and does not postpone required display computations past pagination.
+
+Custom raw field computations now use [native field producers](native-field-producers.md), whose lookup/group example is activated by selection or filtering through the same dependency graph. The producer regression cases also demonstrate the outstanding preservation issue: a misdeclared block can filter parents while returning valid field types. The linked guide compares declaration-only, structural, runtime, and isolated-execution enforcement; stronger preservation validation remains a proposal.
+
+Relevant implementation points:
+
+- [Source, relation, and stage contracts](../packages/backend/read/plan.ts).
+- [Eager definition construction and native/application planning](../packages/backend/read/execute.ts).
+- [Public selection and predicate grammar](../packages/core/src/read/query.ts).
+
+## Cases that already work
+
+- A custom application derivation can call an external service or an explicitly managed worker pool. Such calls are ordinary async TypeScript; a new runtime primitive is not required for every implementation.
+- Backend-defined MongoDB grouping and other read aggregations can use `.native({ stages, output })`. Removing frontend grouping does not remove backend aggregation.
+- Native predicates and per-row application predicates can compose through nested Boolean expressions on bounded candidates.
+- Native child prefixes and application transformations can form an include through relation-first composition, including payloads that omit their original join key.
+- Application-derived join keys can drive deferred MongoDB relations. Additional database access after application work already exists; arbitrary re-entry over transformed root rows does not.
+
+## Architectural implications to refine
+
+1. Custom relation fetching now uses a typed candidate-provider contract alongside optimized MongoDB relations. Generic root sources and query-aware executors remain future work.
+2. Implemented for MongoDB relations: declare association before transformation and keep parent identity outside the payload in both execution strategies. Broader providers should retain the same contract.
+3. Represent dependencies between source work, computed fields, and relations. Keep the efficient native-prefix path for plans that fit it; allow explicit additional dependencies and materialization where needed.
+4. Expose processing effects and lifecycle explicitly: row mapping, filtering, batch transforms, whole-input transforms, and stream finalization need different contracts.
+5. `resolveBatch` now provides typed parent dependencies and validates candidate output/accounting. A future query-aware executor can receive validated selection/predicate/ordering requirements; the candidate loader intentionally leaves those operations to Adira. Async predicate preparation remains future work.
+6. Add lazy resource references and cycle-aware binding registration. Continue bounding each incoming query's depth and complexity.
+7. Extend the public grammar deliberately for embedded values, variants, arguments, aliases, or relation predicates. Each addition should remain a backend-approved capability; broader execution support does not require arbitrary frontend queries.
+
+Items explicitly described as implemented above are available now; the remaining directions are proposals. See the [resolveBatch contract](resolve-batch.md) for batching, validation, policies, and completeness limits.
+
+Types can check declared input/output shapes and supported instructions. They cannot prove arbitrary business calculations, the truth of a raw stage's output declaration, or that an external search returned every matching key. Runtime validation happens at materialization/output boundaries; it does not observe every fused intermediate MongoDB value.
+
+Some costs are inherent. An exact ordering by an arbitrary application-only score requires sufficient score evaluation, an equivalent native expression, or an authoritative indexed/precomputed result. A more flexible plan cannot safely paginate first and infer the missing answers afterward.

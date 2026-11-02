@@ -1,5 +1,6 @@
 import ts from "typescript";
-import { DependencyResolver } from "src/utils/dependency-resolver";
+import { DependencyResolver } from "../utils/dependency-resolver";
+import { publicTypeArguments } from "../utils/public-read-types";
 
 export class SymbolCollector {
   private checker: ts.TypeChecker;
@@ -125,7 +126,9 @@ export class SymbolCollector {
         }
         entityName = entityName.left;
       }
-      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg, onSymbol));
+      publicTypeArguments(node, this.checker, this.resolver)?.forEach((arg) =>
+        this.crawlTypeNode(arg, onSymbol),
+      );
     }
     // typeof References
     else if (ts.isTypeQueryNode(node)) {
@@ -164,7 +167,9 @@ export class SymbolCollector {
           onSymbol(symbol, node.qualifier || node);
         } else this.crawl(symbol);
       }
-      node.typeArguments?.forEach((arg) => this.crawlTypeNode(arg, onSymbol));
+      publicTypeArguments(node, this.checker, this.resolver)?.forEach((arg) =>
+        this.crawlTypeNode(arg, onSymbol),
+      );
     }
     // Conditional Branches (T extends U ? A : B) - Keeps BOTH
     else if (ts.isConditionalTypeNode(node)) {

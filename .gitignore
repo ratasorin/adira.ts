@@ -1,2 +1,9 @@
 node_modules
 dist
+examples/stress/results/
+other
+/examples/invoice/**/.env
+/examples/invoice/**/.env.*
+!/examples/invoice/**/.env.example
+/examples/invoice/**/__pycache__/
+*.tsbuildinfo

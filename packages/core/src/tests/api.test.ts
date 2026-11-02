@@ -111,7 +111,7 @@ const { run: runQueryCategories } = queryCategories({
 });
 runQueryCategories().then((r) => {
   if (isError(r)) return;
-  r.executor?.rows[0].createdBy;
+  r.rows[0].createdBy;
 });
 
 export const generatePdf = apiClient("/generate/:id", "GET");

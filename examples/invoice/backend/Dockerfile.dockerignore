@@ -1,0 +1,10 @@
+**/.git
+**/node_modules
+**/dist
+**/.adira
+**/.env
+**/.env.*
+**/*.tsbuildinfo
+other
+examples/stress
+.git

@@ -1,0 +1,17 @@
+{
+  "output": {
+    "dir": "./shared",
+    "file": "index.api.d.ts",
+    "typename": "InvoiceAPI"
+  },
+  "registry": {
+    "name": "@invoice/types",
+    "version": "1.1.0",
+    "description": "Generated Invoice API contract",
+    "url": "http://localhost",
+    "port": 8888
+  },
+  "allowedDependencies": [
+    "@n/adira.core.ts"
+  ]
+}
