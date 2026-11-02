@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { handleDeleteCustomer,handleGetCustomers,handlePatchCustomer,handlePatchCustomerMetadata,handlePostCustomer,handlePostCustomerVersion,sanitizePatchCustomerMetadataPayload,sanitizePatchCustomerPayload,sanitizePostCustomerPayload } from "../controller/http/customer";
+import { protectRoute } from "../middleware/auth";
+const customerRouter = Router();
+customerRouter.get("/customers", protectRoute(), handleGetCustomers);
+customerRouter.post("/customers", protectRoute(), sanitizePostCustomerPayload, handlePostCustomer);
+customerRouter.post("/customers/:id/version", protectRoute(), handlePostCustomerVersion);
+customerRouter.patch("/customers/:id", protectRoute(), sanitizePatchCustomerPayload, handlePatchCustomer);
+customerRouter.patch("/customers/:id/metadata", protectRoute(), sanitizePatchCustomerMetadataPayload, handlePatchCustomerMetadata);
+customerRouter.delete("/customers/:id", protectRoute(), handleDeleteCustomer);
+export default customerRouter;

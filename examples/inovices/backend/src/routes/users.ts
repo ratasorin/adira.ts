@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { completeRegistration,handleCreateUser,handleDeleteUser,handleGetUsers,handlePatchUser,sanitizePatchUserPayload,sanitizePostUserPayload } from "../controller/http/users";
+import { protectRoute } from "../middleware/auth";
+const usersRouter = Router();
+usersRouter.get("/users", protectRoute(["ADVANCED"]), handleGetUsers);
+usersRouter.post("/users", protectRoute(["ADVANCED"]), sanitizePostUserPayload, handleCreateUser);
+usersRouter.patch("/users/:id", protectRoute(["ADVANCED"]), sanitizePatchUserPayload, handlePatchUser);
+usersRouter.delete("/users/:id", protectRoute(["ADVANCED"]), handleDeleteUser);
+usersRouter.post("/users/register/:token_id", completeRegistration);
+export default usersRouter;

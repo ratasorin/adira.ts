@@ -1,2 +1,9 @@
 node_modules
 dist
+/other/
+/examples/inovices/.adira/
+/examples/inovices/**/.data/
+/examples/inovices/**/.env
+/examples/inovices/**/.env.*
+!/examples/inovices/**/.env.example
+*.tsbuildinfo

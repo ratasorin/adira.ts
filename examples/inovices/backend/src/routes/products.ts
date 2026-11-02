@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { handleDeleteProduct,handleGetProducts,handlePatchProduct,handlePatchProductMetadata,handlePostProduct,handlePostProductVersion,sanitizePatchProductMetadataPayload,sanitizePatchProductPayload,sanitizePostProductPayload } from "../controller/http/products";
+import { protectRoute } from "../middleware/auth";
+const productsRouter = Router();
+productsRouter.get("/products", protectRoute(), handleGetProducts);
+productsRouter.post("/products", protectRoute(), sanitizePostProductPayload, handlePostProduct);
+productsRouter.post("/products/:id/version", protectRoute(), handlePostProductVersion);
+productsRouter.patch("/products/:id", protectRoute(), sanitizePatchProductPayload, handlePatchProduct);
+productsRouter.patch("/products/:id/metadata", protectRoute(), sanitizePatchProductMetadataPayload, handlePatchProductMetadata);
+productsRouter.delete("/products/:id", protectRoute(), handleDeleteProduct);
+export default productsRouter;

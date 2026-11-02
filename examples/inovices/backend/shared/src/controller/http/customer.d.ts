@@ -1,0 +1,13 @@
+import { Backend } from "@n/adira.core.ts";
+import type { ICustomer } from "../../models/Customer";
+import { CustomerDetails } from "../../models/Customer";
+import { ErrorResponse } from "../../types";
+import { type Json } from "../../types/json";
+export declare const getExecutor: Backend.ExecuteGET<ICustomer, {}>;
+export declare const postExecutor: Backend.ExecutePOST<ICustomer>;
+export declare const patchExecutor: Backend.ExecutePATCH<ICustomer>;
+export declare const patchMetadataExecutor: Backend.ExecutePATCH<ICustomer>;
+export type CustomerGetExecutor = typeof getExecutor;
+export type CustomerPostExecutor = typeof postExecutor;
+export type CustomerPatchExecutor = typeof patchExecutor;
+export type CustomerMetadataPatchExecutor = typeof patchMetadataExecutor;

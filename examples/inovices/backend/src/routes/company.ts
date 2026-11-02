@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { handleDeleteCompany,handleGetCompanies,handlePatchCompany,handlePatchCompanyMetadata,handlePostCompanies,handlePostCompanyVersion,sanitizePatchCompanyMetadataPayload,sanitizePatchCompanyPayload,sanitizePostCompanyPayload } from "../controller/http/company";
+import { protectRoute } from "../middleware/auth";
+const companyRouter = Router();
+companyRouter.get("/companies", protectRoute(), handleGetCompanies);
+companyRouter.post("/companies", protectRoute(), sanitizePostCompanyPayload, handlePostCompanies);
+companyRouter.post("/companies/:id/version", protectRoute(), handlePostCompanyVersion);
+companyRouter.patch("/companies/:id", protectRoute(), sanitizePatchCompanyPayload, handlePatchCompany);
+companyRouter.patch("/companies/:id/metadata", protectRoute(), sanitizePatchCompanyMetadataPayload, handlePatchCompanyMetadata);
+companyRouter.delete("/companies/:id", protectRoute(), handleDeleteCompany);
+export default companyRouter;

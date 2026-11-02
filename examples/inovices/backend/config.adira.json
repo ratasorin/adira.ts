@@ -1,0 +1,17 @@
+{
+  "output": {
+    "dir": "./shared",
+    "file": "index.api.d.ts",
+    "typename": "InovicesAPI"
+  },
+  "registry": {
+    "name": "@inovices/types",
+    "version": "1.1.0",
+    "description": "Generated Inovices API contract",
+    "url": "http://localhost",
+    "port": 8888
+  },
+  "allowedDependencies": [
+    "@n/adira.core.ts"
+  ]
+}

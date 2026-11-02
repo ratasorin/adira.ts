@@ -1,0 +1,14 @@
+import { Router } from "express";
+import { handleDraftInvoiceNumber } from "../controller/http/invoice";
+import { handleCheckInvoiceNumberAvailability,handleDeleteInvoice,handleGetInvoiceIdsByIssuer,handleGetInvoices,handleGetInvoiceVersionGraph,handlePatchInvoice,handlePostInvoice,sanitizePatchInvoicePayload,sanitizePostInvoicePayload,} from "../controller/invoice";
+import { protectRoute } from "../middleware/auth";
+const invoiceRouter = Router();
+invoiceRouter.get("/invoices", protectRoute(), handleGetInvoices);
+invoiceRouter.get("/invoice-groups/by-issuer", protectRoute(), handleGetInvoiceIdsByIssuer);
+invoiceRouter.get("/invoices/availability/number", protectRoute(), handleCheckInvoiceNumberAvailability);
+invoiceRouter.post("/invoices", protectRoute(), sanitizePostInvoicePayload, handlePostInvoice);
+invoiceRouter.get("/invoices/:id/version-graph", protectRoute(), handleGetInvoiceVersionGraph);
+invoiceRouter.patch("/invoices/:id", protectRoute(), sanitizePatchInvoicePayload, handlePatchInvoice);
+invoiceRouter.delete("/invoices/:id", protectRoute(), handleDeleteInvoice);
+invoiceRouter.get("/draft/invoices/seqnum/:base_company_id", protectRoute(), handleDraftInvoiceNumber);
+export default invoiceRouter;

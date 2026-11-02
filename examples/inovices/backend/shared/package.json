@@ -1,0 +1,13 @@
+{
+  "name": "@inovices/types",
+  "version": "1.1.0",
+  "description": "Generated Inovices API contract",
+  "main": "src/index.api.d.ts",
+  "types": "src/index.api.d.ts",
+  "peerDependencies": {
+    "@n/adira.core.ts": "*"
+  },
+  "devDependencies": {
+    "@n/adira.core.ts": "*"
+  }
+}
